@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useAuth, useProfile } from "@/hooks/useAuth";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 
 // Navigation items
 const navigationItems = [
@@ -32,7 +34,6 @@ const navigationItems = [
     title: "Dashboard",
     url: "/",
     icon: Home,
-    isActive: true,
   },
   {
     title: "Leads",
@@ -79,16 +80,22 @@ const quickActions = [
   },
 ];
 
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
-
 export function AppSidebar() {
   const { user, signOut } = useAuth();
+  const { profile } = useProfile();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
+  };
+
+  const isActive = (path: string) => {
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname.startsWith(path);
   };
 
   return (
@@ -116,16 +123,44 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
-                    isActive={item.isActive}
+                    isActive={isActive(item.url)}
                     className="w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 data-[active=true]:bg-blue-100 data-[active=true]:text-blue-700"
                   >
-                    <a href={item.url} className="flex items-center gap-3">
+                    <Link to={item.url} className="flex items-center gap-3">
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {profile?.role === 'leads_manager' && (
+                <>
+                  <SidebarMenuItem key="Admin Panel">
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive('/admin')}
+                      className="w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 data-[active=true]:bg-blue-100 data-[active=true]:text-blue-700"
+                    >
+                      <Link to="/admin" className="flex items-center gap-3">
+                        <Settings className="h-4 w-4" />
+                        <span>Admin Panel</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem key="User Management">
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive('/admin/users')}
+                      className="w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 data-[active=true]:bg-blue-100 data-[active=true]:text-blue-700"
+                    >
+                      <Link to="/admin/users" className="flex items-center gap-3">
+                        <Users className="h-4 w-4" />
+                        <span>User Management</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -144,10 +179,10 @@ export function AppSidebar() {
                     asChild
                     className="w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-gray-50 hover:text-gray-700"
                   >
-                    <a href={item.url} className="flex items-center gap-3">
+                    <Link to={item.url} className="flex items-center gap-3">
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
