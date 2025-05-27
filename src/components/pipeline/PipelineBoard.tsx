@@ -406,7 +406,9 @@ export const PipelineBoard: React.FC = () => {
                   </div>
                 ) : (
                   <div className="flex gap-6 min-w-max">
-                    {sortedStatuses.map((status) => (
+                    {sortedStatuses
+                      .filter(status => !status.name.toLowerCase().includes('new lead'))
+                      .map((status) => (
                       <div key={status.id} className="min-w-[340px] max-w-[340px]">
                         <PipelineColumn
                           status={status}

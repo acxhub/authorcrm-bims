@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, UserPlus, Hash, Trash2, CheckSquare } from 'lucide-react';
+import { Users, UserPlus, Hash, Trash2, CheckSquare, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useUsers } from '@/hooks/useUsers';
 import { useUpdateLead, useDeleteLead, useManageLeadTags } from '@/hooks/useLeads';
 import { useTags } from '@/hooks/useTags';
+import { useStatuses } from '@/hooks/useStatuses';
 import { useCreateActivity } from '@/hooks/useActivities';
 import { useAuth } from '@/hooks/useAuth';
 import type { Lead } from '@/lib/api/leads';
@@ -28,12 +29,15 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
 }) => {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [selectedStatusId, setSelectedStatusId] = useState<string>('');
 
   const { user } = useAuth();
   const { users, loading: usersLoading } = useUsers();
   const { data: allTags, isLoading: tagsLoading } = useTags();
+  const { data: statuses, isLoading: statusesLoading } = useStatuses();
   const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
   const { addTags } = useManageLeadTags();
@@ -93,6 +97,40 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
       onActionsComplete();
     } catch (error) {
       console.error('Bulk tag addition failed:', error);
+    }
+  };
+
+  const handleBulkChangeStatus = async () => {
+    if (!selectedStatusId || selectedLeads.length === 0) return;
+
+    try {
+      const selectedStatus = statuses?.find(s => s.id === selectedStatusId);
+      
+      // Update all selected leads
+      await Promise.all(
+        selectedLeads.map(async (lead) => {
+          await updateLead.mutateAsync({
+            id: lead.id,
+            data: { status_id: selectedStatusId }
+          });
+
+          // Log the status change activity
+          await createActivity.mutateAsync({
+            lead_id: lead.id,
+            user_id: user?.id || '',
+            activity_type: 'status_change',
+            summary: `Lead status bulk changed to ${selectedStatus?.name || 'Unknown Status'}`,
+            outcome: `Part of bulk status change of ${selectedLeads.length} leads`,
+          });
+        })
+      );
+
+      setIsStatusDialogOpen(false);
+      setSelectedStatusId('');
+      onSelectionChange([]);
+      onActionsComplete();
+    } catch (error) {
+      console.error('Bulk status change failed:', error);
     }
   };
 
@@ -217,6 +255,67 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
                     disabled={!selectedUserId || isLoading}
                   >
                     {isLoading ? 'Assigning...' : 'Assign Leads'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Bulk Change Status */}
+          <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Change Status
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Bulk Change Status</DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label>Changing status for {selectedLeads.length} leads to:</Label>
+                  <Select value={selectedStatusId} onValueChange={setSelectedStatusId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a status..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusesLoading ? (
+                        <SelectItem value="loading" disabled>Loading statuses...</SelectItem>
+                      ) : statuses?.length === 0 ? (
+                        <SelectItem value="no-statuses" disabled>No statuses found</SelectItem>
+                      ) : (
+                        statuses?.map((status) => (
+                          <SelectItem key={status.id} value={status.id}>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: status.color }}
+                              />
+                              {status.name}
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsStatusDialogOpen(false)}
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleBulkChangeStatus}
+                    disabled={!selectedStatusId || isLoading}
+                  >
+                    {isLoading ? 'Changing...' : 'Change Status'}
                   </Button>
                 </div>
               </div>

@@ -76,91 +76,42 @@ export const PipelineBreakdown: React.FC = () => {
   const topStatuses = statusBreakdown.slice(0, 5);
 
   return (
-    <div className="space-y-6">
-      {/* Pipeline Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-blue-700">Total Pipeline</p>
-                <p className="text-xl font-bold text-blue-900">{totalLeads}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Target className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-green-700">Active Leads</p>
-                <p className="text-xl font-bold text-green-900">{activeLeads}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200/60">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-purple-700">Conversion</p>
-                <p className="text-xl font-bold text-purple-900">{conversionRate}%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Status Breakdown */}
-      <Card className="bg-white/60 backdrop-blur-sm border-gray-200/60">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-gray-600" />
-            <CardTitle className="text-lg font-semibold text-gray-900">
-              Status Distribution
-            </CardTitle>
+    <Card className="bg-white/60 backdrop-blur-sm border-gray-200/60">
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-gray-600" />
+          <CardTitle className="text-lg font-semibold text-gray-900">
+            Status Distribution
+          </CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {topStatuses.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <p className="text-sm">No pipeline data available</p>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {topStatuses.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-sm">No pipeline data available</p>
-            </div>
-          ) : (
-            <>
-              {topStatuses.map((status, index) => (
-                <div
-                  key={status.statusId}
-                  className="animate-fade-in"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <StatusBar status={status} totalCount={totalLeads} />
-                </div>
-              ))}
-              
-              {statusBreakdown.length > 5 && (
-                <div className="pt-2 border-t border-gray-200">
-                  <p className="text-xs text-gray-500 text-center">
-                    Showing top 5 statuses • {statusBreakdown.length - 5} more available
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+        ) : (
+          <>
+            {topStatuses.map((status, index) => (
+              <div
+                key={status.statusId}
+                className="animate-fade-in"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <StatusBar status={status} totalCount={totalLeads} />
+              </div>
+            ))}
+            {statusBreakdown.length > 5 && (
+              <div className="pt-2 border-t border-gray-200">
+                <p className="text-xs text-gray-500 text-center">
+                  Showing top 5 statuses • {statusBreakdown.length - 5} more available
+                </p>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }; 

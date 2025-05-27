@@ -166,7 +166,7 @@ export const DashboardMetrics: React.FC = () => {
         change={formatPercentage(dealsChange)}
         trend={dealsChange >= 0 ? 'up' : 'down'}
         icon={Target}
-        description="Deals in progress"
+        description="Excluding New Lead & Closed"
         color="green"
       />
       

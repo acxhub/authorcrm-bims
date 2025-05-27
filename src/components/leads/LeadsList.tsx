@@ -36,6 +36,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
   const [tagFilter, setTagFilter] = useState<string[]>([]);
 
@@ -51,7 +52,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
       tag_ids: tagFilter.length ? tagFilter : undefined,
     },
     page,
-    10
+    pageSize
   );
 
   const { data: statuses } = useStatuses();
@@ -65,6 +66,11 @@ export const LeadsList: React.FC<LeadsListProps> = ({
 
   const handleStatusFilter = (statusId: string) => {
     setStatusFilter(statusId === 'all' ? '' : statusId);
+    setPage(1);
+  };
+
+  const handlePageSizeChange = (newPageSize: string) => {
+    setPageSize(parseInt(newPageSize));
     setPage(1);
   };
 
@@ -406,10 +412,29 @@ export const LeadsList: React.FC<LeadsListProps> = ({
           )}
 
           {/* Pagination */}
-          {leadsData && leadsData.total_pages > 1 && (
+          {leadsData && (leadsData.total_pages > 1 || leadsData.count > pageSize) && (
             <div className="flex items-center justify-between mt-4 p-4">
-              <div className="text-sm text-gray-500">
-                Showing {((page - 1) * 10) + 1} to {Math.min(page * 10, leadsData.count)} of {leadsData.count} leads
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-gray-500">
+                  Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, leadsData.count)} of {leadsData.count} leads
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">Show:</span>
+                  <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                      <SelectItem value="250">250</SelectItem>
+                      <SelectItem value="500">500</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm text-gray-500">per page</span>
+                </div>
               </div>
               <div className="flex gap-2">
                 <Button
@@ -420,6 +445,9 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                 >
                   Previous
                 </Button>
+                <span className="flex items-center px-3 text-sm text-gray-600">
+                  Page {page} of {leadsData.total_pages}
+                </span>
                 <Button
                   variant="outline"
                   size="sm"

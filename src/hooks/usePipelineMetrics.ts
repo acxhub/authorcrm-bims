@@ -51,10 +51,15 @@ export const usePipelineMetrics = () => {
     const closedLostStatuses = statuses.filter(s => 
       s.name.toLowerCase().includes('closed lost') || s.name.toLowerCase().includes('lost') || s.name.toLowerCase().includes('dead')
     );
-    const closedStatusIds = [...closedWonStatuses, ...closedLostStatuses].map(s => s.id);
+    const newLeadStatuses = statuses.filter(s => 
+      s.name.toLowerCase().includes('new lead')
+    );
+    
+    // Exclude New Lead, Closed Won, and Closed Lost from active leads
+    const excludedStatusIds = [...closedWonStatuses, ...closedLostStatuses, ...newLeadStatuses].map(s => s.id);
 
-    // Calculate active leads (not in closed statuses)
-    const activeLeads = leads.filter(lead => !closedStatusIds.includes(lead.status_id)).length;
+    // Calculate active leads (not in excluded statuses)
+    const activeLeads = leads.filter(lead => !excludedStatusIds.includes(lead.status_id)).length;
 
     // Calculate conversion rate (closed won / total leads)
     const closedWonLeads = leads.filter(lead => 
@@ -63,6 +68,7 @@ export const usePipelineMetrics = () => {
     const conversionRate = totalLeads > 0 ? (closedWonLeads / totalLeads) * 100 : 0;
 
     // Calculate average time to close (for closed leads)
+    const closedStatusIds = [...closedWonStatuses, ...closedLostStatuses].map(s => s.id);
     const closedLeads = leads.filter(lead => closedStatusIds.includes(lead.status_id));
     let averageTimeToClose = 0;
     
