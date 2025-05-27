@@ -45,21 +45,6 @@ const navigationItems = [
     url: "/pipeline",
     icon: BarChart3,
   },
-  {
-    title: "Books",
-    url: "/books",
-    icon: BookOpen,
-  },
-  {
-    title: "Calendar",
-    url: "/calendar",
-    icon: Calendar,
-  },
-  {
-    title: "Messages",
-    url: "/messages",
-    icon: MessageSquare,
-  },
 ];
 
 const quickActions = [

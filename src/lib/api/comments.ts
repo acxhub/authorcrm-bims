@@ -1,32 +1,100 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+import type { Database } from '@/integrations/supabase/types';
 
-export type Comment = Tables<'comments'>;
-export type CreateCommentRequest = Omit<TablesInsert<'comments'>, 'id' | 'created_at' | 'updated_at' | 'user_id'>;
-export type UpdateCommentRequest = Partial<Omit<TablesUpdate<'comments'>, 'id' | 'created_at' | 'updated_at'>>;
+export type Comment = Database['public']['Tables']['comments']['Row'] & {
+  user_profile?: Database['public']['Tables']['profiles']['Row'];
+  replies?: Comment[];
+};
 
-export type CommentWithProfile = Comment & {
-  user_profile: {
-    id: string;
-    full_name: string | null;
-    email: string;
-    avatar_url?: string | null;
-  };
-  replies?: CommentWithProfile[];
+export type CreateCommentData = Database['public']['Tables']['comments']['Insert'];
+export type UpdateCommentData = Database['public']['Tables']['comments']['Update'];
+
+// Get comments for a deal (via lead_id)
+export const getCommentsByLeadId = async (leadId: string): Promise<Comment[]> => {
+  const { data, error } = await supabase
+    .from('comments')
+    .select(`
+      *,
+      user_profile:profiles!comments_user_id_fkey(*)
+    `)
+    .eq('lead_id', leadId)
+    .is('parent_comment_id', null)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  // Get replies for each comment
+  const commentsWithReplies = await Promise.all(
+    data.map(async (comment) => {
+      const { data: replies, error: repliesError } = await supabase
+        .from('comments')
+        .select(`
+          *,
+          user_profile:profiles!comments_user_id_fkey(*)
+        `)
+        .eq('parent_comment_id', comment.id)
+        .order('created_at', { ascending: true });
+
+      if (repliesError) throw repliesError;
+
+      return {
+        ...comment,
+        replies: replies || []
+      };
+    })
+  );
+
+  return commentsWithReplies;
+};
+
+// Create a new comment
+export const createComment = async (data: CreateCommentData): Promise<Comment> => {
+  const { data: comment, error } = await supabase
+    .from('comments')
+    .insert(data)
+    .select(`
+      *,
+      user_profile:profiles!comments_user_id_fkey(*)
+    `)
+    .single();
+
+  if (error) throw error;
+  return comment;
+};
+
+// Update a comment
+export const updateComment = async (id: string, data: UpdateCommentData): Promise<Comment> => {
+  const { data: comment, error } = await supabase
+    .from('comments')
+    .update(data)
+    .eq('id', id)
+    .select(`
+      *,
+      user_profile:profiles!comments_user_id_fkey(*)
+    `)
+    .single();
+
+  if (error) throw error;
+  return comment;
+};
+
+// Delete a comment
+export const deleteComment = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('comments')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
 };
 
 export class CommentsAPI {
-  async getComments(leadId: string): Promise<CommentWithProfile[]> {
+  async getComments(leadId: string): Promise<Comment[]> {
     const { data, error } = await supabase
       .from('comments')
       .select(`
         *,
-        user_profile:profiles!comments_user_id_fkey(
-          id,
-          full_name,
-          email,
-          avatar_url
-        )
+        user_profile:profiles!comments_user_id_fkey(*)
       `)
       .eq('lead_id', leadId)
       .is('parent_comment_id', null)
@@ -38,7 +106,7 @@ export class CommentsAPI {
 
     // Fetch replies for each comment
     const commentsWithReplies = await Promise.all(
-      (data || []).map(async (comment) => {
+      data.map(async (comment) => {
         const replies = await this.getReplies(comment.id);
         return {
           ...comment,
@@ -50,17 +118,12 @@ export class CommentsAPI {
     return commentsWithReplies;
   }
 
-  async getReplies(parentCommentId: string): Promise<CommentWithProfile[]> {
+  async getReplies(parentCommentId: string): Promise<Comment[]> {
     const { data, error } = await supabase
       .from('comments')
       .select(`
         *,
-        user_profile:profiles!comments_user_id_fkey(
-          id,
-          full_name,
-          email,
-          avatar_url
-        )
+        user_profile:profiles!comments_user_id_fkey(*)
       `)
       .eq('parent_comment_id', parentCommentId)
       .order('created_at', { ascending: true });
@@ -72,17 +135,12 @@ export class CommentsAPI {
     return data || [];
   }
 
-  async getCommentById(id: string): Promise<CommentWithProfile> {
+  async getCommentById(id: string): Promise<Comment> {
     const { data, error } = await supabase
       .from('comments')
       .select(`
         *,
-        user_profile:profiles!comments_user_id_fkey(
-          id,
-          full_name,
-          email,
-          avatar_url
-        )
+        user_profile:profiles!comments_user_id_fkey(*)
       `)
       .eq('id', id)
       .single();
@@ -92,55 +150,6 @@ export class CommentsAPI {
     }
 
     return data;
-  }
-
-  async createComment(commentData: CreateCommentRequest): Promise<Comment> {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
-    const { data, error } = await supabase
-      .from('comments')
-      .insert({
-        ...commentData,
-        user_id: user.id,
-      })
-      .select('*')
-      .single();
-
-    if (error) {
-      throw new Error(`Failed to create comment: ${error.message}`);
-    }
-
-    return data;
-  }
-
-  async updateComment(id: string, updates: UpdateCommentRequest): Promise<Comment> {
-    const { data, error } = await supabase
-      .from('comments')
-      .update(updates)
-      .eq('id', id)
-      .select('*')
-      .single();
-
-    if (error) {
-      throw new Error(`Failed to update comment: ${error.message}`);
-    }
-
-    return data;
-  }
-
-  async deleteComment(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('comments')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      throw new Error(`Failed to delete comment: ${error.message}`);
-    }
   }
 
   async getCommentStats(leadId?: string): Promise<{

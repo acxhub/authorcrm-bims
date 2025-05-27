@@ -1,32 +1,97 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+import type { Database } from '@/integrations/supabase/types';
 
-export type Activity = Tables<'activity_logs'>;
-export type CreateActivityRequest = Omit<TablesInsert<'activity_logs'>, 'id' | 'created_at' | 'updated_at' | 'user_id'>;
-export type UpdateActivityRequest = Partial<Omit<TablesUpdate<'activity_logs'>, 'id' | 'created_at' | 'updated_at'>>;
+export type Activity = Database['public']['Tables']['activity_logs']['Row'] & {
+  user_profile?: Database['public']['Tables']['profiles']['Row'];
+};
 
-// Activity types based on database schema
+export type CreateActivityData = Database['public']['Tables']['activity_logs']['Insert'];
+export type UpdateActivityData = Database['public']['Tables']['activity_logs']['Update'];
+
+// Activity types enum
 export type ActivityType = 'call' | 'email' | 'meeting' | 'note' | 'status_change' | 'assignment';
 
-export interface ActivityWithProfile extends Activity {
-  user_profile: {
-    id: string;
-    full_name: string | null;
-    email: string | null;
-  };
-}
+// Get activities for a deal (via lead_id)
+export const getActivitiesByLeadId = async (leadId: string): Promise<Activity[]> => {
+  const { data, error } = await supabase
+    .from('activity_logs')
+    .select(`
+      *,
+      user_profile:profiles!activity_logs_user_id_fkey(*)
+    `)
+    .eq('lead_id', leadId)
+    .order('activity_date', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+};
+
+// Create a new activity
+export const createActivity = async (data: CreateActivityData): Promise<Activity> => {
+  const { data: activity, error } = await supabase
+    .from('activity_logs')
+    .insert(data)
+    .select(`
+      *,
+      user_profile:profiles!activity_logs_user_id_fkey(*)
+    `)
+    .single();
+
+  if (error) throw error;
+  return activity;
+};
+
+// Update an activity
+export const updateActivity = async (id: string, data: UpdateActivityData): Promise<Activity> => {
+  const { data: activity, error } = await supabase
+    .from('activity_logs')
+    .update(data)
+    .eq('id', id)
+    .select(`
+      *,
+      user_profile:profiles!activity_logs_user_id_fkey(*)
+    `)
+    .single();
+
+  if (error) throw error;
+  return activity;
+};
+
+// Delete an activity
+export const deleteActivity = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('activity_logs')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+};
+
+// Log a quick activity (helper function)
+export const logActivity = async (
+  leadId: string,
+  userId: string,
+  activityType: ActivityType,
+  summary: string,
+  outcome?: string
+): Promise<Activity> => {
+  return createActivity({
+    lead_id: leadId,
+    user_id: userId,
+    activity_type: activityType,
+    summary,
+    outcome,
+    activity_date: new Date().toISOString(),
+  });
+};
 
 export class ActivitiesAPI {
-  async getActivities(leadId?: string, limit = 50): Promise<ActivityWithProfile[]> {
+  async getActivities(leadId?: string, limit = 50): Promise<Activity[]> {
     let query = supabase
       .from('activity_logs')
       .select(`
         *,
-        user_profile:profiles!activity_logs_user_id_fkey(
-          id,
-          full_name,
-          email
-        )
+        user_profile:profiles!activity_logs_user_id_fkey(*)
       `)
       .order('activity_date', { ascending: false })
       .limit(limit);
@@ -44,16 +109,12 @@ export class ActivitiesAPI {
     return data || [];
   }
 
-  async getActivityById(id: string): Promise<ActivityWithProfile> {
+  async getActivityById(id: string): Promise<Activity> {
     const { data, error } = await supabase
       .from('activity_logs')
       .select(`
         *,
-        user_profile:profiles!activity_logs_user_id_fkey(
-          id,
-          full_name,
-          email
-        )
+        user_profile:profiles!activity_logs_user_id_fkey(*)
       `)
       .eq('id', id)
       .single();
@@ -65,117 +126,7 @@ export class ActivitiesAPI {
     return data;
   }
 
-  async createActivity(activityData: CreateActivityRequest): Promise<Activity> {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
-    const { data, error } = await supabase
-      .from('activity_logs')
-      .insert({
-        ...activityData,
-        user_id: user.id,
-      })
-      .select('*')
-      .single();
-
-    if (error) {
-      throw new Error(`Failed to create activity: ${error.message}`);
-    }
-
-    return data;
-  }
-
-  async updateActivity(id: string, updates: UpdateActivityRequest): Promise<Activity> {
-    const { data, error } = await supabase
-      .from('activity_logs')
-      .update(updates)
-      .eq('id', id)
-      .select('*')
-      .single();
-
-    if (error) {
-      throw new Error(`Failed to update activity: ${error.message}`);
-    }
-
-    return data;
-  }
-
-  async deleteActivity(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('activity_logs')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      throw new Error(`Failed to delete activity: ${error.message}`);
-    }
-  }
-
-  // Helper methods for common activity types
-  async logCall(leadId: string, summary: string, outcome?: string): Promise<Activity> {
-    return this.createActivity({
-      lead_id: leadId,
-      activity_type: 'call',
-      activity_date: new Date().toISOString(),
-      summary,
-      outcome: outcome || null,
-    });
-  }
-
-  async logEmail(leadId: string, summary: string, outcome?: string): Promise<Activity> {
-    return this.createActivity({
-      lead_id: leadId,
-      activity_type: 'email',
-      activity_date: new Date().toISOString(),
-      summary,
-      outcome: outcome || null,
-    });
-  }
-
-  async logMeeting(leadId: string, summary: string, outcome?: string): Promise<Activity> {
-    return this.createActivity({
-      lead_id: leadId,
-      activity_type: 'meeting',
-      activity_date: new Date().toISOString(),
-      summary,
-      outcome: outcome || null,
-    });
-  }
-
-  async logNote(leadId: string, summary: string): Promise<Activity> {
-    return this.createActivity({
-      lead_id: leadId,
-      activity_type: 'note',
-      activity_date: new Date().toISOString(),
-      summary,
-      outcome: null,
-    });
-  }
-
-  async logStatusChange(leadId: string, fromStatus: string, toStatus: string, note?: string): Promise<Activity> {
-    return this.createActivity({
-      lead_id: leadId,
-      activity_type: 'status_change',
-      activity_date: new Date().toISOString(),
-      summary: `Status changed from "${fromStatus}" to "${toStatus}"`,
-      outcome: note || null,
-    });
-  }
-
-  async logAssignment(leadId: string, assignedTo: string, assignedBy: string): Promise<Activity> {
-    return this.createActivity({
-      lead_id: leadId,
-      activity_type: 'assignment',
-      activity_date: new Date().toISOString(),
-      summary: `Lead assigned to ${assignedTo} by ${assignedBy}`,
-      outcome: null,
-    });
-  }
-
-  async getRecentActivities(days = 7): Promise<ActivityWithProfile[]> {
+  async getRecentActivities(days = 7): Promise<Activity[]> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
@@ -183,11 +134,7 @@ export class ActivitiesAPI {
       .from('activity_logs')
       .select(`
         *,
-        user_profile:profiles!activity_logs_user_id_fkey(
-          id,
-          full_name,
-          email
-        )
+        user_profile:profiles!activity_logs_user_id_fkey(*)
       `)
       .gte('activity_date', cutoffDate.toISOString())
       .order('activity_date', { ascending: false });

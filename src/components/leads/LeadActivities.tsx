@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, Plus, Phone, Mail, Calendar, FileText, UserCheck, ArrowRight, Clock } from 'lucide-react';
+import { Activity as ActivityIcon, Plus, Phone, Mail, Calendar, FileText, UserCheck, ArrowRight, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,18 +10,18 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useActivities, useCreateActivity, useLogCall, useLogEmail, useLogMeeting, useLogNote } from '@/hooks/useActivities';
+import { useActivitiesByLeadId, useCreateActivity, useLogActivity } from '@/hooks/useActivities';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead } from '@/lib/api/leads';
-import type { ActivityWithProfile } from '@/lib/api/activities';
+import type { Activity } from '@/lib/api/activities';
 
 interface LeadActivitiesProps {
   lead: Lead;
 }
 
 interface ActivityItemProps {
-  activity: ActivityWithProfile;
+  activity: Activity;
 }
 
 const ActivityItem: React.FC<ActivityItemProps> = ({ activity }) => {
@@ -40,7 +40,7 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ activity }) => {
       case 'status_change':
         return <ArrowRight className="h-4 w-4" />;
       default:
-        return <Activity className="h-4 w-4" />;
+        return <ActivityIcon className="h-4 w-4" />;
     }
   };
 
@@ -124,40 +124,32 @@ export const LeadActivities: React.FC<LeadActivitiesProps> = ({ lead }) => {
   const [outcome, setOutcome] = useState('');
 
   const { user } = useAuth();
-  const { data: activities, isLoading } = useActivities(lead.id);
+  const { data: activities, isLoading } = useActivitiesByLeadId(lead.id);
   const createActivity = useCreateActivity();
-  const logCall = useLogCall();
-  const logEmail = useLogEmail();
-  const logMeeting = useLogMeeting();
-  const logNote = useLogNote();
+  const logActivity = useLogActivity();
 
   const handleQuickLog = async (type: 'call' | 'email' | 'meeting' | 'note', quickSummary: string) => {
+    if (!user) return;
+    
     try {
-      switch (type) {
-        case 'call':
-          await logCall.mutateAsync({ leadId: lead.id, summary: quickSummary });
-          break;
-        case 'email':
-          await logEmail.mutateAsync({ leadId: lead.id, summary: quickSummary });
-          break;
-        case 'meeting':
-          await logMeeting.mutateAsync({ leadId: lead.id, summary: quickSummary });
-          break;
-        case 'note':
-          await logNote.mutateAsync({ leadId: lead.id, summary: quickSummary });
-          break;
-      }
+      await logActivity.mutateAsync({ 
+        leadId: lead.id, 
+        userId: user.id,
+        activityType: type,
+        summary: quickSummary 
+      });
     } catch (error) {
       console.error('Failed to log activity:', error);
     }
   };
 
   const handleCustomActivity = async () => {
-    if (!activityType || !summary.trim()) return;
+    if (!activityType || !summary.trim() || !user) return;
 
     try {
       await createActivity.mutateAsync({
         lead_id: lead.id,
+        user_id: user.id,
         activity_type: activityType as any,
         summary: summary.trim(),
         outcome: outcome.trim() || null,
@@ -173,25 +165,24 @@ export const LeadActivities: React.FC<LeadActivitiesProps> = ({ lead }) => {
     }
   };
 
-  const isSubmitting = createActivity.isPending || logCall.isPending || 
-                     logEmail.isPending || logMeeting.isPending || logNote.isPending;
+  const isSubmitting = createActivity.isPending || logActivity.isPending;
 
   // Group activities by date
-  const groupedActivities = activities?.reduce((groups, activity) => {
+  const groupedActivities = (activities || []).reduce((groups, activity) => {
     const date = new Date(activity.activity_date).toDateString();
     if (!groups[date]) {
       groups[date] = [];
     }
     groups[date].push(activity);
     return groups;
-  }, {} as Record<string, ActivityWithProfile[]>) || {};
+  }, {} as Record<string, Activity[]>);
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
-            <Activity className="h-5 w-5" />
+            <ActivityIcon className="h-5 w-5" />
             Activity Log ({activities?.length || 0})
           </CardTitle>
           

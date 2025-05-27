@@ -7,18 +7,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useComments, useCreateComment, useUpdateComment, useDeleteComment } from '@/hooks/useComments';
+import { useCommentsByLeadId, useCreateComment, useUpdateComment, useDeleteComment } from '@/hooks/useComments';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead } from '@/lib/api/leads';
-import type { CommentWithProfile } from '@/lib/api/comments';
+import type { Comment } from '@/lib/api/comments';
 
 interface LeadCommentsProps {
   lead: Lead;
 }
 
 interface CommentItemProps {
-  comment: CommentWithProfile;
+  comment: Comment;
   leadId: string;
   onReply: (parentId: string) => void;
   level?: number;
@@ -203,15 +203,16 @@ export const LeadComments: React.FC<LeadCommentsProps> = ({ lead }) => {
   const [replyContent, setReplyContent] = useState('');
 
   const { user } = useAuth();
-  const { data: comments, isLoading } = useComments(lead.id);
+  const { data: comments, isLoading } = useCommentsByLeadId(lead.id);
   const createComment = useCreateComment();
 
   const handleSubmitComment = async () => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || !user) return;
 
     try {
       await createComment.mutateAsync({
         lead_id: lead.id,
+        user_id: user.id,
         content: newComment.trim(),
         parent_comment_id: null,
       });
@@ -222,11 +223,12 @@ export const LeadComments: React.FC<LeadCommentsProps> = ({ lead }) => {
   };
 
   const handleSubmitReply = async () => {
-    if (!replyContent.trim() || !replyingTo) return;
+    if (!replyContent.trim() || !replyingTo || !user) return;
 
     try {
       await createComment.mutateAsync({
         lead_id: lead.id,
+        user_id: user.id,
         content: replyContent.trim(),
         parent_comment_id: replyingTo,
       });

@@ -51,6 +51,7 @@ export const SimpleLeadAssign: React.FC<SimpleLeadAssignProps> = ({
       // Log the assignment activity
       await createActivity.mutateAsync({
         lead_id: lead.id,
+        user_id: user?.id || '',
         activity_type: 'assignment',
         summary: `Lead assigned to ${assignedUser?.full_name || 'Unknown User'}`,
         outcome: null,
@@ -75,6 +76,7 @@ export const SimpleLeadAssign: React.FC<SimpleLeadAssignProps> = ({
       // Log the unassignment activity
       await createActivity.mutateAsync({
         lead_id: lead.id,
+        user_id: user?.id || '',
         activity_type: 'assignment',
         summary: 'Lead unassigned',
         outcome: 'Lead removed from assigned user',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Edit, ExternalLink, Phone, Mail, Calendar, MapPin, User, Hash, MessageCircle, Activity, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, Edit, ExternalLink, Phone, Mail, Calendar, MapPin, User, Hash, MessageCircle, Activity, MoreHorizontal, Globe, Building2, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -8,10 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useLead } from '@/hooks/useLeads';
 import { useAuth } from '@/hooks/useAuth';
-import { LeadAssignment } from './LeadAssignment';
-import { LeadTagging } from './LeadTagging';
 import { LeadComments } from './LeadComments';
 import { LeadActivities } from './LeadActivities';
+import { LeadDeals } from './LeadDeals';
 import { SimpleTagAdd } from './SimpleTagAdd';
 import { SimpleLeadAssign } from './SimpleLeadAssign';
 import { formatDistanceToNow } from 'date-fns';
@@ -28,7 +27,7 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
   onBack, 
   onEdit 
 }) => {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('comments');
   const [lead, setLead] = useState<Lead | null>(null);
 
   const { user } = useAuth();
@@ -55,8 +54,6 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
       setLead({
         ...lead,
         assigned_to: assignedTo,
-        // Note: In a real app, you'd want to refetch the full lead data
-        // to get the updated assigned_to_profile
       });
     }
   };
@@ -68,6 +65,14 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
         tags,
       });
     }
+  };
+
+  const handleEmailClick = (email: string) => {
+    window.open(`mailto:${email}`, '_self');
+  };
+
+  const handlePhoneClick = (phone: string) => {
+    window.open(`tel:${phone}`, '_self');
   };
 
   if (isLoading) {
@@ -101,236 +106,379 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {onBack && (
-            <Button variant="outline" size="sm" onClick={onBack}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          )}
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{lead.book_title}</h1>
-            <p className="text-gray-600">by {lead.author_name}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {onEdit && (
-            <Button variant="outline" onClick={() => onEdit(lead)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Lead
-            </Button>
-          )}
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <MoreHorizontal className="h-4 w-4" />
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {onBack && (
+              <Button variant="outline" size="sm" onClick={onBack}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {lead.primary_email && (
-                <DropdownMenuItem onClick={() => window.open(`mailto:${lead.primary_email}`)}>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Email
-                </DropdownMenuItem>
-              )}
-              {lead.phone_number_1 && (
-                <DropdownMenuItem onClick={() => window.open(`tel:${lead.phone_number_1}`)}>
-                  <Phone className="h-4 w-4 mr-2" />
-                  Call Primary
-                </DropdownMenuItem>
-              )}
-              {lead.amazon_link && (
-                <DropdownMenuItem onClick={() => window.open(lead.amazon_link, '_blank')}>
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  View on Amazon
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            )}
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{lead.book_title}</h1>
+              <p className="text-gray-600">by {lead.author_name}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {onEdit && (
+              <Button variant="outline" onClick={() => onEdit(lead)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Lead
+              </Button>
+            )}
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {lead.primary_email && (
+                  <DropdownMenuItem onClick={() => handleEmailClick(lead.primary_email!)}>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Send Email
+                  </DropdownMenuItem>
+                )}
+                {lead.phone_number_1 && (
+                  <DropdownMenuItem onClick={() => handlePhoneClick(lead.phone_number_1!)}>
+                    <Phone className="h-4 w-4 mr-2" />
+                    Call Primary
+                  </DropdownMenuItem>
+                )}
+                {lead.amazon_link && (
+                  <DropdownMenuItem onClick={() => window.open(lead.amazon_link!, '_blank')}>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    View on Amazon
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
-      {/* Lead Overview Card */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Lead Info */}
-            <div className="lg:col-span-2 space-y-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16">
+      {/* Main Content */}
+      <div className="flex gap-6 p-6">
+        {/* Center Content */}
+        <div className="flex-1 space-y-6">
+          {/* Profile Card */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-start gap-6">
+                <Avatar className="h-20 w-20">
                   <AvatarImage src="" />
-                  <AvatarFallback className="bg-blue-100 text-blue-700 text-lg">
+                  <AvatarFallback className="bg-blue-100 text-blue-700 text-xl">
                     {getInitials(lead.author_name)}
                   </AvatarFallback>
                 </Avatar>
                 
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold text-gray-900">{lead.author_name}</h3>
-                  <p className="text-gray-600">{lead.book_title}</p>
-                  
-                  <div className="flex items-center gap-4 mt-2">
-                    <Badge 
-                      className="font-medium"
-                      style={{ 
-                        backgroundColor: `${lead.status.color}20`,
-                        color: lead.status.color,
-                        borderColor: lead.status.color
-                      }}
-                    >
-                      {lead.status.name}
-                    </Badge>
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">{lead.author_name}</h2>
+                    <p className="text-lg text-gray-600">{lead.book_title}</p>
                     
-                    {lead.multiple_titles && (
-                      <Badge variant="secondary">Multiple Titles</Badge>
+                    <div className="flex items-center gap-4 mt-3">
+                      <Badge 
+                        className="font-medium"
+                        style={{ 
+                          backgroundColor: `${lead.status.color}20`,
+                          color: lead.status.color,
+                          borderColor: lead.status.color
+                        }}
+                      >
+                        {lead.status.name}
+                      </Badge>
+                      
+                      {lead.multiple_titles && (
+                        <Badge variant="secondary">Multiple Titles</Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Contact Information Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {lead.primary_email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-gray-500" />
+                        <button 
+                          onClick={() => handleEmailClick(lead.primary_email!)}
+                          className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {lead.primary_email}
+                        </button>
+                      </div>
+                    )}
+                    {lead.secondary_email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-gray-500" />
+                        <button 
+                          onClick={() => handleEmailClick(lead.secondary_email!)}
+                          className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {lead.secondary_email}
+                        </button>
+                      </div>
+                    )}
+                    {lead.phone_number_1 && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-gray-500" />
+                        <button 
+                          onClick={() => handlePhoneClick(lead.phone_number_1!)}
+                          className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {lead.phone_number_1}
+                        </button>
+                      </div>
+                    )}
+                    {lead.phone_number_2 && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-gray-500" />
+                        <button 
+                          onClick={() => handlePhoneClick(lead.phone_number_2!)}
+                          className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {lead.phone_number_2}
+                        </button>
+                      </div>
+                    )}
+                    {lead.website && (
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-gray-500" />
+                        <a 
+                          href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {lead.website}
+                        </a>
+                      </div>
+                    )}
+                    {lead.publisher && (
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm text-gray-700">{lead.publisher}</span>
+                      </div>
+                    )}
+                    {(lead.state || lead.country) && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm text-gray-700">
+                          {[lead.state, lead.country].filter(Boolean).join(', ')}
+                        </span>
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Contact Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {lead.primary_email && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">{lead.primary_email}</span>
-                  </div>
-                )}
-                {lead.secondary_email && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">{lead.secondary_email}</span>
-                  </div>
-                )}
-                {lead.phone_number_1 && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">{lead.phone_number_1}</span>
-                  </div>
-                )}
-                {lead.phone_number_2 && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">{lead.phone_number_2}</span>
-                  </div>
-                )}
-              </div>
+              {/* Author Bio */}
+              {lead.author_bio && (
+                <div className="mt-6 pt-6 border-t">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">Author Bio</h3>
+                  <p className="text-sm text-gray-600 leading-relaxed">{lead.author_bio}</p>
+                </div>
+              )}
 
-              {/* Quick Assignment */}
-              <div className="space-y-2">
-                <div className="text-sm font-medium text-gray-700">Assignment</div>
+              {/* Other Titles */}
+              {lead.multiple_titles && lead.other_titles && (
+                <div className="mt-6 pt-6 border-t">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">Other Titles</h3>
+                  <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                    {(lead.other_titles as string[]).map((title, index) => (
+                      <li key={index}>{title}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Amazon Link */}
+              {lead.amazon_link && (
+                <div className="mt-6 pt-6 border-t">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">Book Link</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(lead.amazon_link!, '_blank')}
+                  >
+                    <ExternalLink className="h-3 w-3 mr-2" />
+                    View on Amazon
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Comments and Activities Section */}
+          <Card>
+            <CardContent className="p-0">
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <div className="px-6 pt-6">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="comments" className="flex items-center gap-2">
+                      <MessageCircle className="h-4 w-4" />
+                      Comments
+                    </TabsTrigger>
+                    <TabsTrigger value="activities" className="flex items-center gap-2">
+                      <Activity className="h-4 w-4" />
+                      Recent Activities
+                    </TabsTrigger>
+                    <TabsTrigger value="deals" className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Deals
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <TabsContent value="comments" className="px-6 pb-6 mt-6">
+                  <LeadComments lead={lead} />
+                </TabsContent>
+
+                <TabsContent value="activities" className="px-6 pb-6 mt-6">
+                  <LeadActivities lead={lead} />
+                </TabsContent>
+
+                <TabsContent value="deals" className="px-6 pb-6 mt-6">
+                  <LeadDeals lead={lead} />
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Sidebar */}
+        <div className="w-80 space-y-6">
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {lead.primary_email && (
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => handleEmailClick(lead.primary_email!)}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Email
+                </Button>
+              )}
+              {lead.phone_number_1 && (
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => handlePhoneClick(lead.phone_number_1!)}
+                >
+                  <Phone className="h-4 w-4 mr-2" />
+                  Call Primary
+                </Button>
+              )}
+              {lead.amazon_link && (
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => window.open(lead.amazon_link!, '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View on Amazon
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Assignment */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Assignment
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
                 <SimpleLeadAssign 
                   lead={lead} 
                   onAssignmentChange={handleAssignmentChange}
                 />
+                
+                {/* Current Assignment Display */}
+                {lead.assigned_to_profile && (
+                  <div className="pt-3 border-t">
+                    <div className="text-sm font-medium text-gray-700 mb-2">Currently Assigned To</div>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={lead.assigned_to_profile.avatar_url || ''} />
+                        <AvatarFallback className="text-xs">
+                          {getInitials(lead.assigned_to_profile.full_name || 'U')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm text-gray-600">
+                        {lead.assigned_to_profile.full_name || lead.assigned_to_profile.email}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Quick Tags */}
-              <div className="space-y-2">
-                <div className="text-sm font-medium text-gray-700">Tags</div>
-                <SimpleTagAdd 
-                  lead={lead} 
-                  onTagsChange={handleTagsChange}
-                />
-              </div>
-            </div>
+          {/* Tags */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Hash className="h-5 w-5" />
+                Tags
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SimpleTagAdd 
+                lead={lead} 
+                onTagsChange={handleTagsChange}
+              />
+            </CardContent>
+          </Card>
 
-            {/* Meta Information */}
-            <div className="space-y-4">
+          {/* Meta Information */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Lead Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
               <div>
                 <div className="text-sm font-medium text-gray-700">Created</div>
-                <div className="text-sm text-gray-600 mt-1">
+                <div className="text-sm text-gray-600">
                   {formatDistanceToNow(new Date(lead.created_at!), { addSuffix: true })} by{' '}
                   {lead.created_by_profile.full_name || 'Unknown User'}
                 </div>
               </div>
-
-              {lead.amazon_link && (
-                <div>
-                  <div className="text-sm font-medium text-gray-700">Amazon Link</div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-1"
-                    onClick={() => window.open(lead.amazon_link!, '_blank')}
-                  >
-                    <ExternalLink className="h-3 w-3 mr-2" />
-                    View Book
-                  </Button>
+              
+              <div>
+                <div className="text-sm font-medium text-gray-700">Last Updated</div>
+                <div className="text-sm text-gray-600">
+                  {formatDistanceToNow(new Date(lead.updated_at!), { addSuffix: true })}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
 
-          {/* Author Bio */}
-          {lead.author_bio && (
-            <div className="mt-6 pt-6 border-t">
-              <div className="text-sm font-medium text-gray-700 mb-2">Author Bio</div>
-              <p className="text-sm text-gray-600 leading-relaxed">{lead.author_bio}</p>
-            </div>
-          )}
-
-          {/* Other Titles */}
-          {lead.multiple_titles && lead.other_titles && (
-            <div className="mt-6 pt-6 border-t">
-              <div className="text-sm font-medium text-gray-700 mb-2">Other Titles</div>
-              <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-                {(lead.other_titles as string[]).map((title, index) => (
-                  <li key={index}>{title}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Tabs for different sections */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Assignment
-          </TabsTrigger>
-          <TabsTrigger value="tags" className="flex items-center gap-2">
-            <Hash className="h-4 w-4" />
-            Tags
-          </TabsTrigger>
-          <TabsTrigger value="activities" className="flex items-center gap-2">
-            <Activity className="h-4 w-4" />
-            Activities
-          </TabsTrigger>
-          <TabsTrigger value="comments" className="flex items-center gap-2">
-            <MessageCircle className="h-4 w-4" />
-            Comments
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="mt-6">
-          <LeadAssignment 
-            lead={lead} 
-            onAssignmentChange={handleAssignmentChange}
-          />
-        </TabsContent>
-
-        <TabsContent value="tags" className="mt-6">
-          <LeadTagging 
-            lead={lead} 
-            onTagsChange={handleTagsChange}
-          />
-        </TabsContent>
-
-        <TabsContent value="activities" className="mt-6">
-          <LeadActivities lead={lead} />
-        </TabsContent>
-
-        <TabsContent value="comments" className="mt-6">
-          <LeadComments lead={lead} />
-        </TabsContent>
-      </Tabs>
+              <div>
+                <div className="text-sm font-medium text-gray-700">Status</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: lead.status.color }}
+                  />
+                  <span className="text-sm text-gray-600">{lead.status.name}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }; 

@@ -112,6 +112,77 @@ export type Database = {
           },
         ]
       }
+      deals: {
+        Row: {
+          assigned_to: string | null
+          category: string | null
+          created_at: string | null
+          created_by: string
+          deal_value: number | null
+          id: string
+          lead_id: string
+          notes: string | null
+          offer_title: string
+          status_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string | null
+          created_at?: string | null
+          created_by: string
+          deal_value?: number | null
+          id?: string
+          lead_id: string
+          notes?: string | null
+          offer_title: string
+          status_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string | null
+          created_at?: string | null
+          created_by?: string
+          deal_value?: number | null
+          id?: string
+          lead_id?: string
+          notes?: string | null
+          offer_title?: string
+          status_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "statuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_tags: {
         Row: {
           created_at: string | null
@@ -152,17 +223,24 @@ export type Database = {
           author_bio: string | null
           author_name: string
           book_title: string
+          category: string | null
+          country: string | null
           created_at: string | null
           created_by: string
+          deal_value: number | null
           id: string
           multiple_titles: boolean | null
+          offer_title: string | null
           other_titles: Json | null
           phone_number_1: string | null
           phone_number_2: string | null
           primary_email: string | null
+          publisher: string | null
           secondary_email: string | null
+          state: string | null
           status_id: string
           updated_at: string | null
+          website: string | null
         }
         Insert: {
           amazon_link?: string | null
@@ -170,17 +248,24 @@ export type Database = {
           author_bio?: string | null
           author_name: string
           book_title: string
+          category?: string | null
+          country?: string | null
           created_at?: string | null
           created_by: string
+          deal_value?: number | null
           id?: string
           multiple_titles?: boolean | null
+          offer_title?: string | null
           other_titles?: Json | null
           phone_number_1?: string | null
           phone_number_2?: string | null
           primary_email?: string | null
+          publisher?: string | null
           secondary_email?: string | null
+          state?: string | null
           status_id: string
           updated_at?: string | null
+          website?: string | null
         }
         Update: {
           amazon_link?: string | null
@@ -188,17 +273,24 @@ export type Database = {
           author_bio?: string | null
           author_name?: string
           book_title?: string
+          category?: string | null
+          country?: string | null
           created_at?: string | null
           created_by?: string
+          deal_value?: number | null
           id?: string
           multiple_titles?: boolean | null
+          offer_title?: string | null
           other_titles?: Json | null
           phone_number_1?: string | null
           phone_number_2?: string | null
           primary_email?: string | null
+          publisher?: string | null
           secondary_email?: string | null
+          state?: string | null
           status_id?: string
           updated_at?: string | null
+          website?: string | null
         }
         Relationships: [
           {
@@ -232,7 +324,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_active: boolean | null
-          role: Database["public"]["Enums"]["user_role"] | null
+          role: string | null
           updated_at: string | null
         }
         Insert: {
@@ -242,7 +334,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_active?: boolean | null
-          role?: Database["public"]["Enums"]["user_role"] | null
+          role?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -252,7 +344,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_active?: boolean | null
-          role?: Database["public"]["Enums"]["user_role"] | null
+          role?: string | null
           updated_at?: string | null
         }
         Relationships: []

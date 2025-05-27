@@ -56,6 +56,29 @@ export class LeadsAPI {
       query = query.in('status_id', filters.status_ids);
     }
 
+    // Filter by tag IDs - leads that have ANY of the specified tags
+    if (filters.tag_ids?.length) {
+      // Use a subquery to find leads that have any of the specified tags
+      const { data: leadIdsWithTags } = await supabase
+        .from('lead_tags')
+        .select('lead_id')
+        .in('tag_id', filters.tag_ids);
+      
+      if (leadIdsWithTags?.length) {
+        const leadIds = leadIdsWithTags.map(lt => lt.lead_id);
+        query = query.in('id', leadIds);
+      } else {
+        // No leads have these tags, return empty result
+        return {
+          data: [],
+          count: 0,
+          page,
+          limit,
+          total_pages: 0
+        };
+      }
+    }
+
     if (filters.assigned_to) {
       query = query.eq('assigned_to', filters.assigned_to);
     }

@@ -15,6 +15,11 @@ import { useStatuses } from '@/hooks/useStatuses';
 import { BulkLeadActions } from './BulkLeadActions';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead } from '@/lib/api/leads';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useTags } from '@/hooks/useTags';
+import { useLeadsRealtime } from '@/hooks/useLeadsRealtime';
+import { useTagsRealtime } from '@/hooks/useTagsRealtime';
+import { useStatusesRealtime } from '@/hooks/useStatusesRealtime';
 
 interface LeadsListProps {
   onCreateLead?: () => void;
@@ -32,11 +37,18 @@ export const LeadsList: React.FC<LeadsListProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [page, setPage] = useState(1);
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
+
+  // Enable realtime updates
+  useLeadsRealtime();
+  useTagsRealtime();
+  useStatusesRealtime();
 
   const { data: leadsData, isLoading, refetch } = useLeads(
     {
       search: search || undefined,
       status_ids: statusFilter ? [statusFilter] : undefined,
+      tag_ids: tagFilter.length ? tagFilter : undefined,
     },
     page,
     10
@@ -44,6 +56,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
 
   const { data: statuses } = useStatuses();
   const deleteLead = useDeleteLead();
+  const { data: tags } = useTags();
 
   const handleSearch = (value: string) => {
     setSearch(value);
@@ -128,8 +141,8 @@ export const LeadsList: React.FC<LeadsListProps> = ({
           <CardTitle className="text-lg">Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1">
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex-1 min-w-[200px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
@@ -140,7 +153,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                 />
               </div>
             </div>
-            <div className="w-48">
+            <div className="w-48 min-w-[160px]">
               <Select value={statusFilter || 'all'} onValueChange={handleStatusFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by status" />
@@ -160,6 +173,57 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            {/* Tag Filter */}
+            <div className="min-w-[180px]">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full flex justify-between items-center">
+                    <span>Filter by tags</span>
+                    {tagFilter.length > 0 && (
+                      <span className="ml-2 flex flex-wrap gap-1">
+                        {tags?.filter(t => tagFilter.includes(t.id)).map(tag => (
+                          <Badge key={tag.id} style={{ backgroundColor: `${tag.color}20`, color: tag.color, borderColor: tag.color }} className="text-xs">
+                            {tag.name}
+                          </Badge>
+                        ))}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2">
+                  <div className="max-h-60 overflow-y-auto space-y-1">
+                    {tags?.length ? tags.map(tag => (
+                      <label key={tag.id} className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-gray-50">
+                        <input
+                          type="checkbox"
+                          checked={tagFilter.includes(tag.id)}
+                          onChange={e => {
+                            setTagFilter(prev =>
+                              e.target.checked
+                                ? [...prev, tag.id]
+                                : prev.filter(id => id !== tag.id)
+                            );
+                            setPage(1);
+                          }}
+                          className="accent-blue-600"
+                        />
+                        <span className="text-xs" style={{ color: tag.color }}>{tag.name}</span>
+                      </label>
+                    )) : <span className="text-xs text-gray-400">No tags</span>}
+                  </div>
+                  {tagFilter.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 w-full"
+                      onClick={() => setTagFilter([])}
+                    >
+                      Clear tag filter
+                    </Button>
+                  )}
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </CardContent>
@@ -203,11 +267,10 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                     </TableHead>
                     <TableHead>Author</TableHead>
                     <TableHead>Book Title</TableHead>
-                    <TableHead>Contact</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Tags</TableHead>
                     <TableHead>Assigned To</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="w-12"></TableHead>
+                    <TableHead className="w-32">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -224,7 +287,6 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                           aria-label={`Select lead ${lead.author_name}`}
                         />
                       </TableCell>
-                      
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
@@ -237,15 +299,9 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                             <div className="font-medium text-gray-900">
                               {lead.author_name}
                             </div>
-                            {lead.primary_email && (
-                              <div className="text-sm text-gray-500">
-                                {lead.primary_email}
-                              </div>
-                            )}
                           </div>
                         </div>
                       </TableCell>
-                      
                       <TableCell>
                         <div className="font-medium text-gray-900">
                           {lead.book_title}
@@ -256,38 +312,6 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                           </Badge>
                         )}
                       </TableCell>
-
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {lead.primary_email && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(`mailto:${lead.primary_email}`);
-                              }}
-                            >
-                              <Mail className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {lead.phone_number_1 && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(`tel:${lead.phone_number_1}`);
-                              }}
-                            >
-                              <Phone className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-
                       <TableCell>
                         <Badge 
                           className="font-medium"
@@ -300,7 +324,24 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                           {lead.status.name}
                         </Badge>
                       </TableCell>
-
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {lead.tags?.length ? lead.tags.map((tag: any) => (
+                            <Badge
+                              key={tag.id}
+                              variant="secondary"
+                              className="text-xs"
+                              style={{
+                                backgroundColor: `${tag.color}20`,
+                                color: tag.color,
+                                borderColor: tag.color
+                              }}
+                            >
+                              {tag.name}
+                            </Badge>
+                          )) : <span className="text-xs text-gray-400">No tags</span>}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         {lead.assigned_to_profile ? (
                           <div className="flex items-center gap-2">
@@ -318,51 +359,40 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                           <span className="text-sm text-gray-500">Unassigned</span>
                         )}
                       </TableCell>
-
-                      <TableCell>
-                        <div className="text-sm text-gray-500">
-                          {formatDistanceToNow(new Date(lead.created_at!), { addSuffix: true })}
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <div className="flex gap-2">
+                          {lead.phone_number_1 && (
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0"
-                              onClick={(e) => e.stopPropagation()}
+                              title="Call"
+                              onClick={() => { window.location.href = `tel:${lead.phone_number_1}`; }}
                             >
-                              <MoreHorizontal className="h-4 w-4" />
+                              <Phone className="h-4 w-4" />
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewDetails(lead)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </DropdownMenuItem>
-                            {onViewLead && (
-                              <DropdownMenuItem onClick={() => onViewLead(lead)}>
-                                <Eye className="h-4 w-4 mr-2" />
-                                Quick View
-                              </DropdownMenuItem>
-                            )}
-                            {onEditLead && (
-                              <DropdownMenuItem onClick={() => onEditLead(lead)}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteLead(lead.id)}
-                              className="text-red-600"
+                          )}
+                          {lead.primary_email && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              title="Email"
+                              onClick={() => window.open(`mailto:${lead.primary_email}`)}
                             >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <Mail className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            title="View"
+                            onClick={() => handleViewDetails(lead)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

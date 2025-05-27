@@ -1,111 +1,104 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { commentsApi, type CreateCommentRequest, type UpdateCommentRequest } from '@/lib/api/comments';
+import { getCommentsByLeadId, createComment, updateComment, deleteComment } from '@/lib/api/comments';
+import type { CreateCommentData, UpdateCommentData } from '@/lib/api/comments';
 import { useToast } from '@/hooks/use-toast';
 
-export const useComments = (leadId: string) => {
+// Query keys
+export const commentKeys = {
+  all: ['comments'] as const,
+  byLeadId: (leadId: string) => [...commentKeys.all, 'lead', leadId] as const,
+};
+
+// Get comments by lead ID
+export const useCommentsByLeadId = (leadId: string) => {
   return useQuery({
-    queryKey: ['comments', leadId],
-    queryFn: () => commentsApi.getComments(leadId),
+    queryKey: commentKeys.byLeadId(leadId),
+    queryFn: () => getCommentsByLeadId(leadId),
     enabled: !!leadId,
   });
 };
 
-export const useComment = (id: string) => {
-  return useQuery({
-    queryKey: ['comment', id],
-    queryFn: () => commentsApi.getCommentById(id),
-    enabled: !!id,
-  });
-};
-
+// Create comment mutation
 export const useCreateComment = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (data: CreateCommentRequest) => commentsApi.createComment(data),
+    mutationFn: createComment,
     onSuccess: (newComment) => {
-      // Invalidate comments queries
-      queryClient.invalidateQueries({ queryKey: ['comments'] });
-      
-      // Optionally update specific lead comments
-      if (newComment.lead_id) {
-        queryClient.invalidateQueries({ queryKey: ['comments', newComment.lead_id] });
-      }
+      // Invalidate and refetch comments for this lead
+      queryClient.invalidateQueries({
+        queryKey: commentKeys.byLeadId(newComment.lead_id),
+      });
       
       toast({
-        title: 'Comment added',
-        description: 'Your comment has been successfully posted.',
+        title: 'Success',
+        description: 'Comment added successfully',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
-        description: error.message,
+        description: 'Failed to add comment',
         variant: 'destructive',
       });
     },
   });
 };
 
+// Update comment mutation
 export const useUpdateComment = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateCommentRequest }) =>
-      commentsApi.updateComment(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateCommentData }) =>
+      updateComment(id, data),
     onSuccess: (updatedComment) => {
-      queryClient.invalidateQueries({ queryKey: ['comments'] });
-      queryClient.invalidateQueries({ queryKey: ['comment', updatedComment.id] });
-      
-      if (updatedComment.lead_id) {
-        queryClient.invalidateQueries({ queryKey: ['comments', updatedComment.lead_id] });
-      }
+      // Invalidate and refetch comments for this lead
+      queryClient.invalidateQueries({
+        queryKey: commentKeys.byLeadId(updatedComment.lead_id),
+      });
       
       toast({
-        title: 'Comment updated',
-        description: 'Your comment has been successfully updated.',
+        title: 'Success',
+        description: 'Comment updated successfully',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
-        description: error.message,
+        description: 'Failed to update comment',
         variant: 'destructive',
       });
     },
   });
 };
 
+// Delete comment mutation
 export const useDeleteComment = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (id: string) => commentsApi.deleteComment(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments'] });
+    mutationFn: deleteComment,
+    onSuccess: (_, deletedId) => {
+      // Invalidate all comment queries since we don't know which lead this belonged to
+      queryClient.invalidateQueries({
+        queryKey: commentKeys.all,
+      });
       
       toast({
-        title: 'Comment deleted',
-        description: 'The comment has been successfully deleted.',
+        title: 'Success',
+        description: 'Comment deleted successfully',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
-        description: error.message,
+        description: 'Failed to delete comment',
         variant: 'destructive',
       });
     },
-  });
-};
-
-export const useCommentStats = (leadId?: string) => {
-  return useQuery({
-    queryKey: ['comment-stats', leadId],
-    queryFn: () => commentsApi.getCommentStats(leadId),
-    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }; 

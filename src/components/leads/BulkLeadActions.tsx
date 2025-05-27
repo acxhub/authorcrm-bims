@@ -59,6 +59,7 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
           // Log the assignment activity
           await createActivity.mutateAsync({
             lead_id: lead.id,
+            user_id: user?.id || '',
             activity_type: 'assignment',
             summary: `Lead bulk assigned to ${assignedUser?.full_name || 'Unknown User'}`,
             outcome: `Part of bulk assignment of ${selectedLeads.length} leads`,
