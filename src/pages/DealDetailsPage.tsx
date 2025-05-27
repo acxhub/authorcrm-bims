@@ -315,7 +315,13 @@ export const DealDetailsPage: React.FC = () => {
                       <div className="space-y-3">
                         <div>
                           <label className="text-sm font-medium text-gray-700">Book Title</label>
-                          <p className="text-sm text-gray-900">{deal.lead?.book_title}</p>
+                          <p className="text-sm text-gray-900">
+                            {deal.lead?.book_title && deal.lead.book_title.length > 24 ? (
+                              <span title={deal.lead.book_title}>{deal.lead.book_title.slice(0, 24) + '…'}</span>
+                            ) : (
+                              <span title={deal.lead?.book_title}>{deal.lead?.book_title}</span>
+                            )}
+                          </p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-700">Author</label>

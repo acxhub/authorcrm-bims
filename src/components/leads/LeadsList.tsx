@@ -304,7 +304,11 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                       </TableCell>
                       <TableCell>
                         <div className="font-medium text-gray-900">
-                          {lead.book_title}
+                          {lead.book_title && lead.book_title.length > 24 ? (
+                            <span title={lead.book_title}>{lead.book_title.slice(0, 24) + '…'}</span>
+                          ) : (
+                            <span title={lead.book_title}>{lead.book_title}</span>
+                          )}
                         </div>
                         {lead.multiple_titles && (
                           <Badge variant="secondary" className="mt-1">

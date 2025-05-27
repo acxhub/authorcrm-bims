@@ -936,7 +936,13 @@ const ImportLeadsPage: React.FC = () => {
                         <TableCell>{row._rowIndex}</TableCell>
                         {Object.entries(fieldMapping).map(([csvColumn, dbField]) => (
                           <TableCell key={csvColumn}>
-                            {row[dbField] || '-'}
+                            {dbField === 'book_title' && row[dbField] ? (
+                              <span title={row[dbField]}>
+                                {row[dbField].length > 24 ? row[dbField].slice(0, 24) + '…' : row[dbField]}
+                              </span>
+                            ) : (
+                              row[dbField] || '-'
+                            )}
                           </TableCell>
                         ))}
                       </TableRow>

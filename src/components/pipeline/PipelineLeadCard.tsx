@@ -59,7 +59,11 @@ export const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({ lead, isDrag
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <h4 className="font-medium text-gray-900 truncate">
-                {lead.book_title}
+                {lead.book_title && lead.book_title.length > 24 ? (
+                  <span title={lead.book_title}>{lead.book_title.slice(0, 24) + '…'}</span>
+                ) : (
+                  <span title={lead.book_title}>{lead.book_title}</span>
+                )}
               </h4>
               <p className="text-sm text-gray-600 truncate">
                 by {lead.author_name}
