@@ -14,6 +14,7 @@ import { PipelinePage } from "./pages/PipelineBoard";
 import UserManagementPage from "./pages/UserManagementPage";
 import LeadDetailsPage from "./pages/LeadDetailsPage";
 import { AdminPanel } from "./pages/AdminPanel";
+import { DashboardLayout } from "@/components/DashboardLayout";
 
 const queryClient = new QueryClient();
 
@@ -49,12 +50,16 @@ const App = () => {
               } />
               <Route path="/admin" element={
                 <ProtectedRoute requiredRole="leads_manager">
-                  <AdminPanel />
+                  <DashboardLayout>
+                    <AdminPanel />
+                  </DashboardLayout>
                 </ProtectedRoute>
               } />
               <Route path="/admin/users" element={
                 <ProtectedRoute requiredRole="leads_manager">
-                  <UserManagementPage />
+                  <DashboardLayout>
+                    <UserManagementPage />
+                  </DashboardLayout>
                 </ProtectedRoute>
               } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
