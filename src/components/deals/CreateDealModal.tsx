@@ -14,6 +14,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useStatuses } from '@/hooks/useStatuses';
 import { useUsers } from '@/hooks/useUsers';
 import { useAuth } from '@/hooks/useAuth';
@@ -51,6 +55,7 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
   const { users = [] } = useUsers();
   const { data: leadsData } = useLeads();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [authorSearchOpen, setAuthorSearchOpen] = useState(false);
 
   // Check if user is sales manager
   const isSalesManager = user?.role === 'sales_manager';
@@ -115,6 +120,7 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
   const handleClose = () => {
     form.reset();
     setSelectedLead(null);
+    setAuthorSearchOpen(false);
     onClose();
   };
 
@@ -144,30 +150,53 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Author Name *</FormLabel>
-                  <Select 
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      const selectedAuthor = authorOptions.find(opt => opt.value === value);
-                      if (selectedAuthor) {
-                        setSelectedLead(selectedAuthor.lead);
-                        form.setValue('offer_title', `${selectedAuthor.lead.book_title} - Publishing Package`);
-                      }
-                    }} 
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an author" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {authorOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={authorSearchOpen} onOpenChange={setAuthorSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={authorSearchOpen}
+                          className="w-full justify-between"
+                        >
+                          {field.value
+                            ? authorOptions.find((option) => option.value === field.value)?.label
+                            : "Search and select an author..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Search authors..." />
+                        <CommandList>
+                          <CommandEmpty>No author found.</CommandEmpty>
+                          <CommandGroup>
+                            {authorOptions.map((option) => (
+                              <CommandItem
+                                key={option.value}
+                                value={option.label}
+                                onSelect={() => {
+                                  field.onChange(option.value);
+                                  setSelectedLead(option.lead);
+                                  form.setValue('offer_title', `${option.lead.book_title} - Publishing Package`);
+                                  setAuthorSearchOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === option.value ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {option.label}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
@@ -179,7 +208,13 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <span className="text-gray-600">Book:</span>
-                    <p className="font-medium">{selectedLead.book_title}</p>
+                    <p className="font-medium">
+                      {selectedLead.book_title && selectedLead.book_title.length > 24 ? (
+                        <span title={selectedLead.book_title}>{selectedLead.book_title.slice(0, 24) + '…'}</span>
+                      ) : (
+                        <span title={selectedLead.book_title}>{selectedLead.book_title}</span>
+                      )}
+                    </p>
                   </div>
                   <div>
                     <span className="text-gray-600">Email:</span>
