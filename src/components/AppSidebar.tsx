@@ -1,4 +1,3 @@
-
 import {
   Calendar,
   Home,
@@ -80,7 +79,18 @@ const quickActions = [
   },
 ];
 
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+
 export function AppSidebar() {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
   return (
     <Sidebar className="border-r border-gray-200/60 bg-white/80 backdrop-blur-md">
       <SidebarHeader className="p-6">
@@ -151,14 +161,22 @@ export function AppSidebar() {
           <Avatar className="h-8 w-8">
             <AvatarImage src="" />
             <AvatarFallback className="bg-blue-100 text-blue-700 text-xs font-medium">
-              JD
+              {user?.email?.charAt(0).toUpperCase() || "U"}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">John Doe</p>
-            <p className="text-xs text-gray-600 truncate">Sales Manager</p>
+            <p className="text-sm font-medium text-gray-900 truncate">
+              {user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User"}
+            </p>
+            <p className="text-xs text-gray-600 truncate">{user?.email}</p>
           </div>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0"
+            onClick={handleSignOut}
+            title="Sign out"
+          >
             <Settings className="h-4 w-4" />
           </Button>
         </div>
