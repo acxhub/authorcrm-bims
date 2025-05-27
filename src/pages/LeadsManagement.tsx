@@ -4,7 +4,6 @@ import { LeadsList } from '@/components/leads/LeadsList';
 import { LeadForm } from '@/components/leads/LeadForm';
 import { LeadDetails } from '@/components/leads/LeadDetails';
 import { StatusManagement } from '@/components/admin/StatusManagement';
-import { ImportLeadsModal } from '@/components/leads/ImportLeadsModal';
 import { useCreateLead, useUpdateLead } from '@/hooks/useLeads';
 import { useStatuses } from '@/hooks/useStatuses';
 import type { Lead } from '@/lib/api/leads';
@@ -15,6 +14,7 @@ import { Plus, Download, Upload, Bell, Settings, AlertCircle } from 'lucide-reac
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 type ModalState = 'closed' | 'create' | 'edit' | 'view';
 
@@ -22,7 +22,7 @@ export const LeadsManagement: React.FC = () => {
   const [modalState, setModalState] = useState<ModalState>('closed');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showStatusManagement, setShowStatusManagement] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
+  const navigate = useNavigate();
 
   const { data: statuses, refetch: refetchStatuses } = useStatuses();
   const createLead = useCreateLead();
@@ -54,80 +54,48 @@ export const LeadsManagement: React.FC = () => {
     setSelectedLead(null);
   };
 
-  const handleImportComplete = () => {
-    // Refresh the leads list after import
-    window.location.reload();
-  };
-
-  // Transform lead data for the form
-  const getFormInitialData = () => {
-    if (!selectedLead) return undefined;
-    
-    // Safely convert other_titles from Json to string[]
-    let otherTitles: string[] = [];
-    if (selectedLead.other_titles) {
-      if (Array.isArray(selectedLead.other_titles)) {
-        otherTitles = selectedLead.other_titles.filter((title): title is string => typeof title === 'string');
-      } else if (typeof selectedLead.other_titles === 'string') {
-        otherTitles = [selectedLead.other_titles];
-      }
-    }
-    
-    return {
-      book_title: selectedLead.book_title,
-      author_name: selectedLead.author_name,
-      amazon_link: selectedLead.amazon_link || '',
-      phone_number_1: selectedLead.phone_number_1 || '',
-      phone_number_2: selectedLead.phone_number_2 || '',
-      primary_email: selectedLead.primary_email || '',
-      secondary_email: selectedLead.secondary_email || '',
-      author_bio: selectedLead.author_bio || '',
-      multiple_titles: selectedLead.multiple_titles || false,
-      other_titles: otherTitles,
-      status_id: selectedLead.status_id,
-      publisher: selectedLead.publisher || '',
-      website: selectedLead.website || '',
-      state: selectedLead.state || '',
-      country: selectedLead.country || '',
-    };
+  const handleStatusesUpdated = () => {
+    refetchStatuses();
+    setShowStatusManagement(false);
   };
 
   const handleSubmitForm = async (data: any) => {
     try {
       if (modalState === 'create') {
-        // Get the first status (New Lead) as default
-        const defaultStatus = statuses?.find(s => s.order_index === 1);
-        const createData = {
+        await createLead.mutateAsync({
           ...data,
-          status_id: data.status_id || defaultStatus?.id || '',
-          created_by: user?.id,
-        };
-        
-        console.log('Creating lead with data:', createData);
-        await createLead.mutateAsync(createData);
+          created_by: user!.id,
+        });
       } else if (modalState === 'edit' && selectedLead) {
-        console.log('Updating lead with data:', { id: selectedLead.id, data });
         await updateLead.mutateAsync({
           id: selectedLead.id,
-          data,
+          ...data,
         });
       }
       handleCloseModal();
     } catch (error) {
-      // Enhanced error logging
-      console.error('Form submission error:', error);
-      console.error('User context:', { user, profile });
-      console.error('Modal state:', modalState);
-      console.error('Form data:', data);
+      console.error('Error submitting form:', error);
     }
   };
 
-  const handleStatusesUpdated = async () => {
-    await refetchStatuses();
-    setShowStatusManagement(false);
+  const getFormInitialData = () => {
+    if (modalState === 'edit' && selectedLead) {
+      // Transform lead data for the form
+      const otherTitles = Array.isArray(selectedLead.other_titles) 
+        ? selectedLead.other_titles.map(title => String(title))
+        : typeof selectedLead.other_titles === 'string' 
+          ? [selectedLead.other_titles]
+          : [];
+
+      return {
+        ...selectedLead,
+        other_titles: otherTitles,
+      };
+    }
+    return undefined;
   };
 
-  const isFormLoading = createLead.isPending || updateLead.isPending;
+  const isFormLoading = modalState === 'create' ? createLead.isPending : updateLead.isPending;
 
   return (
     <SidebarProvider>
@@ -140,17 +108,11 @@ export const LeadsManagement: React.FC = () => {
               <div className="flex items-center gap-4">
                 <SidebarTrigger className="h-8 w-8" />
                 <div>
-                  <h1 className="text-xl font-semibold text-gray-900">
-                    {showStatusManagement ? 'Pipeline Configuration' : 'Leads Management'}
-                  </h1>
-                  <p className="text-sm text-gray-600">
-                    {showStatusManagement 
-                      ? 'Configure your sales pipeline statuses.'
-                      : 'View, create, and manage all author/book leads.'
-                    }
-                  </p>
+                  <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
+                  <p className="text-sm text-gray-600">Manage and track your leads</p>
                 </div>
               </div>
+
               <div className="flex items-center gap-3">
                 {!showStatusManagement && (
                   <>
@@ -162,7 +124,7 @@ export const LeadsManagement: React.FC = () => {
                       variant="outline" 
                       size="sm" 
                       className="bg-white/60 backdrop-blur-sm"
-                      onClick={() => setShowImportModal(true)}
+                      onClick={() => navigate('/leads/import')}
                     >
                       <Upload className="h-4 w-4 mr-2" />
                       Import
@@ -200,45 +162,23 @@ export const LeadsManagement: React.FC = () => {
             </div>
           </header>
 
-          <main className="p-6 space-y-8">
-            {/* User Role Warning */}
-            {profile && !['leads_manager', 'sales_manager'].includes(profile.role || '') && (
-              <Alert className="border-red-200 bg-red-50">
-                <AlertCircle className="h-4 w-4 text-red-600" />
-                <AlertDescription className="text-red-800">
-                  <div className="flex items-center justify-between">
-                    <span>
-                      Your account role ({profile.role || 'unknown'}) may not have permission to create leads. 
-                      Contact your administrator if you need access.
-                    </span>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Status Warning */}
+          {/* Main Content */}
+          <main className="p-6">
             {!statuses?.length && !showStatusManagement && (
-              <Alert className="border-amber-200 bg-amber-50">
-                <AlertCircle className="h-4 w-4 text-amber-600" />
-                <AlertDescription className="text-amber-800">
-                  <div className="flex items-center justify-between">
-                    <span>
-                      No pipeline statuses configured. You need to set up statuses before creating leads.
-                    </span>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="ml-4"
-                      onClick={() => setShowStatusManagement(true)}
-                    >
-                      Configure Now
-                    </Button>
-                  </div>
+              <Alert className="mb-6">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Please set up your lead statuses before adding leads.{' '}
+                  <button
+                    onClick={() => setShowStatusManagement(true)}
+                    className="font-medium underline hover:text-blue-600"
+                  >
+                    Set up now
+                  </button>
                 </AlertDescription>
               </Alert>
             )}
 
-            {/* Main Content */}
             {showStatusManagement ? (
               <StatusManagement onStatusesUpdated={handleStatusesUpdated} />
             ) : (
@@ -286,13 +226,6 @@ export const LeadsManagement: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Import Leads Modal */}
-      <ImportLeadsModal
-        open={showImportModal}
-        onOpenChange={setShowImportModal}
-        onImportComplete={handleImportComplete}
-      />
     </SidebarProvider>
   );
 }; 

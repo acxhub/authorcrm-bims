@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Search,
   Filter,
+  Upload,
 } from "lucide-react";
 import {
   Sidebar,
@@ -52,6 +53,11 @@ const quickActions = [
     title: "Add Lead",
     url: "/leads/new",
     icon: PlusCircle,
+  },
+  {
+    title: "Import Leads",
+    url: "/leads/import",
+    icon: Upload,
   },
   {
     title: "Search",

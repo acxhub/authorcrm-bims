@@ -368,11 +368,16 @@ export const UserManagement: React.FC = () => {
                               <Edit className="h-4 w-4 mr-2" />
                               Edit User
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setResetPasswordUser(user)}>
+                            <DropdownMenuItem 
+                              onClick={() => setResetPasswordUser(user)}
+                            >
                               <Key className="h-4 w-4 mr-2" />
                               Reset Password
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
+                            <DropdownMenuItem 
+                              onClick={() => handleToggleStatus(user)}
+                              disabled={user.id === profile?.id}
+                            >
                               {user.is_active ? (
                                 <>
                                   <UserX className="h-4 w-4 mr-2" />
@@ -391,6 +396,7 @@ export const UserManagement: React.FC = () => {
                                 <DropdownMenuItem 
                                   className="text-red-600"
                                   onSelect={(e) => e.preventDefault()}
+                                  disabled={user.id === profile?.id}
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
                                   Delete User

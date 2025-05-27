@@ -13,7 +13,8 @@ import type { CreateLeadData } from '@/lib/api/leads';
 
 const leadFormSchema = z.object({
   book_title: z.string().min(1, 'Book title is required'),
-  author_name: z.string().min(1, 'Author name is required'),
+  first_name: z.string().min(1, 'First name is required'),
+  last_name: z.string().min(1, 'Last name is required'),
   amazon_link: z.string().url('Invalid URL format').optional().or(z.literal('')),
   phone_number_1: z.string().regex(/^[\+]?[1-9][\d]{0,15}$/, 'Invalid phone format').optional().or(z.literal('')),
   phone_number_2: z.string().regex(/^[\+]?[1-9][\d]{0,15}$/, 'Invalid phone format').optional().or(z.literal('')),
@@ -34,7 +35,7 @@ type LeadFormData = z.infer<typeof leadFormSchema>;
 interface LeadFormProps {
   onSubmit: (data: CreateLeadData) => void;
   isLoading?: boolean;
-  initialData?: Partial<LeadFormData>;
+  initialData?: Partial<LeadFormData & { author_name?: string }>;
 }
 
 export const LeadForm: React.FC<LeadFormProps> = ({ 
@@ -49,7 +50,8 @@ export const LeadForm: React.FC<LeadFormProps> = ({
     resolver: zodResolver(leadFormSchema),
     defaultValues: {
       book_title: initialData?.book_title || '',
-      author_name: initialData?.author_name || '',
+      first_name: initialData?.first_name || (initialData?.author_name ? initialData.author_name.split(' ')[0] : ''),
+      last_name: initialData?.last_name || (initialData?.author_name ? initialData.author_name.split(' ').slice(1).join(' ') : ''),
       amazon_link: initialData?.amazon_link || '',
       phone_number_1: initialData?.phone_number_1 || '',
       phone_number_2: initialData?.phone_number_2 || '',
@@ -57,7 +59,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
       secondary_email: initialData?.secondary_email || '',
       author_bio: initialData?.author_bio || '',
       multiple_titles: initialData?.multiple_titles || false,
-      other_titles: initialData?.other_titles || [],
+      other_titles: Array.isArray(initialData?.other_titles) ? initialData.other_titles : [],
       status_id: initialData?.status_id || '',
       publisher: initialData?.publisher || '',
       website: initialData?.website || '',
@@ -77,7 +79,9 @@ export const LeadForm: React.FC<LeadFormProps> = ({
   const handleSubmit = (data: LeadFormData) => {
     const submitData: CreateLeadData = {
       book_title: data.book_title,
-      author_name: data.author_name,
+      author_name: `${data.first_name} ${data.last_name}`.trim(),
+      first_name: data.first_name,
+      last_name: data.last_name,
       amazon_link: data.amazon_link || null,
       phone_number_1: data.phone_number_1 || null,
       phone_number_2: data.phone_number_2 || null,
@@ -121,12 +125,26 @@ export const LeadForm: React.FC<LeadFormProps> = ({
 
             <FormField
               control={form.control}
-              name="author_name"
+              name="first_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Author Name *</FormLabel>
+                  <FormLabel>First Name *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter author name" {...field} />
+                    <Input placeholder="Enter first name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="last_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Last Name *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter last name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -4,6 +4,23 @@
 
 **URL**: https://lovable.dev/projects/b2e04454-e59e-43f8-8bbd-6e8d9698b26e
 
+## Environment Setup
+
+Before running the project, you need to set up environment variables for Supabase:
+
+1. Create a `.env` file in the root directory
+2. Add the following variables:
+
+```env
+VITE_SUPABASE_URL=https://rvxyycuukrkjlmaytqok.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key_here
+VITE_SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+```
+
+**Important**: The `VITE_SUPABASE_SERVICE_ROLE_KEY` is required for user management features (creating, deleting users, resetting passwords). You can find this key in your Supabase project settings under API keys.
+
+⚠️ **Security Note**: Never commit the service role key to version control. Add `.env` to your `.gitignore` file.
+
 ## How can I edit this code?
 
 There are several ways of editing your application.

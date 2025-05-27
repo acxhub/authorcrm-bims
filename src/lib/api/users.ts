@@ -1,5 +1,17 @@
 import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@supabase/supabase-js';
 import type { Tables, Database } from '@/integrations/supabase/types';
+
+// Create admin client with service role key for user management
+const SUPABASE_URL = "https://rvxyycuukrkjlmaytqok.supabase.co";
+const SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2eHl5Y3V1a3JramxtYXl0cW9rIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0ODMzMDYxNCwiZXhwIjoyMDYzOTA2NjE0fQ.zsmMhzT_bNHXA05k3EamNhW6ukvQ7mrLxd3T7Tc0mPY";
+
+const adminClient = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
 
 export type UserProfile = Tables<'profiles'>;
 export type UserRole = Database['public']['Enums']['user_role'];
@@ -86,23 +98,23 @@ export class UsersAPI {
   }
 
   async create(userData: CreateUserRequest): Promise<UserProfile> {
-    // First create the auth user
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    // First create the auth user using admin client
+    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email: userData.email,
       password: userData.password,
       email_confirm: true,
     });
 
     if (authError) {
-      throw new Error(authError.message);
+      throw new Error(`Failed to create user: ${authError.message}`);
     }
 
     if (!authData.user) {
       throw new Error('Failed to create user');
     }
 
-    // Then update the profile with additional data
-    const { data, error } = await supabase
+    // Then update the profile with additional data using admin client
+    const { data, error } = await adminClient
       .from('profiles')
       .update({
         full_name: userData.full_name,
@@ -116,8 +128,8 @@ export class UsersAPI {
 
     if (error) {
       // If profile update fails, we should clean up the auth user
-      await supabase.auth.admin.deleteUser(authData.user.id);
-      throw new Error(error.message);
+      await adminClient.auth.admin.deleteUser(authData.user.id);
+      throw new Error(`Failed to update user profile: ${error.message}`);
     }
 
     return data;
@@ -126,16 +138,13 @@ export class UsersAPI {
   async update(id: string, updates: UpdateUserRequest): Promise<UserProfile> {
     const { data, error } = await supabase
       .from('profiles')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updates)
       .eq('id', id)
       .select()
       .single();
 
     if (error) {
-      throw new Error(error.message);
+      throw new Error(`Failed to update user: ${error.message}`);
     }
 
     return data;
@@ -149,24 +158,24 @@ export class UsersAPI {
       .eq('id', id);
 
     if (profileError) {
-      throw new Error(profileError.message);
+      throw new Error(`Failed to deactivate user: ${profileError.message}`);
     }
 
-    // Then delete the auth user (this will cascade to profile)
-    const { error: authError } = await supabase.auth.admin.deleteUser(id);
+    // Then delete the auth user using admin client
+    const { error: authError } = await adminClient.auth.admin.deleteUser(id);
 
     if (authError) {
-      throw new Error(authError.message);
+      throw new Error(`Failed to delete user: ${authError.message}`);
     }
   }
 
   async resetPassword(id: string, newPassword: string): Promise<void> {
-    const { error } = await supabase.auth.admin.updateUserById(id, {
+    const { error } = await adminClient.auth.admin.updateUserById(id, {
       password: newPassword,
     });
 
     if (error) {
-      throw new Error(error.message);
+      throw new Error(`Failed to reset password: ${error.message}`);
     }
   }
 

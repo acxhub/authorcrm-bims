@@ -52,6 +52,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "activity_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_with_author_name"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "activity_logs_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -94,6 +101,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_with_author_name"
             referencedColumns: ["id"]
           },
           {
@@ -175,6 +189,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "deals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_with_author_name"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "deals_status_id_fkey"
             columns: ["status_id"]
             isOneToOne: false
@@ -208,6 +229,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "lead_tags_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_with_author_name"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "lead_tags_tag_id_fkey"
             columns: ["tag_id"]
             isOneToOne: false
@@ -228,7 +256,9 @@ export type Database = {
           created_at: string | null
           created_by: string
           deal_value: number | null
+          first_name: string | null
           id: string
+          last_name: string | null
           multiple_titles: boolean | null
           offer_title: string | null
           other_titles: Json | null
@@ -253,7 +283,9 @@ export type Database = {
           created_at?: string | null
           created_by: string
           deal_value?: number | null
+          first_name?: string | null
           id?: string
+          last_name?: string | null
           multiple_titles?: boolean | null
           offer_title?: string | null
           other_titles?: Json | null
@@ -278,7 +310,9 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           deal_value?: number | null
+          first_name?: string | null
           id?: string
+          last_name?: string | null
           multiple_titles?: boolean | null
           offer_title?: string | null
           other_titles?: Json | null
@@ -411,10 +445,121 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      leads_with_author_name: {
+        Row: {
+          amazon_link: string | null
+          assigned_to: string | null
+          author_bio: string | null
+          author_name: string | null
+          book_title: string | null
+          category: string | null
+          computed_author_name: string | null
+          country: string | null
+          created_at: string | null
+          created_by: string | null
+          deal_value: number | null
+          first_name: string | null
+          id: string | null
+          last_name: string | null
+          multiple_titles: boolean | null
+          offer_title: string | null
+          other_titles: Json | null
+          phone_number_1: string | null
+          phone_number_2: string | null
+          primary_email: string | null
+          publisher: string | null
+          secondary_email: string | null
+          state: string | null
+          status_id: string | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          amazon_link?: string | null
+          assigned_to?: string | null
+          author_bio?: string | null
+          author_name?: string | null
+          book_title?: string | null
+          category?: string | null
+          computed_author_name?: never
+          country?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deal_value?: number | null
+          first_name?: string | null
+          id?: string | null
+          last_name?: string | null
+          multiple_titles?: boolean | null
+          offer_title?: string | null
+          other_titles?: Json | null
+          phone_number_1?: string | null
+          phone_number_2?: string | null
+          primary_email?: string | null
+          publisher?: string | null
+          secondary_email?: string | null
+          state?: string | null
+          status_id?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          amazon_link?: string | null
+          assigned_to?: string | null
+          author_bio?: string | null
+          author_name?: string | null
+          book_title?: string | null
+          category?: string | null
+          computed_author_name?: never
+          country?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deal_value?: number | null
+          first_name?: string | null
+          id?: string | null
+          last_name?: string | null
+          multiple_titles?: boolean | null
+          offer_title?: string | null
+          other_titles?: Json | null
+          phone_number_1?: string | null
+          phone_number_2?: string | null
+          primary_email?: string | null
+          publisher?: string | null
+          secondary_email?: string | null
+          state?: string | null
+          status_id?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "statuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
-      [_ in never]: never
+      get_author_name: {
+        Args: { first_name: string; last_name: string }
+        Returns: string
+      }
     }
     Enums: {
       activity_type:

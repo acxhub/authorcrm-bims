@@ -49,7 +49,7 @@ export class LeadsAPI {
 
     // Apply filters
     if (filters.search) {
-      query = query.or(`book_title.ilike.%${filters.search}%,author_name.ilike.%${filters.search}%,primary_email.ilike.%${filters.search}%`);
+      query = query.or(`book_title.ilike.%${filters.search}%,author_name.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,primary_email.ilike.%${filters.search}%`);
     }
 
     if (filters.status_ids?.length) {

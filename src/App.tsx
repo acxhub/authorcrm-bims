@@ -15,6 +15,7 @@ import { PipelinePage } from "./pages/PipelineBoard";
 import { DealDetailsPage } from "./pages/DealDetailsPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import LeadDetailsPage from "./pages/LeadDetailsPage";
+import ImportLeadsPage from "./pages/ImportLeadsPage";
 import { AdminPanel } from "./pages/AdminPanel";
 import { DashboardLayout } from "@/components/DashboardLayout";
 
@@ -45,6 +46,11 @@ const App = () => {
                 <Route path="/leads" element={
                   <ProtectedRoute>
                     <LeadsManagement />
+                  </ProtectedRoute>
+                } />
+                <Route path="/leads/import" element={
+                  <ProtectedRoute>
+                    <ImportLeadsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/leads/:id" element={
