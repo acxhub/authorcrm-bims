@@ -1,16 +1,35 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { Settings, Hash, Users, BarChart3, Database } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { TagManagement } from '@/components/admin/TagManagement';
 import { useAuth, useProfile } from '@/hooks/useAuth';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams, useNavigate } from 'react-router-dom';
+
+const TABS = ['tags', 'users', 'analytics', 'system'];
 
 export const AdminPanel: React.FC = () => {
   const { user } = useAuth();
   const { profile, loading } = useProfile();
-  const [activeTab, setActiveTab] = useState('tags');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // Get tab from URL, default to 'tags' if missing/invalid
+  const urlTab = searchParams.get('tab');
+  const activeTab = TABS.includes(urlTab || '') ? urlTab! : 'tags';
+
+  // Keep tab in sync with URL
+  const handleTabChange = (tab: string) => {
+    setSearchParams({ tab });
+  };
+
+  // If no tab param or invalid, set to default
+  useEffect(() => {
+    if (!urlTab || !TABS.includes(urlTab)) {
+      setSearchParams({ tab: 'tags' }, { replace: true });
+    }
+  }, [urlTab, setSearchParams]);
 
   // Only redirect if loading is done and user/profile/role is not correct
   if (!loading && (!user || !profile || profile.role !== 'leads_manager')) {
@@ -46,7 +65,7 @@ export const AdminPanel: React.FC = () => {
       </div>
 
       {/* Admin Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="tags" className="flex items-center gap-2">
             <Hash className="h-4 w-4" />
