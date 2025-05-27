@@ -12,6 +12,11 @@ export const AdminPanel: React.FC = () => {
   const { profile, loading } = useProfile();
   const [activeTab, setActiveTab] = useState('tags');
 
+  // Only redirect if loading is done and user/profile/role is not correct
+  if (!loading && (!user || !profile || profile.role !== 'leads_manager')) {
+    return <Navigate to="/" replace />;
+  }
+
   // Show loading while profile is being fetched
   if (loading) {
     return (
@@ -22,11 +27,6 @@ export const AdminPanel: React.FC = () => {
         </div>
       </div>
     );
-  }
-
-  // Only allow leads_manager role to access admin panel
-  if (!user || !profile || profile.role !== 'leads_manager') {
-    return <Navigate to="/" replace />;
   }
 
   return (
