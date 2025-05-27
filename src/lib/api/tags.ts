@@ -95,33 +95,52 @@ export class TagsAPI {
   }
 
   async initializePredefinedTags(): Promise<Tag[]> {
-    // First, get existing tags to avoid duplicates
-    const existingTags = await this.getTags();
-    const existingTagNames = existingTags.map(tag => tag.name);
+    // First, get ALL existing tags (both active and inactive) to avoid duplicates
+    const { data: allExistingTags, error: fetchError } = await supabase
+      .from('tags')
+      .select('name, id, is_active')
+      .in('name', PREDEFINED_TAGS.map(tag => tag.name));
 
-    // Filter out tags that already exist
+    if (fetchError) {
+      throw new Error(`Failed to fetch existing tags: ${fetchError.message}`);
+    }
+
+    const existingTagNames = allExistingTags?.map(tag => tag.name) || [];
+    const inactiveTagNames = allExistingTags?.filter(tag => !tag.is_active).map(tag => tag.name) || [];
+
+    // Filter out tags that already exist (both active and inactive)
     const tagsToCreate = PREDEFINED_TAGS.filter(
       tag => !existingTagNames.includes(tag.name)
     );
 
-    if (tagsToCreate.length === 0) {
-      return existingTags;
+    // Reactivate any inactive predefined tags
+    if (inactiveTagNames.length > 0) {
+      const { error: reactivateError } = await supabase
+        .from('tags')
+        .update({ is_active: true })
+        .in('name', inactiveTagNames);
+
+      if (reactivateError) {
+        throw new Error(`Failed to reactivate tags: ${reactivateError.message}`);
+      }
     }
 
-    // Create new tags
-    const { data, error } = await supabase
-      .from('tags')
-      .insert(tagsToCreate.map(tag => ({
-        ...tag,
-        is_active: true
-      })))
-      .select('*');
+    // Create new tags that don't exist at all
+    if (tagsToCreate.length > 0) {
+      const { data, error } = await supabase
+        .from('tags')
+        .insert(tagsToCreate.map(tag => ({
+          ...tag,
+          is_active: true
+        })))
+        .select('*');
 
-    if (error) {
-      throw new Error(`Failed to initialize predefined tags: ${error.message}`);
+      if (error) {
+        throw new Error(`Failed to initialize predefined tags: ${error.message}`);
+      }
     }
 
-    // Return all tags (existing + newly created)
+    // Return all active tags (existing + newly created + reactivated)
     return await this.getTags();
   }
 
