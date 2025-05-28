@@ -97,10 +97,10 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
       return;
     }
 
-    // Get the first status as default
-    const firstStatus = statuses.sort((a, b) => a.order_index - b.order_index)[0];
-    if (!firstStatus) {
-      alert('No statuses available. Please contact an administrator.');
+    // Get the New Deal status as default
+    const newDealStatus = statuses.find(s => s.name === 'New Deal');
+    if (!newDealStatus) {
+      alert('New Deal status not found. Please contact an administrator.');
       return;
     }
 
@@ -109,7 +109,7 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
       offer_title: data.offer_title,
       deal_value: data.deal_value,
       category: data.category,
-      status_id: firstStatus.id,
+      status_id: newDealStatus.id,
       assigned_to: data.assigned_to || user?.id || null,
       created_by: user?.id || '',
     };

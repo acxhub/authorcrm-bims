@@ -413,13 +413,13 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
                     <div className="text-sm font-medium text-gray-700 mb-2">Currently Assigned To</div>
                     <div className="flex items-center gap-2">
                       <Avatar className="h-6 w-6">
-                        <AvatarImage src={lead.assigned_to_profile.avatar_url || ''} />
+                        <AvatarImage src={lead.assigned_to_profile?.avatar_url || ''} />
                         <AvatarFallback className="text-xs">
-                          {getInitials(lead.assigned_to_profile.full_name || 'U')}
+                          {getInitials(lead.assigned_to_profile?.full_name || 'U')}
                         </AvatarFallback>
                       </Avatar>
                       <span className="text-sm text-gray-600">
-                        {lead.assigned_to_profile.full_name || lead.assigned_to_profile.email}
+                        {lead.assigned_to_profile?.full_name || lead.assigned_to_profile?.email || 'Unknown User'}
                       </span>
                     </div>
                   </div>
@@ -454,7 +454,7 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
                 <div className="text-sm font-medium text-gray-700">Created</div>
                 <div className="text-sm text-gray-600">
                   {formatDistanceToNow(new Date(lead.created_at!), { addSuffix: true })} by{' '}
-                  {lead.created_by_profile.full_name || 'Unknown User'}
+                  {lead.created_by_profile?.full_name || 'Unknown User'}
                 </div>
               </div>
               

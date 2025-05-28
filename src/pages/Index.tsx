@@ -7,10 +7,13 @@ import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { PipelineBreakdown } from "@/components/dashboard/PipelineBreakdown";
 import { QuickActions } from "@/components/dashboard/QuickActions";
+import { SalesLeaderboard } from "@/components/dashboard/SalesLeaderboard";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <SidebarProvider>
@@ -51,14 +54,18 @@ const Index = () => {
             {/* Real-time Metrics */}
             <DashboardMetrics />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Recent Activity */}
-              <div className="lg:col-span-2">
+            <div className="grid grid-cols-5 gap-8">
+              {/* Recent Activity - 60% */}
+              <div className="col-span-3">
                 <RecentActivity />
               </div>
 
-              {/* Pipeline Breakdown */}
-              <div>
+              {/* Right Column - 40% */}
+              <div className="col-span-2 space-y-8">
+                {/* Sales Leaderboard */}
+                <SalesLeaderboard />
+                
+                {/* Pipeline Breakdown */}
                 <PipelineBreakdown />
               </div>
             </div>
