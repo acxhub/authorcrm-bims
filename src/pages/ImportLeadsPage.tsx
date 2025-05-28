@@ -24,7 +24,7 @@ const DB_FIELDS = {
   first_name: { label: 'First Name', required: false, type: 'text', maxLength: 100 },
   last_name: { label: 'Last Name', required: false, type: 'text', maxLength: 100 },
   author_name: { label: 'Author Name', required: false, type: 'text', maxLength: 255 },
-  amazon_link: { label: 'Amazon Link', required: false, type: 'url', maxLength: 500 },
+  amazon_link: { label: 'Amazon Link', required: false, type: 'url', maxLength: null }, // No limit
   phone_number_1: { label: 'Primary Phone', required: false, type: 'phone', maxLength: 20 },
   phone_number_2: { label: 'Secondary Phone', required: false, type: 'phone', maxLength: 20 },
   primary_email: { label: 'Primary Email', required: false, type: 'email', maxLength: 255 },
