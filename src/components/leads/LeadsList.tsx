@@ -20,6 +20,7 @@ import { useTags } from '@/hooks/useTags';
 import { useLeadsRealtime } from '@/hooks/useLeadsRealtime';
 import { useTagsRealtime } from '@/hooks/useTagsRealtime';
 import { useStatusesRealtime } from '@/hooks/useStatusesRealtime';
+import { useUsers } from '@/hooks/useUsers';
 
 interface LeadsListProps {
   onCreateLead?: () => void;
@@ -35,6 +36,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [assignedToFilter, setAssignedToFilter] = useState<string>('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
@@ -50,14 +52,19 @@ export const LeadsList: React.FC<LeadsListProps> = ({
       search: search || undefined,
       status_ids: statusFilter ? [statusFilter] : undefined,
       tag_ids: tagFilter.length ? tagFilter : undefined,
+      assigned_to: assignedToFilter || undefined,
     },
     page,
     pageSize
   );
 
   const { data: statuses } = useStatuses();
+  const { users = [] } = useUsers();
   const deleteLead = useDeleteLead();
   const { data: tags } = useTags();
+
+  // Filter users to show only active ones
+  const activeUsers = users.filter(u => u.is_active);
 
   const handleSearch = (value: string) => {
     setSearch(value);
@@ -66,6 +73,11 @@ export const LeadsList: React.FC<LeadsListProps> = ({
 
   const handleStatusFilter = (statusId: string) => {
     setStatusFilter(statusId === 'all' ? '' : statusId);
+    setPage(1);
+  };
+
+  const handleAssignedToFilter = (userId: string) => {
+    setAssignedToFilter(userId === 'all' ? '' : userId);
     setPage(1);
   };
 
@@ -175,6 +187,21 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                         />
                         {status.name}
                       </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-48 min-w-[160px]">
+              <Select value={assignedToFilter || 'all'} onValueChange={handleAssignedToFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by assigned to" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Users</SelectItem>
+                  {activeUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.full_name || user.email}
                     </SelectItem>
                   ))}
                 </SelectContent>
