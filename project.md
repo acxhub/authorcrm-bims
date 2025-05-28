@@ -77,9 +77,10 @@ Build a comprehensive web-based CRM system specifically designed for managing au
 |---------|---------------|---------------|-------|
 | View All Leads | ✅ | ✅ | ❌ |
 | View Assigned Leads | ✅ | ✅ | ✅ |
+| Add New Leads | ✅ | ✅ | ✅ |
 | Edit Any Lead | ✅ | ✅ | ❌ |
 | Edit Assigned Leads | ✅ | ✅ | ✅ |
-| Import/Export Leads | ✅ | ✅ | ❌ |
+| Import/Export Leads | ✅ | ✅ | ✅ |
 | User Management | ✅ | ❌ | ❌ |
 | System Configuration | ✅ | ❌ | ❌ |
 | Lead Assignment | ✅ | ✅ | ❌ |
@@ -109,6 +110,7 @@ Build a comprehensive web-based CRM system specifically designed for managing au
 - **Primary Role**: Lead conversion specialist
 - **Key Responsibilities**:
   - Contact assigned leads
+  - Add new leads they discover
   - Log interaction activities
   - Move leads through pipeline
   - Close deals
