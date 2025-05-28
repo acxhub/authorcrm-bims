@@ -1,6 +1,7 @@
 import { useAuth, useProfile } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import { ForcePasswordReset } from '@/components/auth/ForcePasswordReset';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -32,6 +33,11 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   if (!user) {
     console.log('No user found, redirecting to auth');
     return <Navigate to="/auth" replace />;
+  }
+
+  // Check for force password reset
+  if (user.user_metadata?.force_password_reset) {
+    return <ForcePasswordReset />;
   }
 
   if (requiredRole && !profile) {

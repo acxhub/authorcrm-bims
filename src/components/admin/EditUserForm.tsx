@@ -16,6 +16,7 @@ const updateUserSchema = z.object({
   full_name: z.string().min(1, 'Full name is required'),
   role: z.enum(['leads_manager', 'sales_manager', 'sales'] as const),
   is_active: z.boolean(),
+  force_password_reset: z.boolean().optional(),
 });
 
 type UpdateUserFormData = z.infer<typeof updateUserSchema>;
@@ -157,19 +158,35 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
           </div>
 
           {/* User Status */}
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="is_active"
-              checked={watch('is_active')}
-              onCheckedChange={(checked) => setValue('is_active', checked)}
-            />
-            <Label htmlFor="is_active" className="text-sm font-medium">
-              Active User
-            </Label>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_active"
+                checked={watch('is_active')}
+                onCheckedChange={(checked) => setValue('is_active', checked)}
+              />
+              <Label htmlFor="is_active" className="text-sm font-medium">
+                Active User
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Inactive users cannot log in to the system
+            </p>
+
+            <div className="flex items-center space-x-2 mt-4">
+              <Switch
+                id="force_password_reset"
+                checked={watch('force_password_reset')}
+                onCheckedChange={(checked) => setValue('force_password_reset', checked)}
+              />
+              <Label htmlFor="force_password_reset" className="text-sm font-medium">
+                Force Password Reset
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              User will be required to change their password on next login
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Inactive users cannot log in to the system
-          </p>
 
           {/* User Metadata */}
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">

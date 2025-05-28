@@ -27,6 +27,7 @@ export interface UpdateUserRequest {
   full_name?: string;
   role?: UserRole;
   is_active?: boolean;
+  force_password_reset?: boolean;
 }
 
 export interface UsersFilter {
@@ -44,7 +45,7 @@ export interface PaginatedUsersResponse {
 
 export class UsersAPI {
   async getAll(filters?: UsersFilter, page = 1, limit = 10): Promise<PaginatedUsersResponse> {
-    let query = supabase
+    let query = adminClient
       .from('profiles')
       .select('*', { count: 'exact' });
 
@@ -84,7 +85,7 @@ export class UsersAPI {
   }
 
   async getById(id: string): Promise<UserProfile> {
-    const { data, error } = await supabase
+    const { data, error } = await adminClient
       .from('profiles')
       .select('*')
       .eq('id', id)
@@ -136,7 +137,24 @@ export class UsersAPI {
   }
 
   async update(id: string, updates: UpdateUserRequest): Promise<UserProfile> {
-    const { data, error } = await supabase
+    // Handle force password reset if specified
+    if (updates.force_password_reset !== undefined) {
+      const { error: authError } = await adminClient.auth.admin.updateUserById(
+        id,
+        {
+          user_metadata: { force_password_reset: updates.force_password_reset }
+        }
+      );
+
+      if (authError) {
+        throw new Error(`Failed to update user auth settings: ${authError.message}`);
+      }
+
+      // Remove from updates object as it's not a profile field
+      delete updates.force_password_reset;
+    }
+
+    const { data, error } = await adminClient
       .from('profiles')
       .update(updates)
       .eq('id', id)
