@@ -96,6 +96,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
       country: data.country || null,
       status_id: data.status_id,
       created_by: user?.id || '',
+      assigned_to: user?.role === 'sales' ? user.id : null,
     };
 
     onSubmit(submitData);

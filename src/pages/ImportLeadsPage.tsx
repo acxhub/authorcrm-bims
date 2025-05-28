@@ -527,6 +527,9 @@ const ImportLeadsPage: React.FC = () => {
         // Add assigned user if selected
         if (assignedUserId && assignedUserId !== 'none') {
           leadData.assigned_to = assignedUserId;
+        } else if (user?.role === 'sales') {
+          // Auto-assign to sales agent if they are importing and no specific assignment
+          leadData.assigned_to = user.id;
         }
 
         // Map the data
