@@ -29,7 +29,7 @@ export const PipelineBoard: React.FC = () => {
   const [filters, setFilters] = useState<DealsFilter>({});
   const [showFilters, setShowFilters] = useState(false);
 
-  const { data: dealsData, isLoading: dealsLoading, refetch } = useDeals(filters);
+  const { data: dealsData, isLoading: dealsLoading, refetch } = useDeals(filters, 1, 1000);
   const { data: statuses = [], isLoading: statusesLoading } = useStatuses();
   const { users = [] } = useUsers();
   const updateDealMutation = useUpdateDeal();
@@ -407,7 +407,6 @@ export const PipelineBoard: React.FC = () => {
                 ) : (
                   <div className="flex gap-6 min-w-max">
                     {sortedStatuses
-                      .filter(status => !status.name.toLowerCase().includes('new lead'))
                       .map((status) => (
                       <div key={status.id} className="min-w-[340px] max-w-[340px]">
                         <PipelineColumn

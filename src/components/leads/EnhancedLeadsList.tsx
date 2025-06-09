@@ -27,13 +27,13 @@ import { NotificationsContainer } from '@/components/ui/notifications';
 import { useCreateActivity } from '@/hooks/useActivities';
 import { useAuth } from '@/hooks/useAuth';
 
-interface LeadsListProps {
+interface EnhancedLeadsListProps {
   onCreateLead?: () => void;
   onEditLead?: (lead: Lead) => void;
   onViewLead?: (lead: Lead) => void;
 }
 
-export const LeadsList: React.FC<LeadsListProps> = ({
+export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
   onCreateLead,
   onEditLead,
   onViewLead,

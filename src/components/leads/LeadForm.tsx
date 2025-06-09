@@ -208,7 +208,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
               name="phone_number_1"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Primary Phone</FormLabel>
+                  <FormLabel>Home Phone</FormLabel>
                   <FormControl>
                     <Input placeholder="+1-555-0123" {...field} />
                   </FormControl>
@@ -222,7 +222,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
               name="phone_number_2"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Secondary Phone</FormLabel>
+                  <FormLabel>Mobile Phone</FormLabel>
                   <FormControl>
                     <Input placeholder="+1-555-0124" {...field} />
                   </FormControl>

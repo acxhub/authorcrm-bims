@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Upload, Users, BarChart3, Settings, FileText, Target, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { CreateLeadModal } from '@/components/leads/CreateLeadModal';
 
 interface QuickActionProps {
   icon: React.ComponentType<{ className?: string }>;
@@ -65,6 +66,7 @@ const QuickAction: React.FC<QuickActionProps> = ({
 export const QuickActions: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [showCreateLeadModal, setShowCreateLeadModal] = useState(false);
 
   const isLeadsManager = user?.role === 'leads_manager';
   const isSalesManager = user?.role === 'sales_manager';
@@ -74,7 +76,7 @@ export const QuickActions: React.FC = () => {
       icon: Plus,
       title: 'Add New Lead',
       description: 'Quickly add a new author or book lead to your pipeline',
-      onClick: () => navigate('/leads'),
+      onClick: () => setShowCreateLeadModal(true),
       color: 'blue' as const
     },
     {
@@ -168,6 +170,12 @@ export const QuickActions: React.FC = () => {
           </p>
         </div>
       </CardContent>
+
+      {/* Create Lead Modal */}
+      <CreateLeadModal
+        open={showCreateLeadModal}
+        onClose={() => setShowCreateLeadModal(false)}
+      />
     </Card>
   );
 }; 
