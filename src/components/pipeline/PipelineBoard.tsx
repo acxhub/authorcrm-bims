@@ -12,8 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { DollarSign, TrendingUp, Users, Target, Plus, Filter, RefreshCw, X, Building2, Megaphone, Briefcase, UserCheck, FilterX } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { DollarSign, TrendingUp, Users, Target, Plus, Filter, RefreshCw, X, Building2, Megaphone, Briefcase, UserCheck, FilterX, CalendarIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 import type { Deal, CreateDealData, UpdateDealData, DealsFilter } from '@/lib/api/deals';
 
 const CATEGORIES = [
@@ -28,6 +30,10 @@ export const PipelineBoard: React.FC = () => {
   // Filter state
   const [filters, setFilters] = useState<DealsFilter>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined,
+  });
 
   const { data: dealsData, isLoading: dealsLoading, refetch } = useDeals(filters, 1, 1000);
   const { data: statuses = [], isLoading: statusesLoading } = useStatuses();
@@ -104,8 +110,18 @@ export const PipelineBoard: React.FC = () => {
     }));
   };
 
+  const handleDateRangeChange = (from: Date | undefined, to: Date | undefined) => {
+    setDateRange({ from, to });
+    setFilters(prev => ({
+      ...prev,
+      date_from: from ? format(from, 'yyyy-MM-dd') : undefined,
+      date_to: to ? format(to, 'yyyy-MM-dd') : undefined,
+    }));
+  };
+
   const clearFilters = () => {
     setFilters({});
+    setDateRange({ from: undefined, to: undefined });
   };
 
   const hasActiveFilters = Object.keys(filters).some(key => filters[key as keyof DealsFilter] !== undefined);
@@ -151,8 +167,8 @@ export const PipelineBoard: React.FC = () => {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="flex flex-col h-full">
-        {/* Enhanced Pipeline Header with Filters */}
+      <div className="flex flex-col h-full overflow-hidden">
+        {/* Enhanced Pipeline Header with Filters - Fixed at top */}
         <div className="flex-shrink-0 p-6 pb-4 bg-white/50 backdrop-blur-sm border-b border-gray-200/60">
           <div className="space-y-4">
             {/* Title and Actions Row */}
@@ -205,7 +221,7 @@ export const PipelineBoard: React.FC = () => {
 
             {/* Filter Bar */}
             {showFilters && (
-              <div className="bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200/60 p-4">
+              <div className="bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200/60 p-4 animate-in slide-in-from-top-2 duration-200 shadow-sm">
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="flex items-center gap-2">
                     <UserCheck className="h-4 w-4 text-gray-500" />
@@ -249,15 +265,55 @@ export const PipelineBoard: React.FC = () => {
                     </Select>
                   </div>
 
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">Date Range:</span>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-64 justify-start text-left font-normal bg-white"
+                        >
+                          {dateRange.from ? (
+                            dateRange.to ? (
+                              <>
+                                {format(dateRange.from, "PPP")} -{" "}
+                                {format(dateRange.to, "PPP")}
+                              </>
+                            ) : (
+                              format(dateRange.from, "PPP")
+                            )
+                          ) : (
+                            <span className="text-gray-500">Pick a date range</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          initialFocus
+                          mode="range"
+                          defaultMonth={dateRange.from}
+                          selected={{ from: dateRange.from, to: dateRange.to }}
+                          onSelect={(range) => {
+                            if (range) {
+                              handleDateRangeChange(range.from, range.to);
+                            }
+                          }}
+                          numberOfMonths={2}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
                   {hasActiveFilters && (
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={clearFilters}
-                      className="text-gray-500 hover:text-gray-700"
+                      className="text-gray-500 hover:text-gray-700 ml-auto"
                     >
                       <FilterX className="h-4 w-4 mr-2" />
-                      Clear filters
+                      Clear all filters
                     </Button>
                   )}
                 </div>
@@ -288,6 +344,18 @@ export const PipelineBoard: React.FC = () => {
                         </button>
                       </Badge>
                     )}
+                    {(filters.date_from || filters.date_to) && (
+                      <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                        Date: {dateRange.from && format(dateRange.from, "MMM dd")}
+                        {dateRange.to && ` - ${format(dateRange.to, "MMM dd")}`}
+                        <button
+                          onClick={() => handleDateRangeChange(undefined, undefined)}
+                          className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    )}
                   </div>
                 )}
               </div>
@@ -297,7 +365,7 @@ export const PipelineBoard: React.FC = () => {
 
         {/* Enhanced Pipeline Metrics */}
         <div className="flex-shrink-0 px-6 pb-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-in slide-in-from-top-2 duration-300">
             <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200/60 shadow-sm hover:shadow-md transition-all duration-200">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -362,9 +430,9 @@ export const PipelineBoard: React.FC = () => {
           </div>
         </div>
 
-        {/* Pipeline Board - Scrollable area */}
-        <div className="flex-1 min-h-0 px-6 pb-6">
-          <Card className="h-full bg-white/60 backdrop-blur-sm border-gray-200/60 shadow-lg">
+        {/* Pipeline Board - Only this section scrolls */}
+        <div className="flex-1 min-h-0 overflow-hidden p-6">
+          <Card className="h-full bg-white/60 backdrop-blur-sm border-gray-200/60 shadow-lg flex flex-col relative">
             <CardHeader className="flex-shrink-0 bg-white/80 backdrop-blur-sm border-b border-gray-200/60">
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-blue-600" />
@@ -376,8 +444,8 @@ export const PipelineBoard: React.FC = () => {
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 p-0">
-              <div className="h-full overflow-auto p-6">
+            <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
+              <div className="h-full overflow-x-auto overflow-y-hidden p-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400 transition-colors">
                 {totalDeals === 0 ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
@@ -405,10 +473,10 @@ export const PipelineBoard: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex gap-6 min-w-max">
+                  <div className="flex gap-6 h-full">
                     {sortedStatuses
                       .map((status) => (
-                      <div key={status.id} className="min-w-[340px] max-w-[340px]">
+                      <div key={status.id} className="flex-shrink-0 w-[340px] h-full">
                         <PipelineColumn
                           status={status}
                           deals={dealsByStatus[status.id] || []}

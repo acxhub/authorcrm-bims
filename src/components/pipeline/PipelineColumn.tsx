@@ -48,13 +48,13 @@ export const PipelineColumn: React.FC<PipelineColumnProps> = ({
   };
 
   return (
-    <div ref={drop} className="h-full">
-      <Card className={`h-full transition-all duration-200 ${
+    <div ref={drop} className="h-full flex flex-col">
+      <Card className={`h-full flex flex-col transition-all duration-200 ${
         isOver 
           ? 'ring-2 ring-blue-400 ring-opacity-50 shadow-lg scale-[1.02] bg-blue-50/50' 
           : 'bg-white/80 backdrop-blur-sm border-gray-200/60 shadow-sm hover:shadow-md'
       }`}>
-        <CardHeader className="pb-3 bg-white/60 backdrop-blur-sm border-b border-gray-200/40">
+        <CardHeader className="flex-shrink-0 pb-3 bg-white/60 backdrop-blur-sm border-b border-gray-200/40">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div
@@ -81,8 +81,8 @@ export const PipelineColumn: React.FC<PipelineColumnProps> = ({
           )}
         </CardHeader>
 
-        <CardContent className="flex-1 p-4 pt-3">
-          <div className="space-y-3 min-h-[300px] max-h-[calc(100vh-400px)] overflow-y-auto">
+        <CardContent className="flex-1 p-4 pt-3 overflow-hidden">
+          <div className="space-y-3 h-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
             {deals.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-48 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50">
                 <div className="text-center p-4">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, UserPlus, Hash, Trash2, CheckSquare, RefreshCw, Search } from 'lucide-react';
+import { Users, UserPlus, Hash, Trash2, CheckSquare, RefreshCw, Search, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { useUsers } from '@/hooks/useUsers';
 import { useUpdateLead, useDeleteLead, useManageLeadTags } from '@/hooks/useLeads';
 import { useTags } from '@/hooks/useTags';
@@ -34,10 +37,10 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedStatusId, setSelectedStatusId] = useState<string>('');
-  const [userSearchTerm, setUserSearchTerm] = useState<string>('');
+  const [openUserCombobox, setOpenUserCombobox] = useState(false);
 
   const { user } = useAuth();
-  const { users, loading: usersLoading } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
+  const { users, loading: usersLoading, total } = useUsers({}, 1, 100); // Fetch up to 100 users - should be enough for most cases
   const { data: allTags, isLoading: tagsLoading } = useTags();
   const { data: statuses, isLoading: statusesLoading } = useStatuses();
   const updateLead = useUpdateLead();
@@ -45,12 +48,8 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
   const { addTags } = useManageLeadTags();
   const createActivity = useCreateActivity();
 
-  // Filter users to show all active users with search
-  const assignableUsers = users?.filter(u => 
-    u.is_active && 
-    (u.full_name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-     u.email?.toLowerCase().includes(userSearchTerm.toLowerCase()))
-  ) || [];
+  // Show all active users (no pre-filtering)
+  const assignableUsers = users?.filter(u => u.is_active) || [];
 
   const handleBulkAssign = async () => {
     if (!selectedUserId || selectedLeads.length === 0) return;
@@ -79,7 +78,6 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
 
       setIsAssignDialogOpen(false);
       setSelectedUserId('');
-      setUserSearchTerm('');
       onSelectionChange([]);
       onActionsComplete();
     } catch (error) {
@@ -206,61 +204,106 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
                 Assign to User
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>Bulk Assign Leads</DialogTitle>
               </DialogHeader>
               
               <div className="space-y-4">
-                <div>
+                <div className="space-y-3">
                   <Label>Assigning {selectedLeads.length} leads to:</Label>
                   
-                  {/* Search field */}
-                  <div className="relative mb-3">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Search users by name or email..."
-                      value={userSearchTerm}
-                      onChange={(e) => setUserSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  
-                  <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a user..." />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px] overflow-y-auto">
-                      {usersLoading ? (
-                        <SelectItem value="loading" disabled>Loading users...</SelectItem>
-                      ) : assignableUsers.length === 0 ? (
-                        <SelectItem value="no-users" disabled>
-                          {userSearchTerm ? 'No users match your search' : 'No assignable users found'}
-                        </SelectItem>
-                      ) : (
-                        assignableUsers.map((assignableUser) => (
-                          <SelectItem key={assignableUser.id} value={assignableUser.id}>
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-6 w-6">
-                                <AvatarImage src={assignableUser.avatar_url || ''} />
-                                <AvatarFallback className="text-xs">
-                                  {getInitials(assignableUser.full_name || 'U')}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="font-medium">
-                                  {assignableUser.full_name || 'Unknown User'}
-                                </div>
-                                <div className="text-xs text-gray-500 capitalize">
-                                  {assignableUser.role.replace('_', ' ')}
-                                </div>
+                  {/* Combobox with integrated search */}
+                  <Popover open={openUserCombobox} onOpenChange={setOpenUserCombobox}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openUserCombobox}
+                        className="w-full justify-between font-normal"
+                      >
+                        {selectedUserId ? (
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={assignableUsers.find(u => u.id === selectedUserId)?.avatar_url || ''} />
+                              <AvatarFallback className="text-xs">
+                                {getInitials(assignableUsers.find(u => u.id === selectedUserId)?.full_name || 'U')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="text-left">
+                              <div className="font-medium">
+                                {assignableUsers.find(u => u.id === selectedUserId)?.full_name || 'Unknown User'}
+                              </div>
+                              <div className="text-xs text-gray-500 capitalize">
+                                {assignableUsers.find(u => u.id === selectedUserId)?.role.replace('_', ' ')}
                               </div>
                             </div>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                          </div>
+                        ) : (
+                          <span className="text-gray-500">Search and select a user...</span>
+                        )}
+                        <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[460px] p-0" align="start">
+                      <Command>
+                        <CommandInput 
+                          placeholder="Search users by name or email..." 
+                          className="h-9"
+                        />
+                        <CommandList>
+                          <CommandEmpty>
+                            {usersLoading ? "Loading users..." : "No users found."}
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {assignableUsers.map((assignableUser) => (
+                              <CommandItem
+                                key={assignableUser.id}
+                                value={`${assignableUser.full_name} ${assignableUser.email}`}
+                                onSelect={() => {
+                                  setSelectedUserId(assignableUser.id);
+                                  setOpenUserCombobox(false);
+                                }}
+                              >
+                                <div className="flex items-center gap-3 w-full">
+                                  <Avatar className="h-8 w-8 flex-shrink-0">
+                                    <AvatarImage src={assignableUser.avatar_url || ''} />
+                                    <AvatarFallback className="text-xs">
+                                      {getInitials(assignableUser.full_name || 'U')}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium truncate">
+                                      {assignableUser.full_name || 'Unknown User'}
+                                    </div>
+                                    <div className="text-sm text-gray-500 truncate">
+                                      {assignableUser.email}
+                                    </div>
+                                    <div className="text-xs text-gray-400 capitalize">
+                                      {assignableUser.role.replace('_', ' ')}
+                                    </div>
+                                  </div>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4 flex-shrink-0",
+                                      selectedUserId === assignableUser.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  
+                  {/* Show total users count for debugging */}
+                  {!usersLoading && (
+                    <p className="text-xs text-gray-500">
+                      Showing {assignableUsers.length} active users out of {total} total users
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-2">

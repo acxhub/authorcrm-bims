@@ -6,9 +6,9 @@ import { BarChart3 } from 'lucide-react';
 export const PipelinePage: React.FC = () => {
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-gray-50 to-blue-50">
+      <div className="h-screen flex w-full bg-gradient-to-br from-gray-50 to-blue-50 overflow-hidden">
         <AppSidebar />
-        <SidebarInset className="flex-1 flex flex-col">
+        <SidebarInset className="flex-1 flex flex-col h-full overflow-hidden">
           {/* Header */}
           <header className="bg-white/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-50 flex-shrink-0">
             <div className="flex items-center justify-between px-6 py-4">
@@ -25,8 +25,8 @@ export const PipelinePage: React.FC = () => {
             </div>
           </header>
 
-          {/* Main Content - Full height container */}
-          <main className="flex-1 flex flex-col min-h-0">
+          {/* Main Content - Full height container with overflow hidden */}
+          <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <PipelineBoard />
           </main>
         </SidebarInset>
