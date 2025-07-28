@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, UserPlus, Hash, Trash2, CheckSquare, RefreshCw } from 'lucide-react';
+import { Users, UserPlus, Hash, Trash2, CheckSquare, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { useUsers } from '@/hooks/useUsers';
 import { useUpdateLead, useDeleteLead, useManageLeadTags } from '@/hooks/useLeads';
 import { useTags } from '@/hooks/useTags';
@@ -33,9 +34,10 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedStatusId, setSelectedStatusId] = useState<string>('');
+  const [userSearchTerm, setUserSearchTerm] = useState<string>('');
 
   const { user } = useAuth();
-  const { users, loading: usersLoading } = useUsers();
+  const { users, loading: usersLoading } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
   const { data: allTags, isLoading: tagsLoading } = useTags();
   const { data: statuses, isLoading: statusesLoading } = useStatuses();
   const updateLead = useUpdateLead();
@@ -43,8 +45,12 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
   const { addTags } = useManageLeadTags();
   const createActivity = useCreateActivity();
 
-  // Filter users to show all active users
-  const assignableUsers = users?.filter(u => u.is_active) || [];
+  // Filter users to show all active users with search
+  const assignableUsers = users?.filter(u => 
+    u.is_active && 
+    (u.full_name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+     u.email?.toLowerCase().includes(userSearchTerm.toLowerCase()))
+  ) || [];
 
   const handleBulkAssign = async () => {
     if (!selectedUserId || selectedLeads.length === 0) return;
@@ -73,6 +79,7 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
 
       setIsAssignDialogOpen(false);
       setSelectedUserId('');
+      setUserSearchTerm('');
       onSelectionChange([]);
       onActionsComplete();
     } catch (error) {
@@ -207,15 +214,29 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
               <div className="space-y-4">
                 <div>
                   <Label>Assigning {selectedLeads.length} leads to:</Label>
+                  
+                  {/* Search field */}
+                  <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search users by name or email..."
+                      value={userSearchTerm}
+                      onChange={(e) => setUserSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  
                   <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Choose a user..." />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[300px] overflow-y-auto">
                       {usersLoading ? (
                         <SelectItem value="loading" disabled>Loading users...</SelectItem>
                       ) : assignableUsers.length === 0 ? (
-                        <SelectItem value="no-users" disabled>No assignable users found</SelectItem>
+                        <SelectItem value="no-users" disabled>
+                          {userSearchTerm ? 'No users match your search' : 'No assignable users found'}
+                        </SelectItem>
                       ) : (
                         assignableUsers.map((assignableUser) => (
                           <SelectItem key={assignableUser.id} value={assignableUser.id}>

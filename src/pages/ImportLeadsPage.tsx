@@ -86,7 +86,7 @@ const ImportLeadsPage: React.FC = () => {
   const { user } = useAuth();
   const { data: statuses } = useStatuses();
   const { data: existingLeadsData } = useLeads({}, 1, 1000);
-  const { users = [] } = useUsers();
+  const { users = [] } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
   const createLead = useCreateLead();
 
   // Set default status when statuses are loaded
@@ -909,7 +909,7 @@ const ImportLeadsPage: React.FC = () => {
                     <SelectTrigger>
                       <SelectValue placeholder="Select user to assign leads to" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
                       <SelectItem value="none">No assignment</SelectItem>
                       {users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>

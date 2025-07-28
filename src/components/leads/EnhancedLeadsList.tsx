@@ -74,7 +74,7 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
   );
 
   const { data: statuses } = useStatuses();
-  const { users = [] } = useUsers();
+  const { users = [] } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
   const deleteLead = useDeleteLead();
   const { data: tags } = useTags();
 
@@ -564,7 +564,7 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
                               <SelectTrigger className="h-6 w-6 p-0 border-none bg-transparent hover:bg-gray-100">
                                 <UserPlus className="h-3 w-3" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="max-h-[200px] overflow-y-auto">
                                 <SelectItem value="unassigned">Unassigned</SelectItem>
                                 {activeUsers.map((user) => (
                                   <SelectItem key={user.id} value={user.id}>
@@ -585,7 +585,7 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
                               <SelectTrigger className="h-6 w-6 p-0 border-none bg-transparent hover:bg-gray-100">
                                 <UserPlus className="h-3 w-3" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="max-h-[200px] overflow-y-auto">
                                 <SelectItem value="unassigned">Unassigned</SelectItem>
                                 {activeUsers.map((user) => (
                                   <SelectItem key={user.id} value={user.id}>
