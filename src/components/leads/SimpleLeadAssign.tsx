@@ -26,7 +26,7 @@ export const SimpleLeadAssign: React.FC<SimpleLeadAssignProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   
   const { user } = useAuth();
-  const { users, loading: usersLoading } = useUsers();
+  const { users, loading: usersLoading } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
   const updateLead = useUpdateLead();
   const createActivity = useCreateActivity();
 

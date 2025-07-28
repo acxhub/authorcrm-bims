@@ -46,7 +46,7 @@ export const EditPipelineDealModal: React.FC<EditPipelineDealModalProps> = ({
   isLoading = false,
 }) => {
   const { data: statuses = [] } = useStatuses();
-  const { users = [] } = useUsers();
+  const { users = [] } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
 
   const form = useForm<PipelineDealFormData>({
     resolver: zodResolver(pipelineDealSchema),
@@ -183,7 +183,7 @@ export const EditPipelineDealModal: React.FC<EditPipelineDealModalProps> = ({
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="max-h-[200px] overflow-y-auto">
                         {statuses.map((status) => (
                           <SelectItem key={status.id} value={status.id}>
                             <div className="flex items-center gap-2">
@@ -215,7 +215,7 @@ export const EditPipelineDealModal: React.FC<EditPipelineDealModalProps> = ({
                         <SelectValue placeholder="Select user" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
                       <SelectItem value="unassigned">Unassigned</SelectItem>
                       {users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>

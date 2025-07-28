@@ -20,6 +20,7 @@ export interface LeadsFilter {
   created_by?: string;
   date_from?: string;
   date_to?: string;
+  source?: string;
 }
 
 export interface PaginatedLeadsResponse {
@@ -50,7 +51,7 @@ export class LeadsAPI {
 
     // Apply filters - Enhanced search across multiple fields
     if (filters.search) {
-      query = query.or(`book_title.ilike.%${filters.search}%,author_name.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,primary_email.ilike.%${filters.search}%,secondary_email.ilike.%${filters.search}%,phone_number_1.ilike.%${filters.search}%,phone_number_2.ilike.%${filters.search}%,amazon_link.ilike.%${filters.search}%,author_bio.ilike.%${filters.search}%,publisher.ilike.%${filters.search}%,website.ilike.%${filters.search}%,state.ilike.%${filters.search}%,country.ilike.%${filters.search}%`);
+      query = query.or(`book_title.ilike.%${filters.search}%,author_name.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,primary_email.ilike.%${filters.search}%,secondary_email.ilike.%${filters.search}%,phone_number_1.ilike.%${filters.search}%,phone_number_2.ilike.%${filters.search}%,amazon_link.ilike.%${filters.search}%,author_bio.ilike.%${filters.search}%,publisher.ilike.%${filters.search}%,source.ilike.%${filters.search}%,website.ilike.%${filters.search}%,state.ilike.%${filters.search}%,country.ilike.%${filters.search}%`);
     }
 
     if (filters.status_ids?.length) {
@@ -93,6 +94,10 @@ export class LeadsAPI {
 
     if (filters.created_by) {
       query = query.eq('created_by', filters.created_by);
+    }
+
+    if (filters.source) {
+      query = query.eq('source', filters.source);
     }
 
     if (filters.date_from) {

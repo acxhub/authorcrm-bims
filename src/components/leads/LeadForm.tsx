@@ -25,6 +25,7 @@ const leadFormSchema = z.object({
   other_titles: z.array(z.string()).optional(),
   status_id: z.string().min(1, 'Status is required'),
   publisher: z.string().optional(),
+  source: z.string().optional(),
   website: z.string().url('Invalid URL format').optional().or(z.literal('')),
   state: z.string().optional(),
   country: z.string().optional(),
@@ -62,6 +63,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
       other_titles: Array.isArray(initialData?.other_titles) ? initialData.other_titles : [],
       status_id: initialData?.status_id || '',
       publisher: initialData?.publisher || '',
+      source: initialData?.source || '',
       website: initialData?.website || '',
       state: initialData?.state || '',
       country: initialData?.country || '',
@@ -91,6 +93,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
       multiple_titles: data.multiple_titles,
       other_titles: data.other_titles?.length ? data.other_titles : null,
       publisher: data.publisher || null,
+      source: data.source || null,
       website: data.website || null,
       state: data.state || null,
       country: data.country || null,
@@ -251,7 +254,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-gray-900">Additional Information</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="publisher"
@@ -266,6 +269,22 @@ export const LeadForm: React.FC<LeadFormProps> = ({
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="source"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Source</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Lead source (e.g., Amazon, Website, Referral)" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="state"

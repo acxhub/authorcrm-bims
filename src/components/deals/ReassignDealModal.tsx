@@ -39,7 +39,7 @@ export const ReassignDealModal: React.FC<ReassignDealModalProps> = ({
   deal,
 }) => {
   const { user } = useAuth();
-  const { users } = useUsers();
+  const { users } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
   const updateDealMutation = useUpdateDeal();
   const logActivityMutation = useLogActivity();
 
@@ -113,7 +113,7 @@ export const ReassignDealModal: React.FC<ReassignDealModalProps> = ({
                         <SelectValue placeholder="Select a user" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
                       {users?.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.full_name || user.email}

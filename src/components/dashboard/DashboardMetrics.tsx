@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Users, DollarSign, Target, Activity } from 'lucide-react';
 import { usePipelineMetrics } from '@/hooks/usePipelineMetrics';
+import { useDealsPipelineMetrics } from '@/hooks/useDealsPipelineMetrics';
 import { useLeads } from '@/hooks/useLeads';
 import { useDeals } from '@/hooks/useDeals';
 
@@ -84,11 +85,12 @@ const MetricCard: React.FC<MetricCardProps> = ({
 };
 
 export const DashboardMetrics: React.FC = () => {
-  const { metrics, isLoading: metricsLoading } = usePipelineMetrics();
+  const { metrics: leadsMetrics, isLoading: leadsMetricsLoading } = usePipelineMetrics();
+  const { metrics: dealsMetrics, isLoading: dealsMetricsLoading } = useDealsPipelineMetrics();
   const { data: leadsData, isLoading: leadsLoading } = useLeads({}, 1, 1000);
   const { data: dealsData, isLoading: dealsLoading } = useDeals({}, 1, 1000);
 
-  if (metricsLoading || leadsLoading || dealsLoading) {
+  if (leadsMetricsLoading || dealsMetricsLoading || leadsLoading || dealsLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
@@ -152,7 +154,7 @@ export const DashboardMetrics: React.FC = () => {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <MetricCard
         title="Total Leads"
-        value={metrics.totalLeads.toLocaleString()}
+        value={leadsMetrics.totalLeads.toLocaleString()}
         change={formatPercentage(leadsChange)}
         trend={leadsChange >= 0 ? 'up' : 'down'}
         icon={Users}
@@ -161,22 +163,22 @@ export const DashboardMetrics: React.FC = () => {
       />
       
       <MetricCard
-        title="Active Deals"
-        value={metrics.activeLeads.toLocaleString()}
+        title="Pipeline Deals"
+        value={dealsMetrics.activeDeals.toLocaleString()}
         change={formatPercentage(dealsChange)}
         trend={dealsChange >= 0 ? 'up' : 'down'}
         icon={Target}
-        description="Excluding New Lead & Closed"
+        description="Active deals (excludes closed)"
         color="green"
       />
       
       <MetricCard
-        title="Conversion Rate"
-        value={`${metrics.conversionRate}%`}
-        change={metrics.conversionRate > 20 ? '+Good' : 'Needs work'}
-        trend={metrics.conversionRate > 20 ? 'up' : 'down'}
+        title="Pipeline Value"
+        value={formatCurrency(dealsMetrics.pipelineValue)}
+        change={dealsMetrics.averageDealValue > 0 ? `Avg: ${formatCurrency(dealsMetrics.averageDealValue)}` : 'No deals'}
+        trend={dealsMetrics.pipelineValue > 0 ? 'up' : 'neutral'}
         icon={TrendingUp}
-        description="Lead to deal conversion"
+        description="Total value of active deals"
         color="purple"
       />
       

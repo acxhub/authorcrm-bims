@@ -15,8 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
+import { Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStatuses } from '@/hooks/useStatuses';
 import { useUsers } from '@/hooks/useUsers';
@@ -52,7 +52,7 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
 }) => {
   const { user } = useAuth();
   const { data: statuses = [] } = useStatuses();
-  const { users = [] } = useUsers();
+  const { users = [] } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
   const { data: leadsData } = useLeads();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [authorSearchOpen, setAuthorSearchOpen] = useState(false);
@@ -91,9 +91,8 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
   }, [watchedAuthorName, leadsData, form]);
 
   const handleSubmit = (data: CreateDealFormData) => {
-    if (!selectedLead) {
-      // If no matching lead found, we might need to create one or show an error
-      alert('Please select a valid author from the existing leads.');
+    if (!data.author_name.trim()) {
+      alert('Please enter an author name.');
       return;
     }
 
@@ -104,17 +103,31 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
       return;
     }
 
-    const createData: CreateDealData = {
-      lead_id: selectedLead.id,
-      offer_title: data.offer_title,
-      deal_value: data.deal_value,
-      category: data.category,
-      status_id: newDealStatus.id,
-      assigned_to: data.assigned_to || user?.id || null,
-      created_by: user?.id || '',
-    };
-
-    onSave(createData);
+    if (selectedLead) {
+      // Create deal from existing lead
+      const createData: CreateDealData = {
+        lead_id: selectedLead.id,
+        offer_title: data.offer_title,
+        deal_value: data.deal_value,
+        category: data.category,
+        status_id: newDealStatus.id,
+        assigned_to: data.assigned_to || user?.id || null,
+        created_by: user?.id || '',
+      };
+      onSave(createData);
+    } else {
+      // Manual author entry - show warning but allow creation
+      const confirmed = window.confirm(
+        `You're creating a deal for "${data.author_name}" who is not in the leads system. This will create a deal without an associated lead. Continue?`
+      );
+      
+      if (confirmed) {
+        // For manual entries, we'll need to handle this differently
+        // For now, we'll create a minimal lead record or handle it in the backend
+        alert('Manual author entry is not yet fully implemented. Please add the author as a lead first.');
+        return;
+      }
+    }
   };
 
   const handleClose = () => {
@@ -124,12 +137,36 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
     onClose();
   };
 
-  // Get unique author names from leads
+  // Get unique author names from leads with enhanced search
   const authorOptions = leadsData?.data?.map(lead => ({
     value: lead.author_name,
     label: `${lead.author_name} - ${lead.book_title}`,
+    searchText: `${lead.author_name} ${lead.first_name || ''} ${lead.last_name || ''} ${lead.book_title} ${lead.primary_email || ''}`.toLowerCase(),
     lead: lead
   })) || [];
+
+  // Group by author name to detect duplicates
+  const authorGroups = authorOptions.reduce((acc, option) => {
+    const key = option.value.toLowerCase();
+    if (!acc[key]) {
+      acc[key] = [];
+    }
+    acc[key].push(option);
+    return acc;
+  }, {} as Record<string, typeof authorOptions>);
+
+  // Create final options with duplicate indicators
+  const finalAuthorOptions = authorOptions.map(option => {
+    const duplicates = authorGroups[option.value.toLowerCase()];
+    const hasDuplicates = duplicates && duplicates.length > 1;
+    return {
+      ...option,
+      label: hasDuplicates 
+        ? `${option.label} (${duplicates.length} leads)`
+        : option.label,
+      hasDuplicates
+    };
+  });
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -150,53 +187,101 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Author Name *</FormLabel>
-                  <Popover open={authorSearchOpen} onOpenChange={setAuthorSearchOpen}>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={authorSearchOpen}
-                          className="w-full justify-between"
-                        >
-                          {field.value
-                            ? authorOptions.find((option) => option.value === field.value)?.label
-                            : "Search and select an author..."}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
-                      <Command>
-                        <CommandInput placeholder="Search authors..." />
-                        <CommandList>
-                          <CommandEmpty>No author found.</CommandEmpty>
-                          <CommandGroup>
-                            {authorOptions.map((option) => (
+                  {selectedLead ? (
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        value={field.value} 
+                        onChange={field.onChange}
+                        placeholder="Author name"
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedLead(null);
+                          field.onChange('');
+                        }}
+                      >
+                        Change
+                      </Button>
+                    </div>
+                  ) : (
+                    <Popover open={authorSearchOpen} onOpenChange={setAuthorSearchOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={authorSearchOpen}
+                            className="w-full justify-between"
+                          >
+                            {field.value
+                              ? field.value
+                              : "Search and select an author..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Search authors..." />
+                          <CommandList>
+                            <CommandEmpty>No author found.</CommandEmpty>
+                            <CommandGroup>
+                              {finalAuthorOptions.map((option) => (
+                                <CommandItem
+                                  key={`${option.value}-${option.lead.id}`}
+                                  value={option.searchText}
+                                  onSelect={() => {
+                                    field.onChange(option.value);
+                                    setSelectedLead(option.lead);
+                                    form.setValue('offer_title', `${option.lead.book_title} - Publishing Package`);
+                                    setAuthorSearchOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === option.value ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className={cn(option.hasDuplicates && "text-orange-600 font-medium")}>
+                                      {option.label}
+                                    </span>
+                                    {option.hasDuplicates && (
+                                      <span className="text-xs text-orange-500">
+                                        ⚠️ Multiple leads found for this author
+                                      </span>
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                            
+                            <CommandSeparator />
+                            <CommandGroup>
                               <CommandItem
-                                key={option.value}
-                                value={option.label}
+                                value="new-author"
                                 onSelect={() => {
-                                  field.onChange(option.value);
-                                  setSelectedLead(option.lead);
-                                  form.setValue('offer_title', `${option.lead.book_title} - Publishing Package`);
+                                  field.onChange('');
+                                  setSelectedLead(null);
                                   setAuthorSearchOpen(false);
                                 }}
                               >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    field.value === option.value ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                {option.label}
+                                <Plus className="mr-2 h-4 w-4" />
+                                <span className="text-blue-600 font-medium">
+                                  + Add new author (not in system)
+                                </span>
                               </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
@@ -305,7 +390,7 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
                           <SelectValue placeholder="Select user" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="max-h-[200px] overflow-y-auto">
                         <SelectItem value="unassigned">Unassigned</SelectItem>
                         {users.map((user) => (
                           <SelectItem key={user.id} value={user.id}>

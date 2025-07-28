@@ -267,6 +267,7 @@ export type Database = {
           primary_email: string | null
           publisher: string | null
           secondary_email: string | null
+          source: string | null
           state: string | null
           status_id: string
           updated_at: string | null
@@ -294,6 +295,7 @@ export type Database = {
           primary_email?: string | null
           publisher?: string | null
           secondary_email?: string | null
+          source?: string | null
           state?: string | null
           status_id: string
           updated_at?: string | null
@@ -321,6 +323,7 @@ export type Database = {
           primary_email?: string | null
           publisher?: string | null
           secondary_email?: string | null
+          source?: string | null
           state?: string | null
           status_id?: string
           updated_at?: string | null
@@ -469,6 +472,7 @@ export type Database = {
           primary_email: string | null
           publisher: string | null
           secondary_email: string | null
+          source: string | null
           state: string | null
           status_id: string | null
           updated_at: string | null
@@ -497,6 +501,7 @@ export type Database = {
           primary_email?: string | null
           publisher?: string | null
           secondary_email?: string | null
+          source?: string | null
           state?: string | null
           status_id?: string | null
           updated_at?: string | null
@@ -525,6 +530,7 @@ export type Database = {
           primary_email?: string | null
           publisher?: string | null
           secondary_email?: string | null
+          source?: string | null
           state?: string | null
           status_id?: string | null
           updated_at?: string | null

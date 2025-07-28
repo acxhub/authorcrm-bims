@@ -31,7 +31,7 @@ export const PipelineBoard: React.FC = () => {
 
   const { data: dealsData, isLoading: dealsLoading, refetch } = useDeals(filters, 1, 1000);
   const { data: statuses = [], isLoading: statusesLoading } = useStatuses();
-  const { users = [] } = useUsers();
+  const { users = [] } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
   const updateDealMutation = useUpdateDeal();
   const createDealMutation = useCreateDeal();
 
@@ -214,7 +214,7 @@ export const PipelineBoard: React.FC = () => {
                       <SelectTrigger className="w-48 bg-white">
                         <SelectValue placeholder="All users" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-[200px] overflow-y-auto">
                         <SelectItem value="all">All users</SelectItem>
                         {users.map((user) => (
                           <SelectItem key={user.id} value={user.id}>
