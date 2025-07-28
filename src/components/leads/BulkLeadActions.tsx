@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { useUsers } from '@/hooks/useUsers';
+import { useUsersContext } from '@/contexts/UsersContext';
 import { useUpdateLead, useDeleteLead, useManageLeadTags } from '@/hooks/useLeads';
 import { useTags } from '@/hooks/useTags';
 import { useStatuses } from '@/hooks/useStatuses';
@@ -40,16 +40,13 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
   const [openUserCombobox, setOpenUserCombobox] = useState(false);
 
   const { user } = useAuth();
-  const { users, loading: usersLoading, total } = useUsers({}, 1, 100); // Fetch up to 100 users - should be enough for most cases
+  const { activeUsers: assignableUsers, loading: usersLoading } = useUsersContext();
   const { data: allTags, isLoading: tagsLoading } = useTags();
   const { data: statuses, isLoading: statusesLoading } = useStatuses();
   const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
   const { addTags } = useManageLeadTags();
   const createActivity = useCreateActivity();
-
-  // Show all active users (no pre-filtering)
-  const assignableUsers = users?.filter(u => u.is_active) || [];
 
   const handleBulkAssign = async () => {
     if (!selectedUserId || selectedLeads.length === 0) return;
@@ -301,7 +298,7 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
                   {/* Show total users count for debugging */}
                   {!usersLoading && (
                     <p className="text-xs text-gray-500">
-                      Showing {assignableUsers.length} active users out of {total} total users
+                      Showing {assignableUsers.length} active users
                     </p>
                   )}
                 </div>

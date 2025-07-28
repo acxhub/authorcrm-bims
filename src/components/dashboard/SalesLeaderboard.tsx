@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, Calendar } from 'lucide-react';
-import { useUsers } from '@/hooks/useUsers';
+import { useUsersContext } from '@/contexts/UsersContext';
 import { useDeals } from '@/hooks/useDeals';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 
@@ -22,7 +22,7 @@ export const SalesLeaderboard: React.FC = () => {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  const { users = [] } = useUsers();
+  const { users } = useUsersContext();
   const { data: dealsData } = useDeals({});
 
   // Get only sales users

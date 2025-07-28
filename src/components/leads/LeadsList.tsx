@@ -20,7 +20,8 @@ import { useTags } from '@/hooks/useTags';
 import { useLeadsRealtime } from '@/hooks/useLeadsRealtime';
 import { useTagsRealtime } from '@/hooks/useTagsRealtime';
 import { useStatusesRealtime } from '@/hooks/useStatusesRealtime';
-import { useUsers } from '@/hooks/useUsers';
+import { useUsersContext } from '@/contexts/UsersContext';
+import { SearchableUserSelect } from '@/components/ui/searchable-user-select';
 import { useLeadsState } from '@/hooks/useLeadsState';
 import { useNotifications } from '@/hooks/useNotifications';
 import { NotificationsContainer } from '@/components/ui/notifications';
@@ -74,12 +75,9 @@ export const LeadsList: React.FC<LeadsListProps> = ({
   );
 
   const { data: statuses } = useStatuses();
-  const { users = [] } = useUsers();
+  const { activeUsers, loading: usersLoading } = useUsersContext(); // Use context instead of hook
   const deleteLead = useDeleteLead();
   const { data: tags } = useTags();
-
-  // Filter users to show only active ones
-  const activeUsers = users.filter(u => u.is_active);
 
   // Save scroll position before actions
   const saveScrollPosition = () => {
@@ -556,44 +554,22 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                             <span className="text-sm">
                               {lead.assigned_to_profile.full_name || 'Unknown'}
                             </span>
-                            <Select
-                              value={lead.assigned_to || 'unassigned'}
-                              onValueChange={(value) => handleQuickAssign(lead.id, value === 'unassigned' ? null : value)}
-                              disabled={isAssigning === lead.id}
-                            >
-                              <SelectTrigger className="h-6 w-6 p-0 border-none bg-transparent hover:bg-gray-100">
-                                <UserPlus className="h-3 w-3" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                {activeUsers.map((user) => (
-                                  <SelectItem key={user.id} value={user.id}>
-                                    {user.full_name || user.email}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <SearchableUserSelect
+                              users={activeUsers}
+                              value={lead.assigned_to}
+                              onValueChange={(value) => handleQuickAssign(lead.id, value)}
+                              disabled={isAssigning === lead.id || usersLoading}
+                            />
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-500">Unassigned</span>
-                            <Select
-                              value="unassigned"
-                              onValueChange={(value) => handleQuickAssign(lead.id, value === 'unassigned' ? null : value)}
-                              disabled={isAssigning === lead.id}
-                            >
-                              <SelectTrigger className="h-6 w-6 p-0 border-none bg-transparent hover:bg-gray-100">
-                                <UserPlus className="h-3 w-3" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                {activeUsers.map((user) => (
-                                  <SelectItem key={user.id} value={user.id}>
-                                    {user.full_name || user.email}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <SearchableUserSelect
+                              users={activeUsers}
+                              value={null}
+                              onValueChange={(value) => handleQuickAssign(lead.id, value)}
+                              disabled={isAssigning === lead.id || usersLoading}
+                            />
                           </div>
                         )}
                       </TableCell>

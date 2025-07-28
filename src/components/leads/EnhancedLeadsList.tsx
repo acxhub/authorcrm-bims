@@ -74,7 +74,7 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
   );
 
   const { data: statuses } = useStatuses();
-  const { users = [] } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
+  const { users = [] } = useUsers({}, 1, 100); // Fetch up to 100 users to ensure all are shown
   const deleteLead = useDeleteLead();
   const { data: tags } = useTags();
 

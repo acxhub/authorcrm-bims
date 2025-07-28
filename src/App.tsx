@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { useAppRealtime } from "@/hooks/useAppRealtime";
+import { UsersProvider } from "@/contexts/UsersContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -31,12 +32,13 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <RealtimeProvider>
-          <BrowserRouter>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <Routes>
+        <UsersProvider>
+          <RealtimeProvider>
+            <BrowserRouter>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={
                   <ProtectedRoute>
@@ -88,6 +90,7 @@ const App = () => {
             </TooltipProvider>
           </BrowserRouter>
         </RealtimeProvider>
+        </UsersProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
