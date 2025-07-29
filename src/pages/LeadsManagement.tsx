@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { LeadsList } from '@/components/leads/LeadsList';
 import { LeadForm } from '@/components/leads/LeadForm';
@@ -14,7 +14,7 @@ import { Plus, Download, Upload, Bell, Settings, AlertCircle } from 'lucide-reac
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 type ModalState = 'closed' | 'create' | 'edit' | 'view';
 
@@ -23,12 +23,24 @@ export const LeadsManagement: React.FC = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showStatusManagement, setShowStatusManagement] = useState(false);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: statuses, refetch: refetchStatuses } = useStatuses();
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
   const { user } = useAuth();
   const { profile } = useProfile();
+
+  // Handle URL parameters to open create modal
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'create') {
+      handleCreateLead();
+      // Remove the query parameter after handling it
+      searchParams.delete('action');
+      setSearchParams(searchParams);
+    }
+  }, []);
 
   const handleCreateLead = () => {
     if (!statuses?.length) {

@@ -462,6 +462,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                     </TableHead>
                     <TableHead>Author</TableHead>
                     <TableHead>Book Title</TableHead>
+                    <TableHead>Source</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Tags</TableHead>
                     <TableHead>Assigned To</TableHead>
@@ -513,6 +514,11 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                         )}
                       </TableCell>
                       <TableCell>
+                        <div className="text-sm text-gray-600">
+                          {lead.source || '-'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <Badge 
                           className="font-medium"
                           style={{ 
@@ -525,22 +531,49 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {lead.tags?.length ? lead.tags.map((tag: any) => (
+                        {lead.tags?.length ? (
+                          <div className="relative group">
                             <Badge
-                              key={tag.id}
                               variant="secondary"
-                              className="text-xs"
+                              className="text-xs cursor-help"
                               style={{
-                                backgroundColor: `${tag.color}20`,
-                                color: tag.color,
-                                borderColor: tag.color
+                                backgroundColor: `${lead.tags[lead.tags.length - 1].color}20`,
+                                color: lead.tags[lead.tags.length - 1].color,
+                                borderColor: lead.tags[lead.tags.length - 1].color
                               }}
                             >
-                              {tag.name}
+                              {lead.tags[lead.tags.length - 1].name}
+                              {lead.tags.length > 1 && (
+                                <span className="ml-1 text-xs opacity-70">+{lead.tags.length - 1}</span>
+                              )}
                             </Badge>
-                          )) : <span className="text-xs text-gray-400">No tags</span>}
-                        </div>
+                            {lead.tags.length > 1 && (
+                              <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-10">
+                                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 min-w-[150px] max-w-[300px]">
+                                  <div className="text-xs font-medium text-gray-700 mb-1">All Tags:</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {lead.tags.map((tag: any) => (
+                                      <Badge
+                                        key={tag.id}
+                                        variant="secondary"
+                                        className="text-xs"
+                                        style={{
+                                          backgroundColor: `${tag.color}20`,
+                                          color: tag.color,
+                                          borderColor: tag.color
+                                        }}
+                                      >
+                                        {tag.name}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">No tags</span>
+                        )}
                       </TableCell>
                       <TableCell onClick={e => e.stopPropagation()}>
                         {lead.assigned_to_profile ? (

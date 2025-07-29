@@ -34,6 +34,7 @@ const DB_FIELDS = {
   website: { label: 'Website', required: false, type: 'url', maxLength: 500 },
   state: { label: 'State', required: false, type: 'text', maxLength: 100 },
   country: { label: 'Country', required: false, type: 'text', maxLength: 100 },
+  source: { label: 'Source', required: false, type: 'text', maxLength: 255 },
   status_id: { label: 'Status', required: false, type: 'select', maxLength: null },
 };
 

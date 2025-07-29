@@ -7,8 +7,6 @@ import {
   Settings,
   BarChart3,
   MessageSquare,
-  Search,
-  Filter,
   Upload,
 } from "lucide-react";
 import {
@@ -51,23 +49,13 @@ const navigationItems = [
 const quickActions = [
   {
     title: "Add Lead",
-    url: "/leads/new",
+    url: "/leads?action=create",
     icon: PlusCircle,
   },
   {
     title: "Import Leads",
     url: "/leads/import",
     icon: Upload,
-  },
-  {
-    title: "Search",
-    url: "/search",
-    icon: Search,
-  },
-  {
-    title: "Filters",
-    url: "/filters",
-    icon: Filter,
   },
 ];
 
