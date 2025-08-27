@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useCommentsByLeadId, useCreateComment, useUpdateComment, useDeleteComment } from '@/hooks/useComments';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useProfile } from '@/hooks/useAuth';
 import type { Comment } from '@/lib/api/comments';
 
 interface DealCommentsProps {
@@ -25,6 +25,7 @@ const getInitials = (name: string) => {
 
 export const DealComments: React.FC<DealCommentsProps> = ({ leadId }) => {
   const { user } = useAuth();
+  const { profile } = useProfile();
   const [newComment, setNewComment] = useState('');
   const [editingComment, setEditingComment] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
@@ -141,9 +142,13 @@ export const DealComments: React.FC<DealCommentsProps> = ({ leadId }) => {
           <Textarea
             placeholder="Add a comment..."
             value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
+            onChange={(e) => setNewComment(e.target.value.slice(0, 1000))}
             className="min-h-[80px]"
+            maxLength={1000}
           />
+          <div className="text-xs text-gray-500 text-right">
+            {newComment.length}/1000 characters
+          </div>
           <div className="flex justify-end">
             <Button
               onClick={handleAddComment}
@@ -196,13 +201,15 @@ export const DealComments: React.FC<DealCommentsProps> = ({ leadId }) => {
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteComment(comment.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
+                            {profile?.role !== 'sales' && (
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
@@ -212,9 +219,13 @@ export const DealComments: React.FC<DealCommentsProps> = ({ leadId }) => {
                       <div className="space-y-2">
                         <Textarea
                           value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
+                          onChange={(e) => setEditContent(e.target.value.slice(0, 1000))}
                           className="min-h-[60px]"
+                          maxLength={1000}
                         />
+                        <div className="text-xs text-gray-500 text-right">
+                          {editContent.length}/1000 characters
+                        </div>
                         <div className="flex gap-2">
                           <Button
                             size="sm"
@@ -251,9 +262,13 @@ export const DealComments: React.FC<DealCommentsProps> = ({ leadId }) => {
                     <Textarea
                       placeholder="Write a reply..."
                       value={replyContent}
-                      onChange={(e) => setReplyContent(e.target.value)}
+                      onChange={(e) => setReplyContent(e.target.value.slice(0, 1000))}
                       className="min-h-[60px]"
+                      maxLength={1000}
                     />
+                    <div className="text-xs text-gray-500 text-right">
+                      {replyContent.length}/1000 characters
+                    </div>
                     <div className="flex gap-2">
                       <Button
                         size="sm"
@@ -304,13 +319,15 @@ export const DealComments: React.FC<DealCommentsProps> = ({ leadId }) => {
                                     <Edit className="h-3 w-3 mr-2" />
                                     Edit
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={() => handleDeleteComment(reply.id)}
-                                    className="text-red-600"
-                                  >
-                                    <Trash2 className="h-3 w-3 mr-2" />
-                                    Delete
-                                  </DropdownMenuItem>
+                                  {profile?.role !== 'sales' && (
+                                    <DropdownMenuItem 
+                                      onClick={() => handleDeleteComment(reply.id)}
+                                      className="text-red-600"
+                                    >
+                                      <Trash2 className="h-3 w-3 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             )}
@@ -320,9 +337,13 @@ export const DealComments: React.FC<DealCommentsProps> = ({ leadId }) => {
                             <div className="space-y-2">
                               <Textarea
                                 value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
+                                onChange={(e) => setEditContent(e.target.value.slice(0, 1000))}
                                 className="min-h-[50px] text-xs"
+                                maxLength={1000}
                               />
+                              <div className="text-xs text-gray-500 text-right">
+                                {editContent.length}/1000 characters
+                              </div>
                               <div className="flex gap-2">
                                 <Button
                                   size="sm"

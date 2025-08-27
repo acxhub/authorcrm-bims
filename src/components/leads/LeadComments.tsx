@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useCommentsByLeadId, useCreateComment, useUpdateComment, useDeleteComment } from '@/hooks/useComments';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useProfile } from '@/hooks/useAuth';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead } from '@/lib/api/leads';
 import type { Comment } from '@/lib/api/comments';
@@ -34,10 +34,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const [editContent, setEditContent] = useState(comment.content);
   
   const { user } = useAuth();
+  const { profile } = useProfile();
   const updateComment = useUpdateComment();
   const deleteComment = useDeleteComment();
 
   const isOwner = user?.id === comment.user_id;
+  const canDelete = isOwner && profile?.role !== 'sales';
   const maxLevel = 2; // Limit nesting depth
 
   const handleEdit = async () => {
@@ -113,13 +115,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     <Edit className="h-3 w-3 mr-2" />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={handleDelete}
-                    className="text-red-600"
-                  >
-                    <Trash2 className="h-3 w-3 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
+                  {canDelete && (
+                    <DropdownMenuItem 
+                      onClick={handleDelete}
+                      className="text-red-600"
+                    >
+                      <Trash2 className="h-3 w-3 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -130,10 +134,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
             <div className="space-y-2">
               <Textarea
                 value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
+                onChange={(e) => setEditContent(e.target.value.slice(0, 1000))}
                 className="min-h-[60px]"
                 placeholder="Edit your comment..."
+                maxLength={1000}
               />
+              <div className="text-xs text-gray-500 text-right">
+                {editContent.length}/1000 characters
+              </div>
               <div className="flex gap-2">
                 <Button
                   size="sm"
@@ -273,9 +281,13 @@ export const LeadComments: React.FC<LeadCommentsProps> = ({ lead }) => {
                 id="new-comment"
                 placeholder="Write a comment..."
                 value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
+                onChange={(e) => setNewComment(e.target.value.slice(0, 1000))}
                 className="min-h-[80px]"
+                maxLength={1000}
               />
+              <div className="text-xs text-gray-500 text-right">
+                {newComment.length}/1000 characters
+              </div>
               <div className="flex justify-end">
                 <Button
                   onClick={handleSubmitComment}
@@ -327,9 +339,13 @@ export const LeadComments: React.FC<LeadCommentsProps> = ({ lead }) => {
             <Textarea
               placeholder="Write your reply..."
               value={replyContent}
-              onChange={(e) => setReplyContent(e.target.value)}
+              onChange={(e) => setReplyContent(e.target.value.slice(0, 1000))}
               className="min-h-[60px]"
+              maxLength={1000}
             />
+            <div className="text-xs text-gray-500 text-right">
+              {replyContent.length}/1000 characters
+            </div>
             <div className="flex gap-2">
               <Button
                 size="sm"
