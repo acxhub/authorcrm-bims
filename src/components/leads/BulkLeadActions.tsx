@@ -19,6 +19,7 @@ import { useStatuses } from '@/hooks/useStatuses';
 import { useCreateActivity } from '@/hooks/useActivities';
 import { useAuth } from '@/hooks/useAuth';
 import type { Lead } from '@/lib/api/leads';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BulkLeadActionsProps {
   selectedLeads: Lead[];
@@ -157,6 +158,41 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
       onActionsComplete();
     } catch (error) {
       console.error('Bulk deletion failed:', error);
+    }
+  };
+
+  const handleBulkRecycle = async () => {
+    if (selectedLeads.length === 0) return;
+
+    const confirmed = confirm(
+      `Are you sure you want to recycle ${selectedLeads.length} lead${selectedLeads.length > 1 ? 's' : ''}? They will be unassigned and available for reassignment.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      // Get only assigned leads
+      const assignedLeadIds = selectedLeads
+        .filter(lead => lead.assigned_to)
+        .map(lead => lead.id);
+
+      if (assignedLeadIds.length === 0) {
+        alert('No assigned leads selected to recycle.');
+        return;
+      }
+
+      // Call the bulk_recycle_leads function
+      const { error } = await supabase.rpc('bulk_recycle_leads', { 
+        lead_ids: assignedLeadIds 
+      });
+
+      if (error) throw error;
+
+      onSelectionChange([]);
+      onActionsComplete();
+    } catch (error) {
+      console.error('Bulk recycle failed:', error);
+      alert('Failed to recycle leads. Please try again.');
     }
   };
 
@@ -490,6 +526,18 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Bulk Recycle */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleBulkRecycle}
+            disabled={isLoading}
+            className="text-orange-600 hover:text-orange-700"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Recycle Selected
+          </Button>
 
           {/* Bulk Delete */}
           <Button

@@ -8,6 +8,8 @@ import {
   BarChart3,
   MessageSquare,
   Upload,
+  DollarSign,
+  Trophy,
 } from "lucide-react";
 import {
   Sidebar,
@@ -43,6 +45,16 @@ const navigationItems = [
     title: "Pipeline",
     url: "/pipeline",
     icon: BarChart3,
+  },
+  {
+    title: "Sold Deals",
+    url: "/sold-dashboard",
+    icon: DollarSign,
+  },
+  {
+    title: "Sales Board",
+    url: "/sales-board",
+    icon: Trophy,
   },
 ];
 

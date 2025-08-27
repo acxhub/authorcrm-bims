@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Mail, Phone, MoreHorizontal, Edit, Trash2, Eye, UserPlus, Calendar, X } from 'lucide-react';
+import { Plus, Search, Filter, Mail, Phone, MoreHorizontal, Edit, Trash2, Eye, UserPlus, Calendar, X, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,8 @@ import { useLeadsState } from '@/hooks/useLeadsState';
 import { useNotifications } from '@/hooks/useNotifications';
 import { NotificationsContainer } from '@/components/ui/notifications';
 import { useCreateActivity } from '@/hooks/useActivities';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useProfile } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LeadsListProps {
   onCreateLead?: () => void;
@@ -52,6 +53,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
   
   // Hooks
   const { user } = useAuth();
+  const { profile } = useProfile();
   const updateLead = useUpdateLead();
   const createActivity = useCreateActivity();
 
@@ -148,6 +150,30 @@ export const LeadsList: React.FC<LeadsListProps> = ({
           });
         }
       });
+    }
+  };
+
+  const handleRecycleLead = async (leadId: string) => {
+    if (confirm('Are you sure you want to recycle this lead? It will be unassigned and available for reassignment.')) {
+      try {
+        const { error } = await supabase.rpc('recycle_lead', { lead_id: leadId });
+        
+        if (error) throw error;
+        
+        notifications.addNotification({
+          type: 'success',
+          title: 'Lead recycled successfully',
+        });
+        
+        // Refresh the leads list
+        refetch();
+        preserveScrollPosition();
+      } catch (error) {
+        notifications.addNotification({
+          type: 'error',
+          title: 'Failed to recycle lead',
+        });
+      }
     }
   };
 
@@ -462,7 +488,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                     </TableHead>
                     <TableHead>Author</TableHead>
                     <TableHead>Book Title</TableHead>
-                    <TableHead>Source</TableHead>
+                    <TableHead>Publisher</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Tags</TableHead>
                     <TableHead>Assigned To</TableHead>
@@ -515,7 +541,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                       </TableCell>
                       <TableCell>
                         <div className="text-sm text-gray-600">
-                          {lead.source || '-'}
+                          {lead.publisher || '-'}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -655,13 +681,24 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                                   Edit
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem 
-                                onClick={() => handleDeleteLead(lead.id)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
+                              {lead.assigned_to && (
+                                <DropdownMenuItem 
+                                  onClick={() => handleRecycleLead(lead.id)}
+                                  className="text-orange-600"
+                                >
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                  Recycle
+                                </DropdownMenuItem>
+                              )}
+                              {(profile?.role === 'leads_manager' || profile?.can_delete_leads) && (
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteLead(lead.id)}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>

@@ -6,6 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Author CRM - A customer relationship management system for managing author leads, deals, and sales pipelines. Built with React, TypeScript, and Supabase using the Lovable.dev platform.
 
+**Last Updated**: August 2025  
+**Version**: Production-ready with real-time collaboration features
+
 ## Key Commands
 
 ### Development
@@ -123,3 +126,44 @@ useEffect(() => {
 - Always check for existing patterns before implementing new features
 - Maintain consistency with existing code style and component patterns
 - Use the existing UI components from shadcn/ui before creating new ones
+
+## Current State (August 2025)
+
+### Recent Features Completed
+- Enhanced bulk action user selection with searchable combobox
+- Fixed user dropdown pagination issues
+- Added source field tracking for leads
+- Improved author search functionality
+- Enhanced pipeline metrics and analytics
+
+### Active Components Count
+- **48 shadcn/ui base components** providing consistent UI primitives
+- **17 custom hooks** managing business logic and real-time subscriptions
+- **9 main pages** with protected routing
+- **7 API service modules** in lib/api/
+- **18 database migrations** ensuring schema evolution
+
+### Performance Considerations
+- Real-time subscriptions active for: leads, deals, activities, comments, tags, statuses
+- React Query caching implemented for all data fetching
+- Optimistic updates enabled for better UX
+- Database indexes on all foreign keys and commonly queried fields
+
+### Security Implementation
+- Row-level security (RLS) enforced at database level
+- Role-based access control (RBAC) with three roles
+- Protected routes with role checking
+- Session-based authentication via Supabase Auth
+
+### Known Integration Points
+- CSV import/export for lead management
+- Drag-and-drop pipeline board using @dnd-kit
+- Real-time notifications via Sonner
+- Data visualization with Recharts
+- File handling with react-dropzone
+
+### Deployment Configuration
+- Vercel deployment ready (vercel.json present)
+- Environment variables managed via Vite
+- Production builds optimized with tree-shaking
+- Static assets served from /public
