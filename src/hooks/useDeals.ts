@@ -6,6 +6,7 @@ export const useDeals = (filters: DealsFilter = {}, page = 1, limit = 10) => {
   return useQuery({
     queryKey: ['deals', filters, page, limit],
     queryFn: () => dealsApi.getDeals(filters, page, limit),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
@@ -14,6 +15,7 @@ export const useDeal = (id: string) => {
     queryKey: ['deals', id],
     queryFn: () => dealsApi.getDealById(id),
     enabled: !!id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
@@ -22,6 +24,7 @@ export const useDealsByLeadId = (leadId: string) => {
     queryKey: ['deals', 'by-lead', leadId],
     queryFn: () => dealsApi.getDealsByLeadId(leadId),
     enabled: !!leadId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 

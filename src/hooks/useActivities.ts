@@ -15,6 +15,7 @@ export const useActivitiesByLeadId = (leadId: string) => {
     queryKey: activityKeys.byLeadId(leadId),
     queryFn: () => getActivitiesByLeadId(leadId),
     enabled: !!leadId,
+    staleTime: 2 * 60 * 1000, // 2 minutes (activities change frequently)
   });
 };
 

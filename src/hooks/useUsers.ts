@@ -1,180 +1,169 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi, type UserProfile, type UsersFilter, type CreateUserRequest, type UpdateUserRequest } from '@/lib/api/users';
 import { useToast } from '@/hooks/use-toast';
 
 export function useUsers(filters?: UsersFilter, page = 1, limit = 10) {
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['users', filters, page, limit],
+    queryFn: () => usersApi.getAll(filters, page, limit),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+  
+  const users = data?.data || [];
+  const total = data?.total || 0;
+  const loading = isLoading;
 
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await usersApi.getAll(filters, page, limit);
-      setUsers(response.data);
-      setTotal(response.total);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch users';
-      setError(errorMessage);
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, [filters, page, limit]);
-
-  const createUser = async (userData: CreateUserRequest): Promise<UserProfile | null> => {
-    try {
-      setLoading(true);
-      const newUser = await usersApi.create(userData);
-      await fetchUsers(); // Refresh the list
+  const queryClient = useQueryClient();
+  
+  const createUserMutation = useMutation({
+    mutationFn: (userData: CreateUserRequest) => usersApi.create(userData),
+    onSuccess: (newUser) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       toast({
         title: 'Success',
         description: 'User created successfully',
       });
-      return newUser;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create user';
-      setError(errorMessage);
+    },
+    onError: (err: Error) => {
       toast({
         title: 'Error',
-        description: errorMessage,
+        description: err.message,
         variant: 'destructive',
       });
+    },
+  });
+  
+  const createUser = async (userData: CreateUserRequest): Promise<UserProfile | null> => {
+    try {
+      const result = await createUserMutation.mutateAsync(userData);
+      return result;
+    } catch {
       return null;
-    } finally {
-      setLoading(false);
     }
   };
 
-  const updateUser = async (id: string, updates: UpdateUserRequest): Promise<UserProfile | null> => {
-    try {
-      setLoading(true);
-      const updatedUser = await usersApi.update(id, updates);
-      
-      // Update the local state
-      setUsers(prev => prev.map(user => 
-        user.id === id ? updatedUser : user
-      ));
-      
+  const updateUserMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: UpdateUserRequest }) => 
+      usersApi.update(id, updates),
+    onSuccess: (updatedUser) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.setQueryData(['user', updatedUser.id], updatedUser);
       toast({
         title: 'Success',
         description: 'User updated successfully',
       });
-      return updatedUser;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update user';
-      setError(errorMessage);
+    },
+    onError: (err: Error) => {
       toast({
         title: 'Error',
-        description: errorMessage,
+        description: err.message,
         variant: 'destructive',
       });
+    },
+  });
+  
+  const updateUser = async (id: string, updates: UpdateUserRequest): Promise<UserProfile | null> => {
+    try {
+      const result = await updateUserMutation.mutateAsync({ id, updates });
+      return result;
+    } catch {
       return null;
-    } finally {
-      setLoading(false);
     }
   };
 
-  const deleteUser = async (id: string): Promise<boolean> => {
-    try {
-      setLoading(true);
-      await usersApi.delete(id);
-      
-      // Remove from local state
-      setUsers(prev => prev.filter(user => user.id !== id));
-      setTotal(prev => prev - 1);
-      
+  const deleteUserMutation = useMutation({
+    mutationFn: (id: string) => usersApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       toast({
         title: 'Success',
         description: 'User deleted successfully',
       });
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete user';
-      setError(errorMessage);
+    },
+    onError: (err: Error) => {
       toast({
         title: 'Error',
-        description: errorMessage,
+        description: err.message,
         variant: 'destructive',
       });
+    },
+  });
+  
+  const deleteUser = async (id: string): Promise<boolean> => {
+    try {
+      await deleteUserMutation.mutateAsync(id);
+      return true;
+    } catch {
       return false;
-    } finally {
-      setLoading(false);
     }
   };
 
-  const toggleUserStatus = async (id: string): Promise<boolean> => {
-    try {
-      setLoading(true);
-      const updatedUser = await usersApi.toggleStatus(id);
-      
-      // Update the local state
-      setUsers(prev => prev.map(user => 
-        user.id === id ? updatedUser : user
-      ));
-      
+  const toggleUserStatusMutation = useMutation({
+    mutationFn: (id: string) => usersApi.toggleStatus(id),
+    onSuccess: (updatedUser) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.setQueryData(['user', updatedUser.id], updatedUser);
       toast({
         title: 'Success',
         description: `User ${updatedUser.is_active ? 'activated' : 'deactivated'} successfully`,
       });
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update user status';
-      setError(errorMessage);
+    },
+    onError: (err: Error) => {
       toast({
         title: 'Error',
-        description: errorMessage,
+        description: err.message,
         variant: 'destructive',
       });
+    },
+  });
+  
+  const toggleUserStatus = async (id: string): Promise<boolean> => {
+    try {
+      await toggleUserStatusMutation.mutateAsync(id);
+      return true;
+    } catch {
       return false;
-    } finally {
-      setLoading(false);
     }
   };
 
-  const resetPassword = async (id: string, newPassword: string): Promise<boolean> => {
-    try {
-      setLoading(true);
-      await usersApi.resetPassword(id, newPassword);
+  const resetPasswordMutation = useMutation({
+    mutationFn: ({ id, newPassword }: { id: string; newPassword: string }) => 
+      usersApi.resetPassword(id, newPassword),
+    onSuccess: () => {
       toast({
         title: 'Success',
         description: 'Password reset successfully',
       });
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to reset password';
-      setError(errorMessage);
+    },
+    onError: (err: Error) => {
       toast({
         title: 'Error',
-        description: errorMessage,
+        description: err.message,
         variant: 'destructive',
       });
+    },
+  });
+  
+  const resetPassword = async (id: string, newPassword: string): Promise<boolean> => {
+    try {
+      await resetPasswordMutation.mutateAsync({ id, newPassword });
+      return true;
+    } catch {
       return false;
-    } finally {
-      setLoading(false);
     }
   };
 
   const refresh = () => {
-    fetchUsers();
+    queryClient.invalidateQueries({ queryKey: ['users'] });
   };
 
   return {
     users,
     total,
     loading,
-    error,
+    error: error?.message || null,
     createUser,
     updateUser,
     deleteUser,
@@ -182,4 +171,13 @@ export function useUsers(filters?: UsersFilter, page = 1, limit = 10) {
     resetPassword,
     refresh,
   };
+}
+
+export function useUser(id: string) {
+  return useQuery({
+    queryKey: ['user', id],
+    queryFn: () => usersApi.getById(id),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 } 

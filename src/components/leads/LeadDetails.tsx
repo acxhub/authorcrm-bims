@@ -13,6 +13,7 @@ import { LeadActivities } from './LeadActivities';
 import { LeadDeals } from './LeadDeals';
 import { SimpleTagAdd } from './SimpleTagAdd';
 import { SimpleLeadAssign } from './SimpleLeadAssign';
+import { ForRecycleButton } from './ForRecycleButton';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead } from '@/lib/api/leads';
 
@@ -28,17 +29,9 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
   onEdit 
 }) => {
   const [activeTab, setActiveTab] = useState('comments');
-  const [lead, setLead] = useState<Lead | null>(null);
 
   const { user } = useAuth();
-  const { data: leadData, isLoading, error } = useLead(leadId);
-
-  // Update local state when data changes
-  React.useEffect(() => {
-    if (leadData) {
-      setLead(leadData);
-    }
-  }, [leadData]);
+  const { data: lead, isLoading, error } = useLead(leadId);
 
   const getInitials = (name: string) => {
     return name
@@ -50,21 +43,13 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
   };
 
   const handleAssignmentChange = (assignedTo: string | null) => {
-    if (lead) {
-      setLead({
-        ...lead,
-        assigned_to: assignedTo,
-      });
-    }
+    // React Query will handle the update through cache invalidation
+    // from the assignment mutation in the component that calls this
   };
 
   const handleTagsChange = (tags: any[]) => {
-    if (lead) {
-      setLead({
-        ...lead,
-        tags,
-      });
-    }
+    // React Query will handle the update through cache invalidation
+    // from the tag mutation in SimpleTagAdd component
   };
 
   const handleEmailClick = (email: string) => {
@@ -424,6 +409,15 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
                     </div>
                   </div>
                 )}
+
+                {/* For Recycle Button */}
+                <div className="pt-3 border-t">
+                  <ForRecycleButton 
+                    lead={lead}
+                    onAssignmentChange={handleAssignmentChange}
+                    onTagsChange={handleTagsChange}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

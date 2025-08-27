@@ -15,6 +15,7 @@ export const useCommentsByLeadId = (leadId: string) => {
     queryKey: commentKeys.byLeadId(leadId),
     queryFn: () => getCommentsByLeadId(leadId),
     enabled: !!leadId,
+    staleTime: 2 * 60 * 1000, // 2 minutes (comments change frequently)
   });
 };
 

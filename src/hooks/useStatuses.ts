@@ -15,6 +15,7 @@ export const useStatus = (id: string) => {
     queryKey: ['status', id],
     queryFn: () => statusesApi.getStatusById(id),
     enabled: !!id,
+    staleTime: 10 * 60 * 1000, // 10 minutes (statuses rarely change)
   });
 };
 

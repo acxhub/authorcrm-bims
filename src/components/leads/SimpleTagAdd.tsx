@@ -33,21 +33,22 @@ export const SimpleTagAdd: React.FC<SimpleTagAddProps> = ({
     predefinedTagNames.includes(tag.name)
   ) || [];
 
-  // Get current lead tags that are predefined
-  const currentPredefinedTags = lead.tags?.filter(tag => 
+  // Get current lead tags (all tags, not just predefined)
+  const currentTags = lead.tags || [];
+  
+  // Separate predefined from custom tags
+  const currentPredefinedTags = currentTags.filter(tag => 
     predefinedTagNames.includes(tag.name)
-  ) || [];
+  );
+  const currentCustomTags = currentTags.filter(tag => 
+    !predefinedTagNames.includes(tag.name)
+  );
 
   const handleAddTags = async () => {
     if (selectedTagIds.length === 0) return;
 
     try {
       await addTags.mutateAsync({ leadId: lead.id, tagIds: selectedTagIds });
-      
-      // Update local state
-      const newTags = allTags?.filter(tag => selectedTagIds.includes(tag.id)) || [];
-      const updatedTags = [...(lead.tags || []), ...newTags];
-      onTagsChange?.(updatedTags);
       
       setIsDialogOpen(false);
       setSelectedTagIds([]);
@@ -59,10 +60,6 @@ export const SimpleTagAdd: React.FC<SimpleTagAddProps> = ({
   const handleRemoveTag = async (tagId: string) => {
     try {
       await removeTags.mutateAsync({ leadId: lead.id, tagIds: [tagId] });
-      
-      // Update local state
-      const updatedTags = lead.tags?.filter(tag => tag.id !== tagId) || [];
-      onTagsChange?.(updatedTags);
     } catch (error) {
       console.error('Failed to remove tag:', error);
     }
@@ -86,32 +83,71 @@ export const SimpleTagAdd: React.FC<SimpleTagAddProps> = ({
 
   return (
     <div className="space-y-3">
-      {/* Current Predefined Tags */}
-      <div className="flex flex-wrap gap-2">
-        {currentPredefinedTags.length === 0 ? (
-          <div className="text-sm text-gray-500 italic">No predefined tags applied</div>
-        ) : (
-          currentPredefinedTags.map((tag) => (
-            <Badge
-              key={tag.id}
-              variant="secondary"
-              className="flex items-center gap-1 pr-1"
-              style={{
-                backgroundColor: `${tag.color}20`,
-                color: tag.color,
-                borderColor: tag.color
-              }}
-            >
-              {tag.name}
-              <button
-                onClick={() => handleRemoveTag(tag.id)}
-                disabled={isLoading}
-                className="ml-1 hover:bg-red-100 rounded-full p-0.5 transition-colors"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))
+      {/* All Current Tags */}
+      <div className="space-y-2">
+        {/* Predefined Tags */}
+        {currentPredefinedTags.length > 0 && (
+          <div>
+            <div className="text-xs font-medium text-gray-600 mb-1">Predefined Tags</div>
+            <div className="flex flex-wrap gap-2">
+              {currentPredefinedTags.map((tag) => (
+                <Badge
+                  key={tag.id}
+                  variant="secondary"
+                  className="flex items-center gap-1 pr-1"
+                  style={{
+                    backgroundColor: `${tag.color}20`,
+                    color: tag.color,
+                    borderColor: tag.color
+                  }}
+                >
+                  {tag.name}
+                  <button
+                    onClick={() => handleRemoveTag(tag.id)}
+                    disabled={isLoading}
+                    className="ml-1 hover:bg-red-100 rounded-full p-0.5 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Custom Tags */}
+        {currentCustomTags.length > 0 && (
+          <div>
+            <div className="text-xs font-medium text-gray-600 mb-1">Custom Tags</div>
+            <div className="flex flex-wrap gap-2">
+              {currentCustomTags.map((tag) => (
+                <Badge
+                  key={tag.id}
+                  variant="outline"
+                  className="flex items-center gap-1 pr-1"
+                  style={{
+                    backgroundColor: tag.color ? `${tag.color}10` : undefined,
+                    color: tag.color || undefined,
+                    borderColor: tag.color || undefined
+                  }}
+                >
+                  {tag.name}
+                  <button
+                    onClick={() => handleRemoveTag(tag.id)}
+                    disabled={isLoading}
+                    className="ml-1 hover:bg-red-100 rounded-full p-0.5 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* No tags message */}
+        {currentTags.length === 0 && (
+          <div className="text-sm text-gray-500 italic">No tags applied</div>
         )}
       </div>
 

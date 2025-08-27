@@ -15,6 +15,7 @@ export const useTag = (id: string) => {
     queryKey: ['tag', id],
     queryFn: () => tagsApi.getTagById(id),
     enabled: !!id,
+    staleTime: 10 * 60 * 1000, // 10 minutes (tags rarely change)
   });
 };
 

@@ -22,7 +22,18 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { SoldDashboard } from "./pages/SoldDashboard";
 import { SalesBoard } from "./pages/SalesBoard";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: true,
+      retry: 1,
+    },
+  },
+});
 
 // Component to enable realtime updates
 const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

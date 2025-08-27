@@ -15,6 +15,7 @@ export const useLead = (id: string) => {
     queryKey: ['lead', id],
     queryFn: () => leadsApi.getLeadById(id),
     enabled: !!id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 

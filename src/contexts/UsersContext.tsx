@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { usersApi, type UserProfile } from '@/lib/api/users';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -21,7 +21,7 @@ export const UsersProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
-  const fetchUsers = async (force = false) => {
+  const fetchUsers = useCallback(async (force = false) => {
     const now = Date.now();
     
     // Skip if we have recent data and not forcing refresh
@@ -50,14 +50,14 @@ export const UsersProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, users.length, lastFetch, CACHE_DURATION]);
 
   // Initial fetch when user is authenticated
   useEffect(() => {
     if (user) {
       fetchUsers();
     }
-  }, [user]);
+  }, [user, fetchUsers]);
 
   const refreshUsers = async () => {
     await fetchUsers(true);
