@@ -8,15 +8,19 @@ import { Trophy, Target, TrendingUp, Award, Star, Medal, Crown, Zap, Calendar, F
 import { useDeals } from '@/hooks/useDeals';
 import { useLeads } from '@/hooks/useLeads';
 import { useUsersContext } from '@/contexts/UsersContext';
+import { useStatuses } from '@/hooks/useStatuses';
 import { formatDistanceToNow, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { cn } from '@/lib/utils';
 
 export const SalesBoard = () => {
   const { data: dealsResponse } = useDeals({}, 1, 1000);
   const { data: leadsData } = useLeads({}, 1, 1000);
+  const { data: statuses } = useStatuses();
   const { activeUsers } = useUsersContext();
   
   // Filter state
@@ -25,6 +29,14 @@ export const SalesBoard = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [roleFilter, setRoleFilter] = useState('all');
   const [activeTab, setActiveTab] = useState('leaderboard');
+  
+  // Sold deals analysis filters
+  const [soldDealsFilters, setSoldDealsFilters] = useState({
+    dateRange: { from: null, to: null },
+    assignedTo: '',
+    minValue: '',
+    maxValue: '',
+  });
   
   const allDeals = dealsResponse?.data || [];
   const allLeads = leadsData?.data || [];
@@ -277,6 +289,89 @@ export const SalesBoard = () => {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 3 }, (_, i) => currentYear - i);
 
+  // Sold deals analysis (merged from SoldDashboard)
+  const soldStatus = statuses?.find(s => 
+    s.name.toLowerCase().includes('sold') || 
+    s.name.toLowerCase().includes('closed') ||
+    s.name.toLowerCase().includes('won')
+  );
+
+  const soldDeals = React.useMemo(() => {
+    if (!soldStatus) return [];
+    
+    let filtered = allDeals.filter(deal => deal.status_id === soldStatus.id);
+
+    // Apply sold deals specific filters
+    if (soldDealsFilters.assignedTo) {
+      filtered = filtered.filter(deal => deal.assigned_to === soldDealsFilters.assignedTo);
+    }
+
+    if (soldDealsFilters.minValue) {
+      filtered = filtered.filter(deal => (deal.deal_value || 0) >= parseFloat(soldDealsFilters.minValue));
+    }
+
+    if (soldDealsFilters.maxValue) {
+      filtered = filtered.filter(deal => (deal.deal_value || 0) <= parseFloat(soldDealsFilters.maxValue));
+    }
+
+    if (soldDealsFilters.dateRange.from) {
+      filtered = filtered.filter(deal => {
+        const dealDate = new Date(deal.created_at);
+        return dealDate >= soldDealsFilters.dateRange.from;
+      });
+    }
+
+    if (soldDealsFilters.dateRange.to) {
+      filtered = filtered.filter(deal => {
+        const dealDate = new Date(deal.created_at);
+        return dealDate <= soldDealsFilters.dateRange.to;
+      });
+    }
+
+    return filtered;
+  }, [allDeals, soldStatus, soldDealsFilters]);
+
+  // Sold deals metrics
+  const soldMetrics = React.useMemo(() => {
+    const totalSoldValue = soldDeals.reduce((sum, deal) => sum + (deal.deal_value || 0), 0);
+    const averageDealSize = soldDeals.length > 0 ? totalSoldValue / soldDeals.length : 0;
+    
+    // Monthly sold deals for current month
+    const currentMonthSold = soldDeals.filter(deal => {
+      const dealDate = new Date(deal.created_at);
+      const now = new Date();
+      return dealDate.getMonth() === now.getMonth() && 
+             dealDate.getFullYear() === now.getFullYear();
+    });
+
+    // Monthly sales trend
+    const monthlySales = {};
+    soldDeals.forEach(deal => {
+      const month = new Date(deal.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+      if (!monthlySales[month]) {
+        monthlySales[month] = { count: 0, value: 0 };
+      }
+      monthlySales[month].count++;
+      monthlySales[month].value += deal.deal_value || 0;
+    });
+
+    return {
+      totalSoldValue,
+      averageDealSize,
+      currentMonthCount: currentMonthSold.length,
+      monthlySales
+    };
+  }, [soldDeals]);
+
+  const clearSoldFilters = () => {
+    setSoldDealsFilters({
+      dateRange: { from: null, to: null },
+      assignedTo: '',
+      minValue: '',
+      maxValue: '',
+    });
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -441,10 +536,11 @@ export const SalesBoard = () => {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4">
             <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
             <TabsTrigger value="achievements">Achievements</TabsTrigger>
             <TabsTrigger value="performance">Performance</TabsTrigger>
+            <TabsTrigger value="sold-analysis">Sold Analysis</TabsTrigger>
           </TabsList>
 
           {/* Leaderboard Tab */}
@@ -693,6 +789,196 @@ export const SalesBoard = () => {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Sold Analysis Tab */}
+          <TabsContent value="sold-analysis" className="space-y-6">
+            {/* Sold Deals Filters */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Filter className="h-5 w-5" />
+                  Sold Deals Filters
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Date Range</label>
+                    <DatePickerWithRange
+                      date={soldDealsFilters.dateRange}
+                      onDateChange={(range) => setSoldDealsFilters({...soldDealsFilters, dateRange: range})}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Assigned To</label>
+                    <Select 
+                      value={soldDealsFilters.assignedTo} 
+                      onValueChange={(value) => setSoldDealsFilters({...soldDealsFilters, assignedTo: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All users" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All users</SelectItem>
+                        {activeUsers.map(user => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.full_name || user.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Min Value</label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={soldDealsFilters.minValue}
+                      onChange={(e) => setSoldDealsFilters({...soldDealsFilters, minValue: e.target.value})}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Max Value</label>
+                    <Input
+                      type="number"
+                      placeholder="No limit"
+                      value={soldDealsFilters.maxValue}
+                      onChange={(e) => setSoldDealsFilters({...soldDealsFilters, maxValue: e.target.value})}
+                    />
+                  </div>
+                </div>
+                
+                <div className="mt-4 flex justify-end">
+                  <Button variant="outline" size="sm" onClick={clearSoldFilters}>
+                    Clear Filters
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Sold Deals Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Total Sold</p>
+                      <p className="text-3xl font-bold text-gray-900">{soldDeals.length}</p>
+                    </div>
+                    <div className="p-3 bg-green-100 rounded-lg">
+                      <TrendingUp className="h-6 w-6 text-green-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Total Value</p>
+                      <p className="text-3xl font-bold text-gray-900">
+                        ${soldMetrics.totalSoldValue.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-blue-100 rounded-lg">
+                      <TrendingUp className="h-6 w-6 text-blue-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Average Deal Size</p>
+                      <p className="text-3xl font-bold text-gray-900">
+                        ${Math.round(soldMetrics.averageDealSize).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-purple-100 rounded-lg">
+                      <Target className="h-6 w-6 text-purple-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">This Month</p>
+                      <p className="text-3xl font-bold text-gray-900">
+                        {soldMetrics.currentMonthCount}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-orange-100 rounded-lg">
+                      <Calendar className="h-6 w-6 text-orange-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recent Sold Deals */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Sold Deals</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {soldDeals.slice(0, 10).map(deal => (
+                    <div key={deal.id} className="flex items-center justify-between py-3 border-b last:border-0">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{deal.offer_title}</p>
+                        <p className="text-sm text-gray-600">
+                          {deal.lead?.author_name} - {deal.lead?.book_title}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-green-600">
+                          ${(deal.deal_value || 0).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatDistanceToNow(new Date(deal.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {soldDeals.length === 0 && (
+                    <p className="text-center text-gray-500 py-8">
+                      No sold deals found with current filters
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Monthly Sales Trend */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Monthly Sales Trend</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {Object.entries(soldMetrics.monthlySales).slice(-6).map(([month, data]) => (
+                    <div key={month} className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{month}</span>
+                      <div className="flex items-center gap-4">
+                        <Badge variant="outline">{data.count} deals</Badge>
+                        <span className="font-semibold">${data.value.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

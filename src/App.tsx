@@ -19,7 +19,6 @@ import LeadDetailsPage from "./pages/LeadDetailsPage";
 import ImportLeadsPage from "./pages/ImportLeadsPage";
 import { AdminPanel } from "./pages/AdminPanel";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { SoldDashboard } from "./pages/SoldDashboard";
 import { SalesBoard } from "./pages/SalesBoard";
 
 const queryClient = new QueryClient({
@@ -81,11 +80,6 @@ const App = () => {
                 <Route path="/deals/:id" element={
                   <ProtectedRoute>
                     <DealDetailsPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/sold-dashboard" element={
-                  <ProtectedRoute>
-                    <SoldDashboard />
                   </ProtectedRoute>
                 } />
                 <Route path="/sales-board" element={
