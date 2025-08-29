@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,6 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { cn } from '@/lib/utils';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/AppSidebar';
 
 export const SalesBoard = () => {
   const { data: dealsResponse } = useDeals({}, 1, 1000);
@@ -65,128 +66,135 @@ export const SalesBoard = () => {
         dateTo = new Date(now.getFullYear(), 11, 31);
         break;
       case 'custom':
-        // Use selected month and year
         dateFrom = new Date(selectedYear, selectedMonth, 1);
-        dateTo = new Date(selectedYear, selectedMonth + 1, 0); // Last day of month
+        dateTo = new Date(selectedYear, selectedMonth + 1, 0);
         break;
       case 'all':
-        return allDeals;
       default:
         return allDeals;
     }
     
     return allDeals.filter(deal => {
       const dealDate = new Date(deal.created_at);
-      return dealDate >= dateFrom && (!dateTo || dealDate <= dateTo);
+      return (!dateFrom || dealDate >= dateFrom) && (!dateTo || dealDate <= dateTo);
     });
   }, [allDeals, timeFilter, selectedMonth, selectedYear]);
 
-  // Calculate metrics with filters
+  // Apply time filter to leads
+  const filteredLeads = React.useMemo(() => {
+    const now = new Date();
+    let dateFrom = null;
+    let dateTo = null;
+    
+    switch(timeFilter) {
+      case 'week':
+        dateFrom = startOfWeek(now);
+        dateTo = endOfWeek(now);
+        break;
+      case 'month':
+        dateFrom = startOfMonth(now);
+        dateTo = endOfMonth(now);
+        break;
+      case 'quarter':
+        dateFrom = subMonths(startOfMonth(now), 2);
+        dateTo = endOfMonth(now);
+        break;
+      case 'year':
+        dateFrom = new Date(now.getFullYear(), 0, 1);
+        dateTo = new Date(now.getFullYear(), 11, 31);
+        break;
+      case 'custom':
+        dateFrom = new Date(selectedYear, selectedMonth, 1);
+        dateTo = new Date(selectedYear, selectedMonth + 1, 0);
+        break;
+      case 'all':
+      default:
+        return allLeads;
+    }
+    
+    return allLeads.filter(lead => {
+      const leadDate = new Date(lead.created_at);
+      return (!dateFrom || leadDate >= dateFrom) && (!dateTo || leadDate <= dateTo);
+    });
+  }, [allLeads, timeFilter, selectedMonth, selectedYear]);
+
+  // Calculate metrics for each user
   const userMetrics = React.useMemo(() => {
     const metrics = {};
-
-    // Filter users by role if needed
-    const filteredUsers = roleFilter === 'all' 
+    
+    // Get users to track
+    const usersToTrack = roleFilter === 'all' 
       ? activeUsers 
       : activeUsers.filter(u => u.role === roleFilter);
-
-    filteredUsers.forEach(user => {
+    
+    // Initialize metrics for all users
+    usersToTrack.forEach(user => {
       metrics[user.id] = {
-        user,
+        id: user.id,
+        name: user.full_name || user.email,
+        email: user.email,
+        role: user.role,
+        avatar_url: user.avatar_url,
         dealsWon: 0,
         totalValue: 0,
         leadsCreated: 0,
+        avgDealSize: 0,
+        closedDeals: [],
         conversionRate: 0,
-        averageDealSize: 0,
-        rank: 0,
-        trend: 'up', // up, down, stable
+        lastActivity: null,
       };
     });
-
-    // Count deals and calculate values
+    
+    // Process deals
     filteredDeals.forEach(deal => {
-      if (deal.created_by && metrics[deal.created_by]) {
-        if (deal.status?.name?.toLowerCase().includes('won') || 
-            deal.status?.name?.toLowerCase().includes('closed') ||
-            deal.status?.name?.toLowerCase().includes('sold')) {
-          metrics[deal.created_by].dealsWon++;
-          metrics[deal.created_by].totalValue += deal.deal_value || 0;
+      // Track deals won (assuming status_id matches a "won" status)
+      const dealStatus = statuses?.find(s => s.id === deal.status_id);
+      const isWon = dealStatus?.name?.toLowerCase().includes('won') || 
+                    dealStatus?.name?.toLowerCase().includes('closed');
+      
+      if (isWon && deal.assigned_to && metrics[deal.assigned_to]) {
+        metrics[deal.assigned_to].dealsWon++;
+        metrics[deal.assigned_to].totalValue += deal.deal_value || 0;
+        metrics[deal.assigned_to].closedDeals.push(deal);
+        
+        // Update last activity
+        if (!metrics[deal.assigned_to].lastActivity || 
+            new Date(deal.updated_at) > new Date(metrics[deal.assigned_to].lastActivity)) {
+          metrics[deal.assigned_to].lastActivity = deal.updated_at;
         }
       }
     });
-
-    // Count leads in the time period
-    const filteredLeads = timeFilter === 'all' ? allLeads : allLeads.filter(lead => {
-      const now = new Date();
-      let dateFrom = null;
-      let dateTo = null;
-      
-      switch(timeFilter) {
-        case 'week':
-          dateFrom = startOfWeek(now);
-          dateTo = endOfWeek(now);
-          break;
-        case 'month':
-          dateFrom = startOfMonth(now);
-          dateTo = endOfMonth(now);
-          break;
-        case 'quarter':
-          dateFrom = subMonths(startOfMonth(now), 2);
-          dateTo = endOfMonth(now);
-          break;
-        case 'year':
-          dateFrom = new Date(now.getFullYear(), 0, 1);
-          dateTo = new Date(now.getFullYear(), 11, 31);
-          break;
-        case 'custom':
-          // Use selected month and year
-          dateFrom = new Date(selectedYear, selectedMonth, 1);
-          dateTo = new Date(selectedYear, selectedMonth + 1, 0);
-          break;
-        default:
-          return true;
-      }
-      
-      const leadDate = new Date(lead.created_at);
-      return leadDate >= dateFrom && (!dateTo || leadDate <= dateTo);
-    });
-
+    
+    // Process leads
     filteredLeads.forEach(lead => {
       if (lead.created_by && metrics[lead.created_by]) {
         metrics[lead.created_by].leadsCreated++;
       }
     });
-
+    
     // Calculate derived metrics
     Object.values(metrics).forEach(metric => {
-      if (metric.dealsWon > 0) {
-        metric.averageDealSize = metric.totalValue / metric.dealsWon;
-      }
-      if (metric.leadsCreated > 0) {
-        metric.conversionRate = (metric.dealsWon / metric.leadsCreated) * 100;
-      }
+      metric.avgDealSize = metric.dealsWon > 0 ? metric.totalValue / metric.dealsWon : 0;
+      metric.conversionRate = metric.leadsCreated > 0 
+        ? (metric.dealsWon / metric.leadsCreated * 100) 
+        : 0;
     });
-
-    // Calculate ranks
-    const sorted = Object.values(metrics).sort((a, b) => b.totalValue - a.totalValue);
-    sorted.forEach((metric, index) => {
-      metric.rank = index + 1;
-    });
-
+    
     return metrics;
-  }, [filteredDeals, allLeads, activeUsers, roleFilter, timeFilter]);
+  }, [filteredDeals, filteredLeads, activeUsers, statuses, roleFilter]);
 
-  // Leaderboard
-  const leaderboard = Object.values(userMetrics)
-    .filter(m => m.totalValue > 0 || m.leadsCreated > 0)
-    .sort((a, b) => b.totalValue - a.totalValue)
-    .slice(0, 10);
+  // Sort users by total value for leaderboard
+  const leaderboard = React.useMemo(() => {
+    return Object.values(userMetrics)
+      .sort((a, b) => b.totalValue - a.totalValue)
+      .map((user, index) => ({ ...user, rank: index + 1 }));
+  }, [userMetrics]);
 
-  // Achievements with progress
+  // Define achievements/badges
   const achievements = [
     {
-      id: 'rookie',
-      name: 'Rising Star',
+      id: 'first-deal',
+      name: 'First Deal',
       description: 'Close your first deal',
       icon: Star,
       color: 'text-yellow-500',
@@ -196,7 +204,7 @@ export const SalesBoard = () => {
       metric: 'dealsWon',
     },
     {
-      id: 'closer',
+      id: 'deal-closer',
       name: 'Deal Closer',
       description: 'Close 10 deals',
       icon: Zap,
@@ -300,51 +308,50 @@ export const SalesBoard = () => {
     if (!soldStatus) return [];
     
     let filtered = allDeals.filter(deal => deal.status_id === soldStatus.id);
-
-    // Apply sold deals specific filters
+    
+    // Apply sold deals filters
+    if (soldDealsFilters.dateRange?.from) {
+      filtered = filtered.filter(deal => 
+        new Date(deal.created_at) >= soldDealsFilters.dateRange.from
+      );
+    }
+    if (soldDealsFilters.dateRange?.to) {
+      filtered = filtered.filter(deal => 
+        new Date(deal.created_at) <= soldDealsFilters.dateRange.to
+      );
+    }
     if (soldDealsFilters.assignedTo) {
-      filtered = filtered.filter(deal => deal.assigned_to === soldDealsFilters.assignedTo);
+      filtered = filtered.filter(deal => 
+        deal.assigned_to === soldDealsFilters.assignedTo
+      );
     }
-
     if (soldDealsFilters.minValue) {
-      filtered = filtered.filter(deal => (deal.deal_value || 0) >= parseFloat(soldDealsFilters.minValue));
+      filtered = filtered.filter(deal => 
+        (deal.deal_value || 0) >= parseFloat(soldDealsFilters.minValue)
+      );
     }
-
     if (soldDealsFilters.maxValue) {
-      filtered = filtered.filter(deal => (deal.deal_value || 0) <= parseFloat(soldDealsFilters.maxValue));
+      filtered = filtered.filter(deal => 
+        (deal.deal_value || 0) <= parseFloat(soldDealsFilters.maxValue)
+      );
     }
-
-    if (soldDealsFilters.dateRange.from) {
-      filtered = filtered.filter(deal => {
-        const dealDate = new Date(deal.created_at);
-        return dealDate >= soldDealsFilters.dateRange.from;
-      });
-    }
-
-    if (soldDealsFilters.dateRange.to) {
-      filtered = filtered.filter(deal => {
-        const dealDate = new Date(deal.created_at);
-        return dealDate <= soldDealsFilters.dateRange.to;
-      });
-    }
-
+    
     return filtered;
   }, [allDeals, soldStatus, soldDealsFilters]);
 
-  // Sold deals metrics
-  const soldMetrics = React.useMemo(() => {
+  const soldAnalysis = React.useMemo(() => {
     const totalSoldValue = soldDeals.reduce((sum, deal) => sum + (deal.deal_value || 0), 0);
     const averageDealSize = soldDeals.length > 0 ? totalSoldValue / soldDeals.length : 0;
     
-    // Monthly sold deals for current month
+    // Current month sold deals
+    const now = new Date();
     const currentMonthSold = soldDeals.filter(deal => {
       const dealDate = new Date(deal.created_at);
-      const now = new Date();
       return dealDate.getMonth() === now.getMonth() && 
              dealDate.getFullYear() === now.getFullYear();
     });
-
-    // Monthly sales trend
+    
+    // Monthly breakdown
     const monthlySales = {};
     soldDeals.forEach(deal => {
       const month = new Date(deal.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
@@ -373,615 +380,477 @@ export const SalesBoard = () => {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <Trophy className="h-8 w-8 text-yellow-500" />
-                Sales Board
-              </h1>
-              <p className="text-gray-600 mt-1">Track performance, compete, and celebrate success</p>
-            </div>
-            
-            {/* Filters */}
-            <div className="flex items-center gap-2">
-              <Select value={timeFilter} onValueChange={setTimeFilter}>
-                <SelectTrigger className="w-36">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="week">This Week</SelectItem>
-                  <SelectItem value="month">This Month</SelectItem>
-                  <SelectItem value="quarter">This Quarter</SelectItem>
-                  <SelectItem value="year">This Year</SelectItem>
-                  <SelectItem value="custom">Custom Month</SelectItem>
-                  <SelectItem value="all">All Time</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Show month/year selectors when custom is selected */}
-              {timeFilter === 'custom' && (
-                <>
-                  <Select 
-                    value={selectedMonth.toString()} 
-                    onValueChange={(val) => setSelectedMonth(parseInt(val))}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {months.map((month, index) => (
-                        <SelectItem key={index} value={index.toString()}>
-                          {month}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select 
-                    value={selectedYear.toString()} 
-                    onValueChange={(val) => setSelectedYear(parseInt(val))}
-                  >
-                    <SelectTrigger className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {years.map(year => (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </>
-              )}
-
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-36">
-                  <SelectValue placeholder="All roles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="sales">Sales</SelectItem>
-                  <SelectItem value="sales_manager">Sales Manager</SelectItem>
-                  <SelectItem value="leads_manager">Leads Manager</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
-        {/* Team Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="border-l-4 border-l-blue-500">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Team Deals</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">{teamTotals.totalDeals}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {timeFilter === 'month' ? 'This month' : 
-                     timeFilter === 'week' ? 'This week' : 
-                     timeFilter === 'year' ? 'This year' :
-                     timeFilter === 'quarter' ? 'This quarter' :
-                     timeFilter === 'custom' ? `${months[selectedMonth]} ${selectedYear}` :
-                     'All time'}
-                  </p>
-                </div>
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <Trophy className="h-6 w-6 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-green-500">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Revenue</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
-                    ${(teamTotals.totalValue / 1000).toFixed(0)}K
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Avg: ${teamTotals.totalDeals > 0 ? (teamTotals.totalValue / teamTotals.totalDeals).toFixed(0) : 0}
-                  </p>
-                </div>
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-purple-500">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Leads Generated</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">{teamTotals.totalLeads}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Conv: {teamTotals.avgConversion.toFixed(1)}%
-                  </p>
-                </div>
-                <div className="p-3 bg-purple-100 rounded-lg">
-                  <Target className="h-6 w-6 text-purple-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-orange-500">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Monthly Target</p>
-                  <div className="mt-2">
-                    <Progress value={monthlyProgress.progress} className="h-2" />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    ${(monthlyProgress.value / 1000).toFixed(0)}K / ${(monthlyProgress.target / 1000).toFixed(0)}K
-                  </p>
-                </div>
-                <div className="p-3 bg-orange-100 rounded-lg">
-                  <Calendar className="h-6 w-6 text-orange-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-4">
-            <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
-            <TabsTrigger value="achievements">Achievements</TabsTrigger>
-            <TabsTrigger value="performance">Performance</TabsTrigger>
-            <TabsTrigger value="sold-analysis">Sold Analysis</TabsTrigger>
-          </TabsList>
-
-          {/* Leaderboard Tab */}
-          <TabsContent value="leaderboard" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-yellow-500" />
-                  Sales Leaderboard
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1">
-                  {leaderboard.map((metric, index) => (
-                    <div 
-                      key={metric.user.id} 
-                      className={cn(
-                        "flex items-center justify-between p-4 rounded-lg transition-all hover:bg-gray-50",
-                        index === 0 && "bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200",
-                        index === 1 && "bg-gray-50 border border-gray-200",
-                        index === 2 && "bg-orange-50 border border-orange-200"
-                      )}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="flex-shrink-0 w-8">
-                          {getRankIcon(index + 1)}
-                        </div>
-                        
-                        <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
-                          <AvatarImage src={metric.user.avatar_url} />
-                          <AvatarFallback className="text-sm font-medium">
-                            {getInitials(metric.user.full_name)}
-                          </AvatarFallback>
-                        </Avatar>
-
-                        <div>
-                          <p className="font-semibold text-gray-900">
-                            {metric.user.full_name || metric.user.email}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="secondary" className="text-xs">
-                              {metric.user.role?.replace('_', ' ')}
-                            </Badge>
-                            <span className="text-xs text-gray-500">
-                              {metric.dealsWon} deals · {metric.leadsCreated} leads
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-gray-900">
-                          ${(metric.totalValue / 1000).toFixed(0)}K
-                        </p>
-                        <div className="flex items-center gap-2 justify-end mt-1">
-                          {metric.conversionRate > 0 && (
-                            <Badge 
-                              variant="outline" 
-                              className={cn(
-                                "text-xs",
-                                metric.conversionRate > 20 ? "text-green-600 border-green-300" : 
-                                metric.conversionRate > 10 ? "text-blue-600 border-blue-300" : 
-                                "text-gray-600"
-                              )}
-                            >
-                              {metric.conversionRate.toFixed(1)}% conv
-                            </Badge>
-                          )}
-                          {metric.averageDealSize > 0 && (
-                            <Badge variant="outline" className="text-xs">
-                              Avg ${(metric.averageDealSize / 1000).toFixed(0)}K
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {leaderboard.length === 0 && (
-                    <div className="text-center py-12">
-                      <Trophy className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">No sales data for the selected period</p>
-                      <p className="text-sm text-gray-400 mt-1">Start closing deals to appear on the leaderboard!</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Achievements Tab */}
-          <TabsContent value="achievements" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Sales Achievements</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {achievements.map(achievement => {
-                    const Icon = achievement.icon;
-                    const earnedBy = Object.values(userMetrics).filter(m => 
-                      m[achievement.metric] >= achievement.requirement
-                    );
-                    const topAchiever = earnedBy.sort((a, b) => 
-                      b[achievement.metric] - a[achievement.metric]
-                    )[0];
-                    
-                    return (
-                      <div 
-                        key={achievement.id} 
-                        className={cn(
-                          "p-6 rounded-lg border-2 transition-all",
-                          earnedBy.length > 0 ? achievement.borderColor : "border-gray-200"
-                        )}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className={cn(
-                            "p-3 rounded-lg inline-block",
-                            earnedBy.length > 0 ? achievement.bgColor : "bg-gray-100"
-                          )}>
-                            <Icon className={cn(
-                              "h-6 w-6",
-                              earnedBy.length > 0 ? achievement.color : "text-gray-400"
-                            )} />
-                          </div>
-                          {earnedBy.length > 0 && (
-                            <Badge className="text-xs">
-                              {earnedBy.length} {earnedBy.length === 1 ? 'person' : 'people'}
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        <div className="mt-4">
-                          <h4 className="font-semibold text-gray-900">{achievement.name}</h4>
-                          <p className="text-sm text-gray-600 mt-1">{achievement.description}</p>
-                        </div>
-
-                        <div className="mt-4">
-                          {topAchiever ? (
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-6 w-6">
-                                <AvatarImage src={topAchiever.user.avatar_url} />
-                                <AvatarFallback className="text-xs">
-                                  {getInitials(topAchiever.user.full_name)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-xs text-gray-600">
-                                Leader: {topAchiever.user.full_name?.split(' ')[0] || 'Unknown'}
-                                {achievement.metric === 'totalValue' && 
-                                  ` ($${(topAchiever.totalValue / 1000).toFixed(0)}K)`
-                                }
-                                {achievement.metric === 'dealsWon' && 
-                                  ` (${topAchiever.dealsWon} deals)`
-                                }
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-gray-400">Not earned yet</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Performance Tab */}
-          <TabsContent value="performance" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Top Performers by Metric */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Top Performers by Conversion Rate</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {Object.values(userMetrics)
-                      .filter(m => m.conversionRate > 0)
-                      .sort((a, b) => b.conversionRate - a.conversionRate)
-                      .slice(0, 5)
-                      .map((metric, index) => (
-                        <div key={metric.user.id} className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-medium text-gray-500 w-4">
-                              {index + 1}.
-                            </span>
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={metric.user.avatar_url} />
-                              <AvatarFallback className="text-xs">
-                                {getInitials(metric.user.full_name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm font-medium">
-                              {metric.user.full_name?.split(' ')[0] || metric.user.email}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-24">
-                              <Progress value={metric.conversionRate} className="h-2" />
-                            </div>
-                            <span className="text-sm font-semibold text-green-600 w-12 text-right">
-                              {metric.conversionRate.toFixed(1)}%
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Top Performers by Average Deal Size */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Top Average Deal Size</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {Object.values(userMetrics)
-                      .filter(m => m.averageDealSize > 0)
-                      .sort((a, b) => b.averageDealSize - a.averageDealSize)
-                      .slice(0, 5)
-                      .map((metric, index) => (
-                        <div key={metric.user.id} className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-medium text-gray-500 w-4">
-                              {index + 1}.
-                            </span>
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={metric.user.avatar_url} />
-                              <AvatarFallback className="text-xs">
-                                {getInitials(metric.user.full_name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm font-medium">
-                              {metric.user.full_name?.split(' ')[0] || metric.user.email}
-                            </span>
-                          </div>
-                          <span className="text-sm font-semibold text-blue-600">
-                            ${(metric.averageDealSize / 1000).toFixed(1)}K
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Sold Analysis Tab */}
-          <TabsContent value="sold-analysis" className="space-y-6">
-            {/* Sold Deals Filters */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Filter className="h-5 w-5" />
-                  Sold Deals Filters
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-gray-50 to-blue-50">
+        <AppSidebar />
+        <SidebarInset className="flex-1">
+          {/* Header */}
+          <header className="bg-white/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-50">
+            <div className="flex items-center justify-between px-6 py-4">
+              <div className="flex items-center gap-4">
+                <SidebarTrigger className="h-8 w-8" />
+                <div className="flex items-center gap-3">
+                  <Trophy className="h-8 w-8 text-yellow-500" />
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Date Range</label>
-                    <DatePickerWithRange
-                      date={soldDealsFilters.dateRange}
-                      onDateChange={(range) => setSoldDealsFilters({...soldDealsFilters, dateRange: range})}
-                    />
+                    <h1 className="text-2xl font-bold text-gray-900">Sales Board</h1>
+                    <p className="text-sm text-gray-600">Track performance, compete, and celebrate success</p>
                   </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Assigned To</label>
+                </div>
+              </div>
+              
+              {/* Filters */}
+              <div className="flex items-center gap-2">
+                <Select value={timeFilter} onValueChange={setTimeFilter}>
+                  <SelectTrigger className="w-36 bg-white/60 backdrop-blur-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="week">This Week</SelectItem>
+                    <SelectItem value="month">This Month</SelectItem>
+                    <SelectItem value="quarter">This Quarter</SelectItem>
+                    <SelectItem value="year">This Year</SelectItem>
+                    <SelectItem value="custom">Custom Month</SelectItem>
+                    <SelectItem value="all">All Time</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Show month/year selectors when custom is selected */}
+                {timeFilter === 'custom' && (
+                  <>
                     <Select 
-                      value={soldDealsFilters.assignedTo} 
-                      onValueChange={(value) => setSoldDealsFilters({...soldDealsFilters, assignedTo: value})}
+                      value={selectedMonth.toString()} 
+                      onValueChange={(val) => setSelectedMonth(parseInt(val))}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="All users" />
+                      <SelectTrigger className="w-32 bg-white/60 backdrop-blur-sm">
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All users</SelectItem>
-                        {activeUsers.map(user => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.full_name || user.email}
+                        {months.map((month, index) => (
+                          <SelectItem key={index} value={index.toString()}>
+                            {month}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
 
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Min Value</label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={soldDealsFilters.minValue}
-                      onChange={(e) => setSoldDealsFilters({...soldDealsFilters, minValue: e.target.value})}
-                    />
-                  </div>
+                    <Select 
+                      value={selectedYear.toString()} 
+                      onValueChange={(val) => setSelectedYear(parseInt(val))}
+                    >
+                      <SelectTrigger className="w-24 bg-white/60 backdrop-blur-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {years.map(year => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
 
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Max Value</label>
-                    <Input
-                      type="number"
-                      placeholder="No limit"
-                      value={soldDealsFilters.maxValue}
-                      onChange={(e) => setSoldDealsFilters({...soldDealsFilters, maxValue: e.target.value})}
-                    />
-                  </div>
-                </div>
-                
-                <div className="mt-4 flex justify-end">
-                  <Button variant="outline" size="sm" onClick={clearSoldFilters}>
-                    Clear Filters
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Sold Deals Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Total Sold</p>
-                      <p className="text-3xl font-bold text-gray-900">{soldDeals.length}</p>
-                    </div>
-                    <div className="p-3 bg-green-100 rounded-lg">
-                      <TrendingUp className="h-6 w-6 text-green-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Total Value</p>
-                      <p className="text-3xl font-bold text-gray-900">
-                        ${soldMetrics.totalSoldValue.toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="p-3 bg-blue-100 rounded-lg">
-                      <TrendingUp className="h-6 w-6 text-blue-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Average Deal Size</p>
-                      <p className="text-3xl font-bold text-gray-900">
-                        ${Math.round(soldMetrics.averageDealSize).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="p-3 bg-purple-100 rounded-lg">
-                      <Target className="h-6 w-6 text-purple-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">This Month</p>
-                      <p className="text-3xl font-bold text-gray-900">
-                        {soldMetrics.currentMonthCount}
-                      </p>
-                    </div>
-                    <div className="p-3 bg-orange-100 rounded-lg">
-                      <Calendar className="h-6 w-6 text-orange-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger className="w-36 bg-white/60 backdrop-blur-sm">
+                    <SelectValue placeholder="All roles" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    <SelectItem value="sales">Sales</SelectItem>
+                    <SelectItem value="sales_manager">Sales Manager</SelectItem>
+                    <SelectItem value="leads_manager">Leads Manager</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+          </header>
 
-            {/* Recent Sold Deals */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Sold Deals</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {soldDeals.slice(0, 10).map(deal => (
-                    <div key={deal.id} className="flex items-center justify-between py-3 border-b last:border-0">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{deal.offer_title}</p>
-                        <p className="text-sm text-gray-600">
-                          {deal.lead?.author_name} - {deal.lead?.book_title}
+          {/* Main Content */}
+          <main className="p-6">
+            <div className="space-y-6">
+              {/* Team Overview Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card className="border-l-4 border-l-blue-500">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Team Deals</p>
+                        <p className="text-3xl font-bold text-gray-900 mt-2">{teamTotals.totalDeals}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {timeFilter === 'month' ? 'This month' : 
+                           timeFilter === 'week' ? 'This week' : 
+                           timeFilter === 'year' ? 'This year' :
+                           timeFilter === 'quarter' ? 'This quarter' :
+                           timeFilter === 'custom' ? `${months[selectedMonth]} ${selectedYear}` :
+                           'All time'}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-green-600">
-                          ${(deal.deal_value || 0).toLocaleString()}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {formatDistanceToNow(new Date(deal.created_at), { addSuffix: true })}
-                        </p>
+                      <div className="p-3 bg-blue-100 rounded-lg">
+                        <Trophy className="h-6 w-6 text-blue-600" />
                       </div>
                     </div>
-                  ))}
-                  
-                  {soldDeals.length === 0 && (
-                    <p className="text-center text-gray-500 py-8">
-                      No sold deals found with current filters
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
 
-            {/* Monthly Sales Trend */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Monthly Sales Trend</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {Object.entries(soldMetrics.monthlySales).slice(-6).map(([month, data]) => (
-                    <div key={month} className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{month}</span>
-                      <div className="flex items-center gap-4">
-                        <Badge variant="outline">{data.count} deals</Badge>
-                        <span className="font-semibold">${data.value.toLocaleString()}</span>
+                <Card className="border-l-4 border-l-green-500">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Revenue</p>
+                        <p className="text-3xl font-bold text-gray-900 mt-2">
+                          ${(teamTotals.totalValue / 1000).toFixed(0)}K
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Avg: ${teamTotals.totalDeals > 0 ? (teamTotals.totalValue / teamTotals.totalDeals).toFixed(0) : 0}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-green-100 rounded-lg">
+                        <TrendingUp className="h-6 w-6 text-green-600" />
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-purple-500">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Leads Generated</p>
+                        <p className="text-3xl font-bold text-gray-900 mt-2">{teamTotals.totalLeads}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Conv: {teamTotals.avgConversion.toFixed(1)}%
+                        </p>
+                      </div>
+                      <div className="p-3 bg-purple-100 rounded-lg">
+                        <Target className="h-6 w-6 text-purple-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-orange-500">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Monthly Target</p>
+                        <div className="mt-2">
+                          <Progress value={monthlyProgress.progress} className="h-2" />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          ${(monthlyProgress.value / 1000).toFixed(0)}K / ${(monthlyProgress.target / 1000).toFixed(0)}K
+                        </p>
+                      </div>
+                      <div className="p-3 bg-orange-100 rounded-lg">
+                        <Calendar className="h-6 w-6 text-orange-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Main Content Tabs */}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                <TabsList className="grid w-full max-w-2xl grid-cols-4">
+                  <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
+                  <TabsTrigger value="achievements">Achievements</TabsTrigger>
+                  <TabsTrigger value="performance">Performance</TabsTrigger>
+                  <TabsTrigger value="sold-analysis">Sold Analysis</TabsTrigger>
+                </TabsList>
+
+                {/* Leaderboard Tab */}
+                <TabsContent value="leaderboard" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Trophy className="h-5 w-5 text-yellow-500" />
+                        Sales Leaderboard
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {leaderboard.map(user => (
+                          <div
+                            key={user.id}
+                            className={cn(
+                              "flex items-center justify-between p-4 rounded-lg border transition-all",
+                              user.rank === 1 && "bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-300",
+                              user.rank === 2 && "bg-gradient-to-r from-gray-50 to-gray-100 border-gray-300",
+                              user.rank === 3 && "bg-gradient-to-r from-orange-50 to-amber-50 border-orange-300",
+                              user.rank > 3 && "hover:bg-gray-50"
+                            )}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center justify-center w-10">
+                                {getRankIcon(user.rank)}
+                              </div>
+                              
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage src={user.avatar_url} />
+                                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                                  {getInitials(user.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              
+                              <div>
+                                <p className="font-semibold text-gray-900">{user.name}</p>
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <span>{user.dealsWon} deals</span>
+                                  <span>•</span>
+                                  <span>${(user.totalValue / 1000).toFixed(0)}K revenue</span>
+                                  {user.lastActivity && (
+                                    <>
+                                      <span>•</span>
+                                      <span>Active {formatDistanceToNow(new Date(user.lastActivity), { addSuffix: true })}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                              {user.conversionRate > 0 && (
+                                <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                                  {user.conversionRate.toFixed(0)}% conv
+                                </Badge>
+                              )}
+                              <Badge 
+                                variant={user.rank === 1 ? "default" : "outline"}
+                                className={cn(
+                                  user.rank === 1 && "bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0"
+                                )}
+                              >
+                                ${user.avgDealSize.toFixed(0)} avg
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {leaderboard.length === 0 && (
+                          <div className="text-center py-8 text-gray-500">
+                            No sales data available for the selected period
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Achievements Tab */}
+                <TabsContent value="achievements" className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {leaderboard.map(user => (
+                      <Card key={user.id}>
+                        <CardHeader>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={user.avatar_url} />
+                              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                                {getInitials(user.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <CardTitle className="text-lg">{user.name}</CardTitle>
+                              <p className="text-sm text-gray-600">{user.role}</p>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-2 gap-3">
+                            {achievements.map(achievement => {
+                              const hasAchieved = user[achievement.metric] >= achievement.requirement;
+                              const progress = Math.min((user[achievement.metric] / achievement.requirement) * 100, 100);
+                              
+                              return (
+                                <div
+                                  key={achievement.id}
+                                  className={cn(
+                                    "p-3 rounded-lg border-2 transition-all",
+                                    hasAchieved 
+                                      ? `${achievement.bgColor} ${achievement.borderColor}` 
+                                      : "bg-gray-50 border-gray-200 opacity-60"
+                                  )}
+                                >
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <achievement.icon 
+                                      className={cn(
+                                        "h-5 w-5",
+                                        hasAchieved ? achievement.color : "text-gray-400"
+                                      )} 
+                                    />
+                                    <span className={cn(
+                                      "text-xs font-semibold",
+                                      hasAchieved ? "text-gray-900" : "text-gray-500"
+                                    )}>
+                                      {achievement.name}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-600 mb-2">{achievement.description}</p>
+                                  <div className="relative">
+                                    <Progress value={progress} className="h-1.5" />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {user[achievement.metric]}/{achievement.requirement}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </TabsContent>
+
+                {/* Performance Tab */}
+                <TabsContent value="performance" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Team Performance Metrics</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {leaderboard.map(user => (
+                          <div key={user.id} className="space-y-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={user.avatar_url} />
+                                <AvatarFallback className="text-xs">
+                                  {getInitials(user.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium text-sm">{user.name}</p>
+                                <p className="text-xs text-gray-600">{user.role}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Deals Won</span>
+                                <span className="font-semibold">{user.dealsWon}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Revenue</span>
+                                <span className="font-semibold">${(user.totalValue / 1000).toFixed(1)}K</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Leads Created</span>
+                                <span className="font-semibold">{user.leadsCreated}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Conversion</span>
+                                <span className="font-semibold">{user.conversionRate.toFixed(1)}%</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Avg Deal</span>
+                                <span className="font-semibold">${user.avgDealSize.toFixed(0)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Sold Analysis Tab */}
+                <TabsContent value="sold-analysis" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>Sold Deals Analysis</CardTitle>
+                        <div className="flex gap-2">
+                          <DatePickerWithRange
+                            date={soldDealsFilters.dateRange}
+                            onDateChange={(range) => setSoldDealsFilters(prev => ({ ...prev, dateRange: range }))}
+                          />
+                          <Select 
+                            value={soldDealsFilters.assignedTo}
+                            onValueChange={(val) => setSoldDealsFilters(prev => ({ ...prev, assignedTo: val }))}
+                          >
+                            <SelectTrigger className="w-40">
+                              <SelectValue placeholder="All users" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">All users</SelectItem>
+                              {activeUsers.map(user => (
+                                <SelectItem key={user.id} value={user.id}>
+                                  {user.full_name || user.email}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            type="number"
+                            placeholder="Min value"
+                            value={soldDealsFilters.minValue}
+                            onChange={(e) => setSoldDealsFilters(prev => ({ ...prev, minValue: e.target.value }))}
+                            className="w-28"
+                          />
+                          <Input
+                            type="number"
+                            placeholder="Max value"
+                            value={soldDealsFilters.maxValue}
+                            onChange={(e) => setSoldDealsFilters(prev => ({ ...prev, maxValue: e.target.value }))}
+                            className="w-28"
+                          />
+                          <Button variant="outline" size="sm" onClick={clearSoldFilters}>
+                            Clear
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <Card>
+                          <CardContent className="p-4">
+                            <p className="text-sm text-gray-600">Total Sold Value</p>
+                            <p className="text-2xl font-bold">${(soldAnalysis.totalSoldValue / 1000).toFixed(0)}K</p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4">
+                            <p className="text-sm text-gray-600">Average Deal Size</p>
+                            <p className="text-2xl font-bold">${soldAnalysis.averageDealSize.toFixed(0)}</p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4">
+                            <p className="text-sm text-gray-600">Deals This Month</p>
+                            <p className="text-2xl font-bold">{soldAnalysis.currentMonthCount}</p>
+                          </CardContent>
+                        </Card>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm text-gray-700">Recent Sold Deals</h4>
+                        {soldDeals.slice(0, 10).map(deal => (
+                          <div key={deal.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div>
+                              <p className="font-medium text-sm">{deal.offer_title}</p>
+                              <p className="text-xs text-gray-600">
+                                {new Date(deal.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Badge variant="outline" className="text-green-600">
+                              ${deal.deal_value?.toLocaleString() || 0}
+                            </Badge>
+                          </div>
+                        ))}
+                        
+                        {soldDeals.length === 0 && (
+                          <p className="text-center text-gray-500 py-4">No sold deals found</p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </main>
+        </SidebarInset>
       </div>
-    </DashboardLayout>
+    </SidebarProvider>
   );
 };

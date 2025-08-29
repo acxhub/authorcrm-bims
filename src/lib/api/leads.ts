@@ -49,9 +49,10 @@ export class LeadsAPI {
         )
       `, { count: 'exact' });
 
-    // Apply filters - Enhanced search across multiple fields
+    // Apply filters - Search across key fields
     if (filters.search) {
-      query = query.or(`book_title.ilike.%${filters.search}%,author_name.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,primary_email.ilike.%${filters.search}%,secondary_email.ilike.%${filters.search}%,phone_number_1.ilike.%${filters.search}%,phone_number_2.ilike.%${filters.search}%,amazon_link.ilike.%${filters.search}%,author_bio.ilike.%${filters.search}%,publisher.ilike.%${filters.search}%,source.ilike.%${filters.search}%,website.ilike.%${filters.search}%,state.ilike.%${filters.search}%,country.ilike.%${filters.search}%`);
+      // Limit search to the most important fields to avoid query complexity
+      query = query.or(`book_title.ilike.%${filters.search}%,author_name.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,primary_email.ilike.%${filters.search}%,phone_number_1.ilike.%${filters.search}%`);
     }
 
     if (filters.status_ids?.length) {
