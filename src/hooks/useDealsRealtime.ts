@@ -12,19 +12,17 @@ export function useDealsRealtime() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'deals' },
         (payload) => {
-          console.log('Deals change detected:', payload);
           // Invalidate all deals queries
           queryClient.invalidateQueries({ queryKey: ['deals'] });
-          
-          // If we have the specific deal ID, also invalidate individual deal queries
-          if ((payload.new as any)?.id || (payload.old as any)?.id) {
-            const dealId = (payload.new as any)?.id || (payload.old as any)?.id;
-            queryClient.invalidateQueries({ queryKey: ['deal', dealId] });
+          // useDeal(id) uses ['deals', id]
+          if ((payload.new as { id?: string })?.id || (payload.old as { id?: string })?.id) {
+            const dealId = (payload.new as { id?: string })?.id || (payload.old as { id?: string })?.id;
+            queryClient.invalidateQueries({ queryKey: ['deals', dealId] });
           }
           
           // If we have the lead ID, invalidate lead queries since deals affect lead data
-          if ((payload.new as any)?.lead_id || (payload.old as any)?.lead_id) {
-            const leadId = (payload.new as any)?.lead_id || (payload.old as any)?.lead_id;
+          if ((payload.new as { lead_id?: string })?.lead_id || (payload.old as { lead_id?: string })?.lead_id) {
+            const leadId = (payload.new as { lead_id?: string })?.lead_id || (payload.old as { lead_id?: string })?.lead_id;
             queryClient.invalidateQueries({ queryKey: ['lead', leadId] });
           }
         }

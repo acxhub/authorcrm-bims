@@ -2,11 +2,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { createClient } from '@supabase/supabase-js';
 import type { Tables, Database } from '@/integrations/supabase/types';
 
-// Create admin client with service role key for user management
-const SUPABASE_URL = "https://rvxyycuukrkjlmaytqok.supabase.co";
-const SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2eHl5Y3V1a3JramxtYXl0cW9rIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0ODMzMDYxNCwiZXhwIjoyMDYzOTA2NjE0fQ.zsmMhzT_bNHXA05k3EamNhW6ukvQ7mrLxd3T7Tc0mPY";
+// Create admin client with service role key for user management.
+// Set VITE_SUPABASE_SERVICE_ROLE_KEY in .env. Rotate key in Supabase if it was ever committed.
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? "https://rvxyycuukrkjlmaytqok.supabase.co";
+const SUPABASE_SERVICE_ROLE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY ?? "";
 
-const adminClient = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+const adminClient = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY || "placeholder", {
   auth: {
     autoRefreshToken: false,
     persistSession: false
@@ -169,8 +170,8 @@ export class UsersAPI {
   }
 
   async delete(id: string): Promise<void> {
-    // First deactivate the profile
-    const { error: profileError } = await supabase
+    // First deactivate the profile (use adminClient to bypass RLS)
+    const { error: profileError } = await adminClient
       .from('profiles')
       .update({ is_active: false })
       .eq('id', id);

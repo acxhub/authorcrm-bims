@@ -27,12 +27,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     const getInitialSession = async () => {
       try {
-        console.log('Getting initial session...');
         const { data: { session } } = await supabase.auth.getSession();
-        
         if (!mounted) return;
-        
-        console.log('Initial session:', session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -48,9 +44,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (!mounted) return;
-        
-        console.log('Auth state changed:', event, session?.user?.id);
-        
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -131,8 +124,6 @@ export function useProfile() {
 
     const fetchProfile = async () => {
       try {
-        console.log('Fetching profile for user:', user.id);
-        
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -146,7 +137,6 @@ export function useProfile() {
           setError(error.message);
           setProfile(null);
         } else {
-          console.log('Profile fetched successfully:', data);
           setProfile(data);
         }
       } catch (err) {

@@ -52,6 +52,7 @@ export const useUpdateTag = () => {
     onSuccess: (updatedTag) => {
       queryClient.invalidateQueries({ queryKey: ['tags'] });
       queryClient.invalidateQueries({ queryKey: ['tag', updatedTag.id] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast({
         title: 'Tag updated',
         description: `Tag "${updatedTag.name}" has been updated successfully.`,
@@ -75,6 +76,7 @@ export const useDeleteTag = () => {
     mutationFn: (id: string) => tagsApi.deleteTag(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tags'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast({
         title: 'Tag deleted',
         description: 'Tag has been deleted successfully.',

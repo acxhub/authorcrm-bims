@@ -302,7 +302,7 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
-                    placeholder="Search by author name, book title, or email..."
+                    placeholder="Search by name, email, phone, book title, publisher..."
                     value={state.filters.search || ''}
                     onChange={(e) => handleSearch(e.target.value)}
                     className="pl-10"
@@ -464,11 +464,11 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
                     </TableHead>
                     <TableHead>Author</TableHead>
                     <TableHead>Book Title</TableHead>
-                    <TableHead>Source</TableHead>
+                    <TableHead>Publisher</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Tags</TableHead>
                     <TableHead>Assigned To</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead>Updated</TableHead>
                     <TableHead className="w-32">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -517,7 +517,7 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
                       </TableCell>
                       <TableCell>
                         <div className="text-sm text-gray-600">
-                          {lead.source || '-'}
+                          {lead.publisher || '-'}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -632,7 +632,7 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-gray-500">
-                          {formatDistanceToNow(new Date(lead.created_at), { addSuffix: true })}
+                          {formatDistanceToNow(new Date(lead.updated_at || lead.created_at), { addSuffix: true })}
                         </span>
                       </TableCell>
                       <TableCell onClick={e => e.stopPropagation()}>

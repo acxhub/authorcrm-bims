@@ -51,6 +51,8 @@ export const useUpdateStatus = () => {
       statusesApi.updateStatus(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['statuses'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
       toast({
         title: 'Status updated',
         description: 'Status has been successfully updated.',
@@ -74,6 +76,8 @@ export const useDeleteStatus = () => {
     mutationFn: (id: string) => statusesApi.deleteStatus(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['statuses'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
       toast({
         title: 'Status deleted',
         description: 'Status has been successfully deleted.',

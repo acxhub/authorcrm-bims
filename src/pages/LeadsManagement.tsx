@@ -81,7 +81,7 @@ export const LeadsManagement: React.FC = () => {
       } else if (modalState === 'edit' && selectedLead) {
         await updateLead.mutateAsync({
           id: selectedLead.id,
-          ...data,
+          data,
         });
       }
       handleCloseModal();
@@ -128,7 +128,7 @@ export const LeadsManagement: React.FC = () => {
               <div className="flex items-center gap-3">
                 {!showStatusManagement && (
                   <>
-                    <Button variant="outline" size="sm" className="bg-white/60 backdrop-blur-sm">
+                    <Button variant="outline" size="sm" className="bg-white/60 backdrop-blur-sm" aria-label="Export leads">
                       <Download className="h-4 w-4 mr-2" />
                       Export
                     </Button>
@@ -137,11 +137,12 @@ export const LeadsManagement: React.FC = () => {
                       size="sm" 
                       className="bg-white/60 backdrop-blur-sm"
                       onClick={() => navigate('/leads/import')}
+                      aria-label="Import leads"
                     >
                       <Upload className="h-4 w-4 mr-2" />
                       Import
                     </Button>
-                    <Button variant="outline" size="sm" className="bg-white/60 backdrop-blur-sm">
+                    <Button variant="outline" size="sm" className="bg-white/60 backdrop-blur-sm" aria-label="Notifications">
                       <Bell className="h-4 w-4" />
                     </Button>
                     <Button 
@@ -149,6 +150,7 @@ export const LeadsManagement: React.FC = () => {
                       size="sm" 
                       className="bg-white/60 backdrop-blur-sm"
                       onClick={() => setShowStatusManagement(true)}
+                      aria-label="Manage statuses"
                     >
                       <Settings className="h-4 w-4 mr-2" />
                       Manage Statuses

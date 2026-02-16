@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dealsApi } from '@/lib/api/deals';
 import type { Deal, CreateDealData, UpdateDealData, DealsFilter } from '@/lib/api/deals';
+import { toast } from '@/hooks/use-toast';
 
 export const useDeals = (filters: DealsFilter = {}, page = 1, limit = 10) => {
   return useQuery({
@@ -34,16 +35,12 @@ export const useCreateDeal = () => {
   return useMutation({
     mutationFn: (data: CreateDealData) => dealsApi.createDeal(data),
     onSuccess: (newDeal: Deal) => {
-      // Invalidate deals queries
       queryClient.invalidateQueries({ queryKey: ['deals'] });
-      
-      // Update the specific deal query
       queryClient.setQueryData(['deals', newDeal.id], newDeal);
-      
-      // Update deals by lead query
-      queryClient.invalidateQueries({ 
-        queryKey: ['deals', 'by-lead', newDeal.lead_id] 
-      });
+      queryClient.invalidateQueries({ queryKey: ['deals', 'by-lead', newDeal.lead_id] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error creating deal', description: error.message, variant: 'destructive' });
     },
   });
 };
@@ -52,19 +49,15 @@ export const useUpdateDeal = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateDealData }) => 
+    mutationFn: ({ id, data }: { id: string; data: UpdateDealData }) =>
       dealsApi.updateDeal(id, data),
     onSuccess: (updatedDeal: Deal) => {
-      // Invalidate deals queries
       queryClient.invalidateQueries({ queryKey: ['deals'] });
-      
-      // Update the specific deal query
       queryClient.setQueryData(['deals', updatedDeal.id], updatedDeal);
-      
-      // Update deals by lead query
-      queryClient.invalidateQueries({ 
-        queryKey: ['deals', 'by-lead', updatedDeal.lead_id] 
-      });
+      queryClient.invalidateQueries({ queryKey: ['deals', 'by-lead', updatedDeal.lead_id] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error updating deal', description: error.message, variant: 'destructive' });
     },
   });
 };
@@ -75,11 +68,11 @@ export const useDeleteDeal = () => {
   return useMutation({
     mutationFn: (id: string) => dealsApi.deleteDeal(id),
     onSuccess: (_, deletedId: string) => {
-      // Invalidate deals queries
       queryClient.invalidateQueries({ queryKey: ['deals'] });
-      
-      // Remove the specific deal query
       queryClient.removeQueries({ queryKey: ['deals', deletedId] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error deleting deal', description: error.message, variant: 'destructive' });
     },
   });
 };
@@ -88,14 +81,14 @@ export const useAssignDeal = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ dealId, assignedTo }: { dealId: string; assignedTo: string | null }) => 
+    mutationFn: ({ dealId, assignedTo }: { dealId: string; assignedTo: string | null }) =>
       dealsApi.assignDeal(dealId, assignedTo),
     onSuccess: (updatedDeal: Deal) => {
-      // Invalidate deals queries
       queryClient.invalidateQueries({ queryKey: ['deals'] });
-      
-      // Update the specific deal query
       queryClient.setQueryData(['deals', updatedDeal.id], updatedDeal);
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error assigning deal', description: error.message, variant: 'destructive' });
     },
   });
 };
@@ -104,14 +97,14 @@ export const useUpdateDealStatus = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ dealId, statusId }: { dealId: string; statusId: string }) => 
+    mutationFn: ({ dealId, statusId }: { dealId: string; statusId: string }) =>
       dealsApi.updateDealStatus(dealId, statusId),
     onSuccess: (updatedDeal: Deal) => {
-      // Invalidate deals queries
       queryClient.invalidateQueries({ queryKey: ['deals'] });
-      
-      // Update the specific deal query
       queryClient.setQueryData(['deals', updatedDeal.id], updatedDeal);
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error updating deal status', description: error.message, variant: 'destructive' });
     },
   });
 }; 

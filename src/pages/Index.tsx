@@ -32,11 +32,11 @@ const Index = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Button variant="outline" size="sm" className="bg-white/60 backdrop-blur-sm">
+                <Button variant="outline" size="sm" className="bg-white/60 backdrop-blur-sm" aria-label="Export dashboard data">
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
-                <Button variant="outline" size="sm" className="bg-white/60 backdrop-blur-sm">
+                <Button variant="outline" size="sm" className="bg-white/60 backdrop-blur-sm" aria-label="Notifications">
                   <Bell className="h-4 w-4" />
                 </Button>
                 <Button 

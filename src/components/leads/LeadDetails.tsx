@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Edit, ExternalLink, Phone, Mail, Calendar, MapPin, User, Hash, MessageCircle, Activity, MoreHorizontal, Globe, Building2, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Edit, ExternalLink, Phone, Mail, Calendar, MapPin, User, Hash, MessageCircle, Activity, MoreHorizontal, Globe, Building2, TrendingUp, DollarSign, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -261,6 +261,47 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Sales Summary */}
+              {(lead.deal_value || lead.offer_title || lead.category) && (
+                <div className="mt-6 pt-6 border-t">
+                  <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Sales Summary
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {lead.offer_title && (
+                      <div className="bg-blue-50 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Briefcase className="h-3.5 w-3.5 text-blue-600" />
+                          <span className="text-xs font-medium text-blue-600 uppercase">Offer</span>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">{lead.offer_title}</span>
+                      </div>
+                    )}
+                    {lead.deal_value != null && (
+                      <div className="bg-green-50 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <DollarSign className="h-3.5 w-3.5 text-green-600" />
+                          <span className="text-xs font-medium text-green-600 uppercase">Deal Value</span>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">
+                          ${lead.deal_value.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                    {lead.category && (
+                      <div className="bg-purple-50 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Hash className="h-3.5 w-3.5 text-purple-600" />
+                          <span className="text-xs font-medium text-purple-600 uppercase">Category</span>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">{lead.category}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Author Bio */}
               {lead.author_bio && (

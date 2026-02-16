@@ -4,6 +4,7 @@ import { useStatusesRealtime } from './useStatusesRealtime';
 import { useActivitiesRealtime } from './useActivitiesRealtime';
 import { useCommentsRealtime } from './useCommentsRealtime';
 import { useDealsRealtime } from './useDealsRealtime';
+import { useCommissionsRealtime } from './useCommissionsRealtime';
 
 /**
  * Comprehensive realtime hook that enables live updates for all major entities
@@ -16,4 +17,5 @@ export function useAppRealtime() {
   useActivitiesRealtime();
   useCommentsRealtime();
   useDealsRealtime();
+  useCommissionsRealtime();
 } 

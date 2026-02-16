@@ -20,6 +20,7 @@ import type { Deal, UpdateDealData } from '@/lib/api/deals';
 import { useDealsRealtime } from '@/hooks/useDealsRealtime';
 import { useCommentsRealtime } from '@/hooks/useCommentsRealtime';
 import { useActivitiesRealtime } from '@/hooks/useActivitiesRealtime';
+import { DealCommissionInfo } from '@/components/deals/DealCommissionInfo';
 
 const getCategoryIcon = (category: string | null) => {
   switch (category) {
@@ -483,7 +484,7 @@ export const DealDetailsPage: React.FC = () => {
                           </p>
                         </div>
                       </div>
-                      
+
                       {deal.updated_at !== deal.created_at && (
                         <div className="flex items-start gap-3">
                           <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
@@ -498,6 +499,9 @@ export const DealDetailsPage: React.FC = () => {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Commission Info */}
+                <DealCommissionInfo dealId={deal.id} />
               </div>
             </div>
           </main>

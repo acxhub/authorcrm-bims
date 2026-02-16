@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Settings, Hash, Users, BarChart3, Database, GitBranch, Shield, Activity, TrendingUp } from 'lucide-react';
+import { Settings, Hash, Users, BarChart3, Database, GitBranch, Shield, Activity, TrendingUp, DollarSign, UserCog } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -12,8 +12,10 @@ import { useAuth, useProfile } from '@/hooks/useAuth';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useTagsRealtime } from '@/hooks/useTagsRealtime';
 import { useStatusesRealtime } from '@/hooks/useStatusesRealtime';
+import { CommissionTemplateManager } from '@/components/commissions/CommissionTemplateManager';
+import { AgentCommissionSettings } from '@/components/commissions/AgentCommissionSettings';
 
-const TABS = ['overview', 'users', 'pipeline', 'tags', 'analytics', 'system'];
+const TABS = ['overview', 'users', 'pipeline', 'tags', 'commissions', 'agent-settings', 'analytics', 'system'];
 
 export const AdminPanel: React.FC = () => {
   const { user } = useAuth();
@@ -94,7 +96,7 @@ export const AdminPanel: React.FC = () => {
           {/* Main Content */}
           <main className="p-6">
             <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-6 bg-white/60 backdrop-blur-sm border border-gray-200/60">
+              <TabsList className="grid w-full grid-cols-8 bg-white/60 backdrop-blur-sm border border-gray-200/60">
                 <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
                   <TrendingUp className="h-4 w-4" />
                   <span className="hidden sm:inline">Overview</span>
@@ -110,6 +112,14 @@ export const AdminPanel: React.FC = () => {
                 <TabsTrigger value="tags" className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
                   <Hash className="h-4 w-4" />
                   <span className="hidden sm:inline">Tags</span>
+                </TabsTrigger>
+                <TabsTrigger value="commissions" className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                  <DollarSign className="h-4 w-4" />
+                  <span className="hidden sm:inline">Commissions</span>
+                </TabsTrigger>
+                <TabsTrigger value="agent-settings" className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                  <UserCog className="h-4 w-4" />
+                  <span className="hidden sm:inline">Agent Settings</span>
                 </TabsTrigger>
                 <TabsTrigger value="analytics" className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
                   <BarChart3 className="h-4 w-4" />
@@ -203,18 +213,23 @@ export const AdminPanel: React.FC = () => {
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-lg">
                         <div className="p-2 bg-orange-100 rounded-lg">
-                          <BarChart3 className="h-5 w-5 text-orange-600" />
+                          <DollarSign className="h-5 w-5 text-orange-600" />
                         </div>
-                        Analytics
+                        Commissions
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-gray-600 mb-4">
-                        View system metrics, user activity, and performance insights.
+                        Manage commission templates, tiers, and agent settings.
                       </p>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">Coming Soon</span>
-                        <span className="text-gray-400 text-sm">View →</span>
+                        <span className="text-xs text-gray-500">Quick Access</span>
+                        <button
+                          onClick={() => handleTabChange('commissions')}
+                          className="text-orange-600 hover:text-orange-700 text-sm font-medium"
+                        >
+                          Configure →
+                        </button>
                       </div>
                     </CardContent>
                   </Card>
@@ -262,9 +277,7 @@ export const AdminPanel: React.FC = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <StatusManagement onStatusesUpdated={() => {
-                      console.log('Pipeline stages updated');
-                    }} />
+                    <StatusManagement onStatusesUpdated={() => {}} />
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -279,11 +292,19 @@ export const AdminPanel: React.FC = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <TagManagement onTagsUpdated={() => {
-                      console.log('Tags updated');
-                    }} />
+                    <TagManagement onTagsUpdated={() => {}} />
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              {/* Commissions Tab */}
+              <TabsContent value="commissions" className="space-y-6">
+                <CommissionTemplateManager />
+              </TabsContent>
+
+              {/* Agent Settings Tab */}
+              <TabsContent value="agent-settings" className="space-y-6">
+                <AgentCommissionSettings />
               </TabsContent>
 
               {/* Analytics Tab */}

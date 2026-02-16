@@ -12,8 +12,6 @@ export function useStatusesRealtime() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'statuses' },
         (payload) => {
-          console.log('Statuses change detected:', payload);
-          // Invalidate all statuses queries
           queryClient.invalidateQueries({ queryKey: ['statuses'] });
           
           // Also invalidate leads and deals queries since they include status data
@@ -21,8 +19,8 @@ export function useStatusesRealtime() {
           queryClient.invalidateQueries({ queryKey: ['deals'] });
           
           // If we have the specific status ID, also invalidate individual status queries
-          if ((payload.new as any)?.id || (payload.old as any)?.id) {
-            const statusId = (payload.new as any)?.id || (payload.old as any)?.id;
+          if ((payload.new as { id?: string })?.id || (payload.old as { id?: string })?.id) {
+            const statusId = (payload.new as { id?: string })?.id || (payload.old as { id?: string })?.id;
             queryClient.invalidateQueries({ queryKey: ['status', statusId] });
           }
         }

@@ -7,6 +7,7 @@ import { CreateDealModal } from '@/components/deals/CreateDealModal';
 import { useDeals, useUpdateDeal, useCreateDeal } from '@/hooks/useDeals';
 import { useStatuses } from '@/hooks/useStatuses';
 import { useUsers } from '@/hooks/useUsers';
+import { useCreateCommissionFromDeal } from '@/hooks/useCreateCommissionFromDeal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,11 +41,34 @@ export const PipelineBoard: React.FC = () => {
   const { users = [] } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
   const updateDealMutation = useUpdateDeal();
   const createDealMutation = useCreateDeal();
+  const createCommissionMutation = useCreateCommissionFromDeal();
 
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const deals = dealsData?.data || [];
+
+  const isClosedWonStatus = (statusId: string) => {
+    const status = statuses.find(s => s.id === statusId);
+    if (!status) return false;
+    const name = status.name.toLowerCase();
+    return name.includes('won') || name.includes('sold') || name === 'closed won';
+  };
+
+  const tryCreateCommission = async (deal: Deal, newStatusId: string, previousStatusId: string) => {
+    if (!isClosedWonStatus(newStatusId) || isClosedWonStatus(previousStatusId)) return;
+    if (!deal.assigned_to || !deal.deal_value) return;
+
+    try {
+      await createCommissionMutation.mutateAsync({
+        dealId: deal.id,
+        agentId: deal.assigned_to,
+        dealValue: deal.deal_value,
+      });
+    } catch {
+      // Error toast is handled by the mutation hook
+    }
+  };
 
   const handleDealClick = (deal: Deal) => {
     navigate(`/deals/${deal.id}`);
@@ -58,11 +82,19 @@ export const PipelineBoard: React.FC = () => {
   };
 
   const handleDealMove = async (dealId: string, newStatusId: string) => {
+    const deal = deals.find(d => d.id === dealId);
+    if (!deal) return;
+
+    const previousStatusId = deal.status_id;
+
     try {
       await updateDealMutation.mutateAsync({
         id: dealId,
         data: { status_id: newStatusId }
       });
+
+      // Auto-create commission when deal moves to "Closed Won"
+      await tryCreateCommission(deal, newStatusId, previousStatusId);
     } catch (error) {
       console.error('Failed to move deal:', error);
     }
@@ -70,12 +102,24 @@ export const PipelineBoard: React.FC = () => {
 
   const handleEditSave = async (data: UpdateDealData) => {
     if (!editingDeal) return;
-    
+
+    const previousStatusId = editingDeal.status_id;
+
     try {
-      await updateDealMutation.mutateAsync({
+      const updatedDeal = await updateDealMutation.mutateAsync({
         id: editingDeal.id,
         data
       });
+
+      // Auto-create commission when status changed to "Closed Won" via edit
+      if (data.status_id && data.status_id !== previousStatusId) {
+        await tryCreateCommission(
+          { ...editingDeal, ...data, deal_value: data.deal_value ?? editingDeal.deal_value } as Deal,
+          data.status_id,
+          previousStatusId
+        );
+      }
+
       setEditingDeal(null);
     } catch (error) {
       console.error('Failed to update deal:', error);

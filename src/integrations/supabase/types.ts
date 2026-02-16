@@ -67,6 +67,57 @@ export type Database = {
           },
         ]
       }
+      agent_commission_settings: {
+        Row: {
+          id: string
+          agent_id: string
+          template_id: string | null
+          custom_commission_percent: number | null
+          custom_markup_percent: number | null
+          use_custom_override: boolean | null
+          notes: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          agent_id: string
+          template_id?: string | null
+          custom_commission_percent?: number | null
+          custom_markup_percent?: number | null
+          use_custom_override?: boolean | null
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          agent_id?: string
+          template_id?: string | null
+          custom_commission_percent?: number | null
+          custom_markup_percent?: number | null
+          use_custom_override?: boolean | null
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_commission_settings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_commission_settings_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "commission_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comments: {
         Row: {
           content: string
@@ -122,6 +173,316 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_audit_log: {
+        Row: {
+          id: string
+          commission_id: string
+          action: string
+          previous_values: Json | null
+          new_values: Json | null
+          performed_by: string | null
+          notes: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          commission_id: string
+          action: string
+          previous_values?: Json | null
+          new_values?: Json | null
+          performed_by?: string | null
+          notes?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          commission_id?: string
+          action?: string
+          previous_values?: Json | null
+          new_values?: Json | null
+          performed_by?: string | null
+          notes?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_audit_log_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_audit_log_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_templates: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          calculation_type: string
+          markup_commissionable_percent: number | null
+          is_active: boolean | null
+          is_default: boolean | null
+          created_by: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          calculation_type: string
+          markup_commissionable_percent?: number | null
+          is_active?: boolean | null
+          is_default?: boolean | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          calculation_type?: string
+          markup_commissionable_percent?: number | null
+          is_active?: boolean | null
+          is_default?: boolean | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_tiers: {
+        Row: {
+          id: string
+          template_id: string
+          min_amount: number
+          max_amount: number | null
+          commission_percent: number
+          sort_order: number | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          template_id: string
+          min_amount: number
+          max_amount?: number | null
+          commission_percent: number
+          sort_order?: number | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          template_id?: string
+          min_amount?: number
+          max_amount?: number | null
+          commission_percent?: number
+          sort_order?: number | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_tiers_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "commission_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commissions: {
+        Row: {
+          id: string
+          deal_id: string
+          agent_id: string | null
+          deal_value: number
+          markup_amount: number | null
+          base_commission_amount: number
+          markup_commissionable_percent: number | null
+          markup_commission_amount: number | null
+          company_markup_amount: number | null
+          total_commission_amount: number
+          template_id: string | null
+          template_name: string | null
+          calculation_type: string | null
+          tier_breakdown: Json | null
+          is_overridden: boolean | null
+          override_amount: number | null
+          override_reason: string | null
+          overridden_by: string | null
+          overridden_at: string | null
+          status: string | null
+          approved_by: string | null
+          approved_at: string | null
+          rejection_reason: string | null
+          paid_at: string | null
+          commission_period: string | null
+          period_type: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          deal_id: string
+          agent_id?: string | null
+          deal_value: number
+          markup_amount?: number | null
+          base_commission_amount: number
+          markup_commissionable_percent?: number | null
+          markup_commission_amount?: number | null
+          company_markup_amount?: number | null
+          total_commission_amount: number
+          template_id?: string | null
+          template_name?: string | null
+          calculation_type?: string | null
+          tier_breakdown?: Json | null
+          is_overridden?: boolean | null
+          override_amount?: number | null
+          override_reason?: string | null
+          overridden_by?: string | null
+          overridden_at?: string | null
+          status?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          rejection_reason?: string | null
+          paid_at?: string | null
+          commission_period?: string | null
+          period_type?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          deal_id?: string
+          agent_id?: string | null
+          deal_value?: number
+          markup_amount?: number | null
+          base_commission_amount?: number
+          markup_commissionable_percent?: number | null
+          markup_commission_amount?: number | null
+          company_markup_amount?: number | null
+          total_commission_amount?: number
+          template_id?: string | null
+          template_name?: string | null
+          calculation_type?: string | null
+          tier_breakdown?: Json | null
+          is_overridden?: boolean | null
+          override_amount?: number | null
+          override_reason?: string | null
+          overridden_by?: string | null
+          overridden_at?: string | null
+          status?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          rejection_reason?: string | null
+          paid_at?: string | null
+          commission_period?: string | null
+          period_type?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commissions_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "commission_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_overridden_by_fkey"
+            columns: ["overridden_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_revenue: {
+        Row: {
+          id: string
+          deal_id: string
+          commission_id: string | null
+          revenue_type: string
+          amount: number
+          description: string | null
+          revenue_period: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          deal_id: string
+          commission_id?: string | null
+          revenue_type: string
+          amount: number
+          description?: string | null
+          revenue_period?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          deal_id?: string
+          commission_id?: string | null
+          revenue_type?: string
+          amount?: number
+          description?: string | null
+          revenue_period?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_revenue_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_revenue_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commissions"
             referencedColumns: ["id"]
           },
         ]
@@ -247,6 +608,7 @@ export type Database = {
       leads: {
         Row: {
           amazon_link: string | null
+          assigned_at: string | null
           assigned_to: string | null
           author_bio: string | null
           author_name: string
@@ -266,8 +628,10 @@ export type Database = {
           phone_number_2: string | null
           primary_email: string | null
           publisher: string | null
+          recycled_at: string | null
+          recycled_by: string | null
+          previous_assignee: string | null
           secondary_email: string | null
-          source: string | null
           state: string | null
           status_id: string
           updated_at: string | null
@@ -275,6 +639,7 @@ export type Database = {
         }
         Insert: {
           amazon_link?: string | null
+          assigned_at?: string | null
           assigned_to?: string | null
           author_bio?: string | null
           author_name: string
@@ -294,8 +659,10 @@ export type Database = {
           phone_number_2?: string | null
           primary_email?: string | null
           publisher?: string | null
+          recycled_at?: string | null
+          recycled_by?: string | null
+          previous_assignee?: string | null
           secondary_email?: string | null
-          source?: string | null
           state?: string | null
           status_id: string
           updated_at?: string | null
@@ -303,6 +670,7 @@ export type Database = {
         }
         Update: {
           amazon_link?: string | null
+          assigned_at?: string | null
           assigned_to?: string | null
           author_bio?: string | null
           author_name?: string
@@ -322,8 +690,10 @@ export type Database = {
           phone_number_2?: string | null
           primary_email?: string | null
           publisher?: string | null
+          recycled_at?: string | null
+          recycled_by?: string | null
+          previous_assignee?: string | null
           secondary_email?: string | null
-          source?: string | null
           state?: string | null
           status_id?: string
           updated_at?: string | null
@@ -351,11 +721,26 @@ export type Database = {
             referencedRelation: "statuses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "leads_recycled_by_fkey"
+            columns: ["recycled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_previous_assignee_fkey"
+            columns: ["previous_assignee"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
         Row: {
           avatar_url: string | null
+          can_delete_leads: boolean | null
           created_at: string | null
           email: string | null
           full_name: string | null
@@ -366,6 +751,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          can_delete_leads?: boolean | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
@@ -376,6 +762,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          can_delete_leads?: boolean | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
@@ -472,7 +859,6 @@ export type Database = {
           primary_email: string | null
           publisher: string | null
           secondary_email: string | null
-          source: string | null
           state: string | null
           status_id: string | null
           updated_at: string | null
@@ -501,7 +887,6 @@ export type Database = {
           primary_email?: string | null
           publisher?: string | null
           secondary_email?: string | null
-          source?: string | null
           state?: string | null
           status_id?: string | null
           updated_at?: string | null
@@ -530,7 +915,6 @@ export type Database = {
           primary_email?: string | null
           publisher?: string | null
           secondary_email?: string | null
-          source?: string | null
           state?: string | null
           status_id?: string | null
           updated_at?: string | null

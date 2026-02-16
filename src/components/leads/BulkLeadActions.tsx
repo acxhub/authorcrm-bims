@@ -165,7 +165,7 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
     if (selectedLeads.length === 0) return;
 
     const confirmed = confirm(
-      `Are you sure you want to recycle ${selectedLeads.length} lead${selectedLeads.length > 1 ? 's' : ''}? They will be unassigned and available for reassignment.`
+      `Are you sure you want to recycle ${selectedLeads.length} lead${selectedLeads.length > 1 ? 's' : ''}? They will be unassigned, tags will be cleared, and status will be reset.`
     );
 
     if (!confirmed) return;
@@ -182,11 +182,20 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
       }
 
       // Call the bulk_recycle_leads function
-      const { error } = await supabase.rpc('bulk_recycle_leads', { 
-        lead_ids: assignedLeadIds 
+      const { error } = await supabase.rpc('bulk_recycle_leads', {
+        lead_ids: assignedLeadIds
       });
 
       if (error) throw error;
+
+      // Clear all tags from recycled leads
+      await supabase.from('lead_tags').delete().in('lead_id', assignedLeadIds);
+
+      // Reset status to the first/default status
+      const defaultStatus = statuses?.sort((a, b) => a.order_index - b.order_index)[0];
+      if (defaultStatus) {
+        await supabase.from('leads').update({ status_id: defaultStatus.id }).in('id', assignedLeadIds);
+      }
 
       onSelectionChange([]);
       onActionsComplete();

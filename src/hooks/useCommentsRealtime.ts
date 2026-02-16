@@ -12,19 +12,14 @@ export function useCommentsRealtime() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'comments' },
         (payload) => {
-          console.log('Comments change detected:', payload);
-          // Invalidate all comments queries
           queryClient.invalidateQueries({ queryKey: ['comments'] });
-          
-          // If we have the lead ID, invalidate comments for that specific lead
-          if ((payload.new as any)?.lead_id || (payload.old as any)?.lead_id) {
-            const leadId = (payload.new as any)?.lead_id || (payload.old as any)?.lead_id;
-            queryClient.invalidateQueries({ queryKey: ['comments', leadId] });
+          // useCommentsByLeadId uses ['comments', 'lead', leadId]
+          if ((payload.new as { lead_id?: string })?.lead_id || (payload.old as { lead_id?: string })?.lead_id) {
+            const leadId = (payload.new as { lead_id?: string })?.lead_id || (payload.old as { lead_id?: string })?.lead_id;
+            queryClient.invalidateQueries({ queryKey: ['comments', 'lead', leadId] });
           }
-          
-          // If we have the specific comment ID, also invalidate individual comment queries
-          if ((payload.new as any)?.id || (payload.old as any)?.id) {
-            const commentId = (payload.new as any)?.id || (payload.old as any)?.id;
+          if ((payload.new as { id?: string })?.id || (payload.old as { id?: string })?.id) {
+            const commentId = (payload.new as { id?: string })?.id || (payload.old as { id?: string })?.id;
             queryClient.invalidateQueries({ queryKey: ['comment', commentId] });
           }
         }

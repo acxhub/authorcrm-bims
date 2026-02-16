@@ -12,13 +12,11 @@ export function useLeadsRealtime() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'leads' },
         (payload) => {
-          console.log('Leads change detected:', payload);
-          // Invalidate all leads queries to trigger refetch
           queryClient.invalidateQueries({ queryKey: ['leads'] });
           
           // If we have the specific lead ID, also invalidate individual lead queries
-          if ((payload.new as any)?.id || (payload.old as any)?.id) {
-            const leadId = (payload.new as any)?.id || (payload.old as any)?.id;
+          if ((payload.new as { id?: string })?.id || (payload.old as { id?: string })?.id) {
+            const leadId = (payload.new as { id?: string })?.id || (payload.old as { id?: string })?.id;
             queryClient.invalidateQueries({ queryKey: ['lead', leadId] });
           }
         }
@@ -27,13 +25,9 @@ export function useLeadsRealtime() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'lead_tags' },
         (payload) => {
-          console.log('Lead tags change detected:', payload);
-          // Invalidate leads queries since tags affect lead data
           queryClient.invalidateQueries({ queryKey: ['leads'] });
-          
-          // If we have the lead ID, invalidate that specific lead
-          if ((payload.new as any)?.lead_id || (payload.old as any)?.lead_id) {
-            const leadId = (payload.new as any)?.lead_id || (payload.old as any)?.lead_id;
+          if ((payload.new as { lead_id?: string })?.lead_id || (payload.old as { lead_id?: string })?.lead_id) {
+            const leadId = (payload.new as { lead_id?: string })?.lead_id || (payload.old as { lead_id?: string })?.lead_id;
             queryClient.invalidateQueries({ queryKey: ['lead', leadId] });
           }
         }

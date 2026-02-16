@@ -12,16 +12,14 @@ export function useTagsRealtime() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'tags' },
         (payload) => {
-          console.log('Tags change detected:', payload);
-          // Invalidate all tags queries
           queryClient.invalidateQueries({ queryKey: ['tags'] });
           
           // Also invalidate leads queries since they include tag data
           queryClient.invalidateQueries({ queryKey: ['leads'] });
           
           // If we have the specific tag ID, also invalidate individual tag queries
-          if ((payload.new as any)?.id || (payload.old as any)?.id) {
-            const tagId = (payload.new as any)?.id || (payload.old as any)?.id;
+          if ((payload.new as { id?: string })?.id || (payload.old as { id?: string })?.id) {
+            const tagId = (payload.new as { id?: string })?.id || (payload.old as { id?: string })?.id;
             queryClient.invalidateQueries({ queryKey: ['tag', tagId] });
           }
         }

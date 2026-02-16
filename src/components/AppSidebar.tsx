@@ -10,6 +10,7 @@ import {
   Upload,
   DollarSign,
   Trophy,
+  Receipt,
 } from "lucide-react";
 import {
   Sidebar,
@@ -55,6 +56,11 @@ const navigationItems = [
     title: "Sales Board",
     url: "/sales-board",
     icon: Trophy,
+  },
+  {
+    title: "Commissions",
+    url: "/commissions",
+    icon: Receipt,
   },
 ];
 

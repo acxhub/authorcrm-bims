@@ -18,9 +18,9 @@ import UserManagementPage from "./pages/UserManagementPage";
 import LeadDetailsPage from "./pages/LeadDetailsPage";
 import ImportLeadsPage from "./pages/ImportLeadsPage";
 import { AdminPanel } from "./pages/AdminPanel";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { SalesBoard } from "./pages/SalesBoard";
 import { SoldDashboard } from "./pages/SoldDashboard";
+import { CommissionsPage } from "./pages/CommissionsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -93,18 +93,19 @@ const App = () => {
                     <SoldDashboard />
                   </ProtectedRoute>
                 } />
+                <Route path="/commissions" element={
+                  <ProtectedRoute>
+                    <CommissionsPage />
+                  </ProtectedRoute>
+                } />
                 <Route path="/admin" element={
                   <ProtectedRoute requiredRole="leads_manager">
-                    <DashboardLayout>
-                      <AdminPanel />
-                    </DashboardLayout>
+                    <AdminPanel />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/users" element={
                   <ProtectedRoute requiredRole="leads_manager">
-                    <DashboardLayout>
-                      <UserManagementPage />
-                    </DashboardLayout>
+                    <UserManagementPage />
                   </ProtectedRoute>
                 } />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

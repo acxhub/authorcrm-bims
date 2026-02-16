@@ -106,7 +106,6 @@ export const QuickActions: React.FC = () => {
       description: 'Create performance and analytics reports',
       onClick: () => {
         // TODO: Implement reporting functionality
-        console.log('Generate report clicked');
       },
       color: 'gray' as const,
       disabled: true
@@ -117,7 +116,6 @@ export const QuickActions: React.FC = () => {
       description: 'Send targeted emails to your leads',
       onClick: () => {
         // TODO: Implement email campaign functionality
-        console.log('Email campaign clicked');
       },
       color: 'red' as const,
       disabled: true

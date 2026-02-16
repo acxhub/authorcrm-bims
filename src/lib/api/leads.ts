@@ -20,7 +20,6 @@ export interface LeadsFilter {
   created_by?: string;
   date_from?: string;
   date_to?: string;
-  source?: string;
 }
 
 export interface PaginatedLeadsResponse {
@@ -52,7 +51,7 @@ export class LeadsAPI {
     // Apply filters - Search across key fields
     if (filters.search) {
       // Limit search to the most important fields to avoid query complexity
-      query = query.or(`book_title.ilike.%${filters.search}%,author_name.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,primary_email.ilike.%${filters.search}%,phone_number_1.ilike.%${filters.search}%`);
+      query = query.or(`book_title.ilike.%${filters.search}%,author_name.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,primary_email.ilike.%${filters.search}%,phone_number_1.ilike.%${filters.search}%,publisher.ilike.%${filters.search}%`);
     }
 
     if (filters.status_ids?.length) {
@@ -97,10 +96,6 @@ export class LeadsAPI {
       query = query.eq('created_by', filters.created_by);
     }
 
-    if (filters.source) {
-      query = query.eq('source', filters.source);
-    }
-
     if (filters.date_from) {
       query = query.gte('created_at', filters.date_from);
     }
@@ -114,8 +109,8 @@ export class LeadsAPI {
     const to = from + limit - 1;
     query = query.range(from, to);
 
-    // Order by created_at desc
-    query = query.order('created_at', { ascending: false });
+    // Order by assigned_at desc (newly distributed first), then created_at desc. Nulls last so unassigned follow.
+    query = query.order('assigned_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false });
 
     const { data, error, count } = await query;
 
@@ -126,7 +121,7 @@ export class LeadsAPI {
     // Transform the data to flatten tags
     const transformedData = (data || []).map(lead => ({
       ...lead,
-      tags: lead.tags?.map((lt: any) => lt.tag).filter(Boolean) || []
+      tags: lead.tags?.map((lt: { tag?: Tables<'tags'> }) => lt.tag).filter(Boolean) || []
     }));
 
     return {
@@ -160,16 +155,20 @@ export class LeadsAPI {
     // Transform tags
     const transformedData = {
       ...data,
-      tags: data.tags?.map((lt: any) => lt.tag).filter(Boolean) || []
+      tags: data.tags?.map((lt: { tag?: Tables<'tags'> }) => lt.tag).filter(Boolean) || []
     };
 
     return transformedData;
   }
 
   async createLead(leadData: CreateLeadData): Promise<Lead> {
+    const insertData = {
+      ...leadData,
+      ...(leadData.assigned_to && { assigned_at: new Date().toISOString() }),
+    };
     const { data, error } = await supabase
       .from('leads')
-      .insert(leadData)
+      .insert(insertData)
       .select(`
         *,
         status:statuses(*),
@@ -187,7 +186,7 @@ export class LeadsAPI {
 
     return {
       ...data,
-      tags: data.tags?.map((lt: any) => lt.tag).filter(Boolean) || []
+      tags: data.tags?.map((lt: { tag?: Tables<'tags'> }) => lt.tag).filter(Boolean) || []
     };
   }
 
@@ -213,7 +212,7 @@ export class LeadsAPI {
 
     return {
       ...data,
-      tags: data.tags?.map((lt: any) => lt.tag).filter(Boolean) || []
+      tags: data.tags?.map((lt: { tag?: Tables<'tags'> }) => lt.tag).filter(Boolean) || []
     };
   }
 
@@ -229,7 +228,11 @@ export class LeadsAPI {
   }
 
   async assignLead(leadId: string, assignedTo: string | null): Promise<Lead> {
-    return this.updateLead(leadId, { assigned_to: assignedTo });
+    return this.updateLead(leadId, {
+      assigned_to: assignedTo,
+      assigned_at: assignedTo ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    });
   }
 
   async updateLeadStatus(leadId: string, statusId: string): Promise<Lead> {

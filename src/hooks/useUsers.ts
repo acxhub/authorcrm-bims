@@ -50,6 +50,8 @@ export function useUsers(filters?: UsersFilter, page = 1, limit = 10) {
     onSuccess: (updatedUser) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.setQueryData(['user', updatedUser.id], updatedUser);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
       toast({
         title: 'Success',
         description: 'User updated successfully',

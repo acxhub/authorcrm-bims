@@ -16,18 +16,17 @@ const UserManagementPage: React.FC = () => {
             <div className="flex items-center justify-between px-6 py-4">
               <div className="flex items-center gap-4">
                 <SidebarTrigger className="h-8 w-8" />
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-600" />
-                  <h1 className="text-xl font-semibold text-gray-900">User Management</h1>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+                  <p className="text-sm text-gray-600">Manage users, roles, and permissions</p>
                 </div>
-                <p className="text-sm text-gray-600">Manage users, roles, and permissions</p>
               </div>
               <div className="flex items-center gap-3">
                 {/* Add any topbar actions here if needed */}
               </div>
             </div>
           </header>
-          <main className="p-6 space-y-8">
+          <main className="p-6">
             <UserManagement />
           </main>
         </SidebarInset>

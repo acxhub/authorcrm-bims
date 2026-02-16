@@ -62,7 +62,6 @@ const DB_FIELDS = {
   website: { label: 'Website', required: false, type: 'url' },
   state: { label: 'State', required: false, type: 'text' },
   country: { label: 'Country', required: false, type: 'text' },
-  source: { label: 'Source', required: false, type: 'text' },
   status_id: { label: 'Status', required: true, type: 'select' },
 };
 

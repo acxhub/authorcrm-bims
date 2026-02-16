@@ -148,9 +148,12 @@ export const SoldDashboard: React.FC = () => {
       case 'today':
         from = today;
         break;
-      case 'week':
-        from = new Date(today.setDate(today.getDate() - 7));
+      case 'week': {
+        const weekStart = new Date(today);
+        weekStart.setDate(weekStart.getDate() - 7);
+        from = weekStart;
         break;
+      }
       case 'month':
         from = startOfMonth(today);
         to = endOfMonth(today);

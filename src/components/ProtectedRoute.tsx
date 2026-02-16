@@ -1,6 +1,5 @@
 import { useAuth, useProfile } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
 import { ForcePasswordReset } from '@/components/auth/ForcePasswordReset';
 
 interface ProtectedRouteProps {
@@ -11,10 +10,6 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
-
-  useEffect(() => {
-    console.log('ProtectedRoute state:', { user: !!user, loading, profile, profileLoading });
-  }, [user, loading, profile, profileLoading]);
 
   if (loading || profileLoading) {
     return (
@@ -31,7 +26,6 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   }
 
   if (!user) {
-    console.log('No user found, redirecting to auth');
     return <Navigate to="/auth" replace />;
   }
 
@@ -52,7 +46,6 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   }
 
   if (requiredRole && profile && profile.role !== requiredRole) {
-    console.log('User role not authorized, redirecting to home');
     return <Navigate to="/" replace />;
   }
 
