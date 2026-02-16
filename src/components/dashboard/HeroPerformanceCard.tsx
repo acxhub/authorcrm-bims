@@ -24,16 +24,16 @@ const StatItem: React.FC<StatItemProps> = ({ label, value, subValue, trend, tren
         <Icon className="h-6 w-6" />
       </div>
       <div className="flex-1">
-        <p className="text-sm text-gray-500 font-medium">{label}</p>
+        <p className="text-sm text-blue-100 font-medium">{label}</p>
         <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-bold text-gray-900">{value}</span>
+          <span className="text-2xl font-bold text-white">{value}</span>
           {trendValue && trend && (
             <Badge 
               variant="secondary" 
               className={`text-xs ${
-                trend === 'up' ? 'bg-green-100 text-green-700' : 
-                trend === 'down' ? 'bg-red-100 text-red-700' : 
-                'bg-gray-100 text-gray-600'
+                trend === 'up' ? 'bg-green-500/20 text-green-300 border-green-400/30' : 
+                trend === 'down' ? 'bg-red-500/20 text-red-300 border-red-400/30' : 
+                'bg-white/20 text-white/80'
               }`}
             >
               {trend === 'up' && <TrendingUp className="h-3 w-3 mr-1" />}
@@ -42,7 +42,7 @@ const StatItem: React.FC<StatItemProps> = ({ label, value, subValue, trend, tren
             </Badge>
           )}
         </div>
-        {subValue && <p className="text-xs text-gray-400 mt-0.5">{subValue}</p>}
+        {subValue && <p className="text-xs text-blue-200/70 mt-0.5">{subValue}</p>}
       </div>
     </div>
   );

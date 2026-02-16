@@ -8,6 +8,7 @@ import { HeroPerformanceCard } from "@/components/dashboard/HeroPerformanceCard"
 import { NeedsAttention } from "@/components/dashboard/NeedsAttention";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { CompactLeaderboard } from "@/components/dashboard/CompactLeaderboard";
+import { RecentlyAssignedLeads } from "@/components/dashboard/RecentlyAssignedLeads";
 import { MyPipeline } from "@/components/dashboard/MyPipeline";
 import { ActionCenter } from "@/components/dashboard/ActionCenter";
 import { useNavigate } from "react-router-dom";
@@ -63,12 +64,19 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Row 4: Activity + Leaderboard */}
+            {/* Row 4: Activity + Recently Assigned */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
               <div className="lg:col-span-3">
                 <RecentActivity />
               </div>
               <div className="lg:col-span-2">
+                <RecentlyAssignedLeads />
+              </div>
+            </div>
+
+            {/* Row 5: Top Performers */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+              <div className="lg:col-span-2 lg:col-start-4">
                 <CompactLeaderboard />
               </div>
             </div>
