@@ -55,6 +55,9 @@ export class DealsAPI {
         created_by_profile:profiles!deals_created_by_fkey(*)
       `, { count: 'exact' });
 
+    // Filter out archived deals
+    query = query.is('deleted_at', null);
+
     // Apply filters
     if (filters.search) {
       query = query.or(`offer_title.ilike.%${filters.search}%,notes.ilike.%${filters.search}%`);
@@ -187,15 +190,72 @@ export class DealsAPI {
     return data;
   }
 
-  async deleteDeal(id: string): Promise<void> {
+  async archiveDeal(id: string, deletedBy: string): Promise<void> {
+    const { error } = await supabase
+      .from('deals')
+      .update({ deleted_at: new Date().toISOString(), deleted_by: deletedBy })
+      .eq('id', id);
+
+    if (error) {
+      throw new Error(`Failed to archive deal: ${error.message}`);
+    }
+  }
+
+  async restoreDeal(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('deals')
+      .update({ deleted_at: null, deleted_by: null })
+      .eq('id', id);
+
+    if (error) {
+      throw new Error(`Failed to restore deal: ${error.message}`);
+    }
+  }
+
+  async permanentlyDeleteDeal(id: string): Promise<void> {
     const { error } = await supabase
       .from('deals')
       .delete()
       .eq('id', id);
 
     if (error) {
-      throw new Error(`Failed to delete deal: ${error.message}`);
+      throw new Error(`Failed to permanently delete deal: ${error.message}`);
     }
+  }
+
+  async getArchivedDeals(page = 1, limit = 10): Promise<PaginatedDealsResponse> {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const { data, error, count } = await supabase
+      .from('deals')
+      .select(`
+        *,
+        lead:leads(
+          *,
+          status:statuses(*),
+          assigned_to_profile:profiles!leads_assigned_to_fkey(*),
+          created_by_profile:profiles!leads_created_by_fkey(*)
+        ),
+        status:statuses(*),
+        assigned_to_profile:profiles!deals_assigned_to_fkey(*),
+        created_by_profile:profiles!deals_created_by_fkey(*)
+      `, { count: 'exact' })
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(`Failed to fetch archived deals: ${error.message}`);
+    }
+
+    return {
+      data: data || [],
+      count: count || 0,
+      page,
+      limit,
+      total_pages: Math.ceil((count || 0) / limit)
+    };
   }
 
   async assignDeal(dealId: string, assignedTo: string | null): Promise<Deal> {
@@ -222,6 +282,7 @@ export class DealsAPI {
         created_by_profile:profiles!deals_created_by_fkey(*)
       `)
       .eq('lead_id', leadId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (error) {

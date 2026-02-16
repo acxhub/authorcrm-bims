@@ -11,7 +11,10 @@ import {
   DollarSign,
   Trophy,
   Receipt,
+  CheckSquare,
+  Archive,
 } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import {
   Sidebar,
   SidebarContent,
@@ -61,6 +64,11 @@ const navigationItems = [
     title: "Commissions",
     url: "/commissions",
     icon: Receipt,
+  },
+  {
+    title: "Reminders",
+    url: "/reminders",
+    icon: CheckSquare,
   },
 ];
 
@@ -156,6 +164,18 @@ export function AppSidebar() {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  <SidebarMenuItem key="Archive">
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive('/admin/archive')}
+                      className="w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 data-[active=true]:bg-blue-100 data-[active=true]:text-blue-700"
+                    >
+                      <Link to="/admin/archive" className="flex items-center gap-3">
+                        <Archive className="h-4 w-4" />
+                        <span>Archive</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </>
               )}
             </SidebarMenu>
@@ -202,9 +222,10 @@ export function AppSidebar() {
             </p>
             <p className="text-xs text-gray-600 truncate">{user?.email}</p>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <NotificationBell />
+          <Button
+            variant="ghost"
+            size="sm"
             className="h-8 w-8 p-0"
             onClick={handleSignOut}
             title="Sign out"

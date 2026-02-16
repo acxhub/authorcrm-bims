@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Settings, Hash, Users, BarChart3, Database, GitBranch, Shield, Activity, TrendingUp, DollarSign, UserCog } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -86,10 +87,13 @@ export const AdminPanel: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200">
-                <Shield className="h-3 w-3 mr-1" />
-                Leads Manager Access
-              </Badge>
+              <div className="flex items-center gap-3">
+                <NotificationBell />
+                <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200">
+                  <Shield className="h-3 w-3 mr-1" />
+                  Leads Manager Access
+                </Badge>
+              </div>
             </div>
           </header>
 

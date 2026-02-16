@@ -68,19 +68,21 @@ export const useUpdateStatus = () => {
   });
 };
 
-export const useDeleteStatus = () => {
+export const useArchiveStatus = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (id: string) => statusesApi.deleteStatus(id),
+    mutationFn: ({ id, deletedBy }: { id: string; deletedBy: string }) =>
+      statusesApi.archiveStatus(id, deletedBy),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['statuses'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-statuses'] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['deals'] });
       toast({
-        title: 'Status deleted',
-        description: 'Status has been successfully deleted.',
+        title: 'Status archived',
+        description: 'Status has been successfully archived.',
       });
     },
     onError: (error: Error) => {
@@ -90,6 +92,54 @@ export const useDeleteStatus = () => {
         variant: 'destructive',
       });
     },
+  });
+};
+
+export const useRestoreStatus = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (id: string) => statusesApi.restoreStatus(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['statuses'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-statuses'] });
+      toast({
+        title: 'Status restored',
+        description: 'Status has been successfully restored.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const usePermanentlyDeleteStatus = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (id: string) => statusesApi.permanentlyDeleteStatus(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['statuses'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-statuses'] });
+      toast({
+        title: 'Status permanently deleted',
+        description: 'Status has been permanently removed.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useArchivedStatuses = () => {
+  return useQuery({
+    queryKey: ['archived-statuses'],
+    queryFn: () => statusesApi.getArchivedStatuses(),
+    staleTime: 10 * 60 * 1000,
   });
 };
 

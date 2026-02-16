@@ -20,6 +20,7 @@ export interface LeadsFilter {
   created_by?: string;
   date_from?: string;
   date_to?: string;
+  include_archived?: boolean;
 }
 
 export interface PaginatedLeadsResponse {
@@ -47,6 +48,11 @@ export class LeadsAPI {
           tag:tags(*)
         )
       `, { count: 'exact' });
+
+    // Filter out archived leads unless explicitly requested
+    if (!filters.include_archived) {
+      query = query.is('deleted_at', null);
+    }
 
     // Apply filters - Search across key fields
     if (filters.search) {
@@ -216,15 +222,79 @@ export class LeadsAPI {
     };
   }
 
-  async deleteLead(id: string): Promise<void> {
+  async archiveLead(id: string, deletedBy: string): Promise<void> {
+    const { error } = await supabase.rpc('archive_lead_cascade', {
+      p_lead_id: id,
+      p_deleted_by: deletedBy,
+    });
+
+    if (error) {
+      throw new Error(`Failed to archive lead: ${error.message}`);
+    }
+  }
+
+  async restoreLead(id: string): Promise<void> {
+    const { error } = await supabase.rpc('restore_lead_cascade', {
+      p_lead_id: id,
+    });
+
+    if (error) {
+      throw new Error(`Failed to restore lead: ${error.message}`);
+    }
+  }
+
+  async permanentlyDeleteLead(id: string): Promise<void> {
+    // Delete related records first (lead_tags, activities, comments, deals)
+    await supabase.from('lead_tags').delete().eq('lead_id', id);
+    await supabase.from('activity_logs').delete().eq('lead_id', id);
+    await supabase.from('comments').delete().eq('lead_id', id);
+    await supabase.from('deals').delete().eq('lead_id', id);
+
     const { error } = await supabase
       .from('leads')
       .delete()
       .eq('id', id);
 
     if (error) {
-      throw new Error(`Failed to delete lead: ${error.message}`);
+      throw new Error(`Failed to permanently delete lead: ${error.message}`);
     }
+  }
+
+  async getArchivedLeads(page = 1, limit = 10): Promise<PaginatedLeadsResponse> {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const { data, error, count } = await supabase
+      .from('leads')
+      .select(`
+        *,
+        status:statuses(*),
+        assigned_to_profile:profiles!leads_assigned_to_fkey(*),
+        created_by_profile:profiles!leads_created_by_fkey(*),
+        tags:lead_tags(
+          tag:tags(*)
+        )
+      `, { count: 'exact' })
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(`Failed to fetch archived leads: ${error.message}`);
+    }
+
+    const transformedData = (data || []).map(lead => ({
+      ...lead,
+      tags: lead.tags?.map((lt: { tag?: Tables<'tags'> }) => lt.tag).filter(Boolean) || []
+    }));
+
+    return {
+      data: transformedData,
+      count: count || 0,
+      page,
+      limit,
+      total_pages: Math.ceil((count || 0) / limit)
+    };
   }
 
   async assignLead(leadId: string, assignedTo: string | null): Promise<Lead> {

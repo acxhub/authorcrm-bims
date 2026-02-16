@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, ExternalLink, Phone, Mail, Calendar, MapPin, User, Hash, MessageCircle, Activity, MoreHorizontal, Globe, Building2, TrendingUp, DollarSign, Tag, Briefcase, Megaphone } from 'lucide-react';
+import { ArrowLeft, Edit, ExternalLink, Phone, Mail, Calendar, MapPin, User, Hash, MessageCircle, Activity, MoreHorizontal, Globe, Building2, TrendingUp, DollarSign, Tag, Briefcase, Megaphone, Archive, RotateCcw, Trash2 } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,18 +10,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
-import { useDeal, useUpdateDeal } from '@/hooks/useDeals';
-import { useAuth } from '@/hooks/useAuth';
+import { useDeal, useUpdateDeal, useRestoreDeal, usePermanentlyDeleteDeal } from '@/hooks/useDeals';
+import { useAuth, useProfile } from '@/hooks/useAuth';
 import { EditPipelineDealModal } from '@/components/pipeline/EditPipelineDealModal';
 import { DealComments } from '@/components/deals/DealComments';
 import { ReassignDealModal } from '@/components/deals/ReassignDealModal';
 import { LogCallModal } from '@/components/deals/LogCallModal';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import type { Deal, UpdateDealData } from '@/lib/api/deals';
 import { useDealsRealtime } from '@/hooks/useDealsRealtime';
 import { useCommentsRealtime } from '@/hooks/useCommentsRealtime';
 import { useActivitiesRealtime } from '@/hooks/useActivitiesRealtime';
 import { DealCommissionInfo } from '@/components/deals/DealCommissionInfo';
+import { canPermanentlyDelete, canRestore, daysUntilPermanentDelete } from '@/lib/permissions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const getCategoryIcon = (category: string | null) => {
   switch (category) {
@@ -75,13 +78,45 @@ export const DealDetailsPage: React.FC = () => {
   const [logCallModalOpen, setLogCallModalOpen] = useState(false);
 
   const { user } = useAuth();
+  const { profile } = useProfile();
   const { data: deal, isLoading, error } = useDeal(id!);
   const updateDealMutation = useUpdateDeal();
+  const restoreDeal = useRestoreDeal();
+  const permanentlyDeleteDeal = usePermanentlyDeleteDeal();
 
   // Enable realtime updates
   useDealsRealtime();
   useCommentsRealtime();
   useActivitiesRealtime();
+
+  const isArchived = deal?.deleted_at != null;
+  const canRestoreThis = canRestore(profile);
+  const canPermanentlyDeleteThis = canPermanentlyDelete(profile, deal?.deleted_at || null);
+  const daysUntilDelete = daysUntilPermanentDelete(deal?.deleted_at || null);
+
+  const handleRestore = async () => {
+    if (!deal) return;
+    if (confirm('Restore this deal? It will become visible again in the pipeline.')) {
+      try {
+        await restoreDeal.mutateAsync(deal.id);
+        navigate('/pipeline');
+      } catch (error) {
+        console.error('Failed to restore deal:', error);
+      }
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!deal) return;
+    if (confirm('Permanently delete this deal? This action cannot be undone.')) {
+      try {
+        await permanentlyDeleteDeal.mutateAsync(deal.id);
+        navigate('/admin/archive');
+      } catch (error) {
+        console.error('Failed to permanently delete deal:', error);
+      }
+    }
+  };
 
   const handleBack = () => {
     navigate('/pipeline');
@@ -195,6 +230,7 @@ export const DealDetailsPage: React.FC = () => {
               </div>
               
               <div className="flex items-center gap-2">
+                <NotificationBell />
                 <Button variant="outline" onClick={handleViewLead}>
                   <User className="h-4 w-4 mr-2" />
                   View Lead
@@ -237,6 +273,47 @@ export const DealDetailsPage: React.FC = () => {
 
           {/* Main Content */}
           <main className="p-6">
+            {/* Archived Banner */}
+            {isArchived && (
+              <Alert variant="destructive" className="mb-6 bg-amber-50 border-amber-200">
+                <Archive className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-800">This deal has been archived</AlertTitle>
+                <AlertDescription className="text-amber-700">
+                  <p>
+                    Archived on {deal?.deleted_at ? format(new Date(deal.deleted_at), 'PPP') : 'unknown date'}.
+                    {daysUntilDelete !== null && daysUntilDelete > 0 && (
+                      <> Eligible for permanent deletion in {daysUntilDelete} day{daysUntilDelete !== 1 ? 's' : ''}.</>
+                    )}
+                    {daysUntilDelete === 0 && <> Eligible for permanent deletion now.</>}
+                  </p>
+                  {canRestoreThis && (
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleRestore}
+                        disabled={restoreDeal.isPending}
+                        className="bg-white"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-1" />
+                        {restoreDeal.isPending ? 'Restoring...' : 'Restore Deal'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={handlePermanentDelete}
+                        disabled={!canPermanentlyDeleteThis || permanentlyDeleteDeal.isPending}
+                        title={!canPermanentlyDeleteThis ? `Cannot permanently delete until ${daysUntilDelete} days have passed` : undefined}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        {permanentlyDeleteDeal.isPending ? 'Deleting...' : 'Permanently Delete'}
+                      </Button>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Main Content - Activities and Comments */}
               <div className="lg:col-span-2 space-y-6">

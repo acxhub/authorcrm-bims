@@ -165,24 +165,68 @@ export const useUpdateCommissionTier = () => {
   });
 };
 
-export const useDeleteCommissionTier = () => {
+export const useArchiveCommissionTier = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => commissionTemplatesApi.deleteTier(id),
+    mutationFn: ({ id, deletedBy }: { id: string; deletedBy: string }) =>
+      commissionTemplatesApi.archiveTier(id, deletedBy),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['commission-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-commission-tiers'] });
       toast({
-        title: 'Tier deleted',
-        description: 'Commission tier has been removed.',
+        title: 'Tier archived',
+        description: 'Commission tier has been archived.',
       });
     },
     onError: (error: Error) => {
+      toast({ title: 'Error archiving tier', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useRestoreCommissionTier = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => commissionTemplatesApi.restoreTier(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['commission-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-commission-tiers'] });
       toast({
-        title: 'Error deleting tier',
-        description: error.message,
-        variant: 'destructive',
+        title: 'Tier restored',
+        description: 'Commission tier has been restored.',
       });
     },
+    onError: (error: Error) => {
+      toast({ title: 'Error restoring tier', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const usePermanentlyDeleteCommissionTier = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => commissionTemplatesApi.permanentlyDeleteTier(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['commission-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-commission-tiers'] });
+      toast({
+        title: 'Tier permanently deleted',
+        description: 'Commission tier has been permanently removed.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error deleting tier', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useArchivedCommissionTiers = () => {
+  return useQuery({
+    queryKey: ['archived-commission-tiers'],
+    queryFn: () => commissionTemplatesApi.getArchivedTiers(),
+    staleTime: 10 * 60 * 1000,
   });
 };

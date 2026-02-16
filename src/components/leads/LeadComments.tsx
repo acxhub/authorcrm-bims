@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useCommentsByLeadId, useCreateComment, useUpdateComment, useDeleteComment } from '@/hooks/useComments';
+import { useCommentsByLeadId, useCreateComment, useUpdateComment, useArchiveComment } from '@/hooks/useComments';
 import { useAuth, useProfile } from '@/hooks/useAuth';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead } from '@/lib/api/leads';
@@ -36,7 +36,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const { user } = useAuth();
   const { profile } = useProfile();
   const updateComment = useUpdateComment();
-  const deleteComment = useDeleteComment();
+  const archiveComment = useArchiveComment();
 
   const isOwner = user?.id === comment.user_id;
   const canDelete = isOwner && profile?.role !== 'sales';
@@ -62,7 +62,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this comment?')) {
       try {
-        await deleteComment.mutateAsync(comment.id);
+        await archiveComment.mutateAsync({ id: comment.id, deletedBy: user?.id || '' });
       } catch (error) {
         console.error('Failed to delete comment:', error);
       }
@@ -116,12 +116,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     Edit
                   </DropdownMenuItem>
                   {canDelete && (
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onClick={handleDelete}
                       className="text-red-600"
                     >
                       <Trash2 className="h-3 w-3 mr-2" />
-                      Delete
+                      Archive
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -219,10 +219,13 @@ export const LeadComments: React.FC<LeadCommentsProps> = ({ lead }) => {
 
     try {
       await createComment.mutateAsync({
-        lead_id: lead.id,
-        user_id: user.id,
-        content: newComment.trim(),
-        parent_comment_id: null,
+        data: {
+          lead_id: lead.id,
+          user_id: user.id,
+          content: newComment.trim(),
+          parent_comment_id: null,
+        },
+        leadContext: { book_title: lead.book_title, assigned_to: lead.assigned_to },
       });
       setNewComment('');
     } catch (error) {
@@ -234,11 +237,20 @@ export const LeadComments: React.FC<LeadCommentsProps> = ({ lead }) => {
     if (!replyContent.trim() || !replyingTo || !user) return;
 
     try {
+      // Find the parent comment's user_id for reply notification
+      const parentComment = comments?.find(c => c.id === replyingTo);
+      const parentUserId = parentComment?.user_id ||
+        comments?.flatMap(c => c.replies || []).find(r => r.id === replyingTo)?.user_id || null;
+
       await createComment.mutateAsync({
-        lead_id: lead.id,
-        user_id: user.id,
-        content: replyContent.trim(),
-        parent_comment_id: replyingTo,
+        data: {
+          lead_id: lead.id,
+          user_id: user.id,
+          content: replyContent.trim(),
+          parent_comment_id: replyingTo,
+        },
+        leadContext: { book_title: lead.book_title, assigned_to: lead.assigned_to },
+        parentCommentUserId: parentUserId,
       });
       setReplyContent('');
       setReplyingTo(null);

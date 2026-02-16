@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
-import { useDealsByLeadId, useCreateDeal, useDeleteDeal } from '@/hooks/useDeals';
+import { useDealsByLeadId, useCreateDeal, useArchiveDeal } from '@/hooks/useDeals';
 import { CreateDealModal } from '@/components/deals/CreateDealModal';
+import { useAuth } from '@/hooks/useAuth';
 import type { Lead } from '@/lib/api/leads';
 import type { Deal } from '@/lib/api/deals';
 
@@ -45,7 +46,8 @@ export const LeadDeals: React.FC<LeadDealsProps> = ({ lead }) => {
   
   const { data: deals = [], isLoading } = useDealsByLeadId(lead.id);
   const createDealMutation = useCreateDeal();
-  const deleteDealMutation = useDeleteDeal();
+  const archiveDealMutation = useArchiveDeal();
+  const { session } = useAuth();
 
   const handleCreateDeal = async (dealData: any) => {
     try {
@@ -56,12 +58,12 @@ export const LeadDeals: React.FC<LeadDealsProps> = ({ lead }) => {
     }
   };
 
-  const handleDeleteDeal = async (dealId: string) => {
-    if (window.confirm('Are you sure you want to delete this deal?')) {
+  const handleArchiveDeal = async (dealId: string) => {
+    if (window.confirm('Archive this deal? It will be hidden and can be restored by an admin. After 30 days, it can be permanently deleted.')) {
       try {
-        await deleteDealMutation.mutateAsync(dealId);
+        await archiveDealMutation.mutateAsync({ id: dealId, deletedBy: session?.user?.id || '' });
       } catch (error) {
-        console.error('Failed to delete deal:', error);
+        console.error('Failed to archive deal:', error);
       }
     }
   };
@@ -138,11 +140,12 @@ export const LeadDeals: React.FC<LeadDealsProps> = ({ lead }) => {
                     <Button variant="ghost" size="sm">
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleDeleteDeal(deal.id)}
-                      disabled={deleteDealMutation.isPending}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleArchiveDeal(deal.id)}
+                      disabled={archiveDealMutation.isPending}
+                      title="Archive deal"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

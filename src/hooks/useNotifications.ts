@@ -1,46 +1,69 @@
-import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { notificationsApi } from '@/lib/api/notifications';
+import { useAuth } from '@/hooks/useAuth';
 
-export interface Notification {
-  id: string;
-  type: 'success' | 'error' | 'info' | 'warning';
-  title: string;
-  message?: string;
-  duration?: number;
+export type { Notification, NotificationType, CreateNotificationData } from '@/lib/api/notifications';
+export { NOTIFICATION_TYPES } from '@/lib/api/notifications';
+
+export const notificationKeys = {
+  all: ['notifications'] as const,
+  list: (userId: string, page: number) => [...notificationKeys.all, userId, page] as const,
+  unreadCount: (userId: string) => [...notificationKeys.all, 'unread-count', userId] as const,
+};
+
+export function useNotifications(page = 1, limit = 20) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: notificationKeys.list(user?.id || '', page),
+    queryFn: () => notificationsApi.getNotifications(user!.id, page, limit),
+    enabled: !!user?.id,
+    staleTime: 2 * 60 * 1000,
+  });
 }
 
-export const useNotifications = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+export function useUnreadNotificationCount() {
+  const { user } = useAuth();
 
-  const addNotification = useCallback((notification: Omit<Notification, 'id'>) => {
-    const id = crypto.randomUUID();
-    const newNotification: Notification = {
-      ...notification,
-      id,
-      duration: notification.duration || 5000,
-    };
+  return useQuery({
+    queryKey: notificationKeys.unreadCount(user?.id || ''),
+    queryFn: () => notificationsApi.getUnreadCount(user!.id),
+    enabled: !!user?.id,
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+  });
+}
 
-    setNotifications(prev => [...prev, newNotification]);
+export function useMarkNotificationRead() {
+  const queryClient = useQueryClient();
 
-    // Auto remove after duration
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
-    }, newNotification.duration);
+  return useMutation({
+    mutationFn: (notificationId: string) => notificationsApi.markAsRead(notificationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+    },
+  });
+}
 
-    return id;
-  }, []);
+export function useMarkAllNotificationsRead() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const removeNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  }, []);
+  return useMutation({
+    mutationFn: () => notificationsApi.markAllAsRead(user!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+    },
+  });
+}
 
-  const clearNotifications = useCallback(() => {
-    setNotifications([]);
-  }, []);
+export function useDeleteNotification() {
+  const queryClient = useQueryClient();
 
-  return {
-    notifications,
-    addNotification,
-    removeNotification,
-    clearNotifications,
-  };
-}; 
+  return useMutation({
+    mutationFn: (notificationId: string) => notificationsApi.deleteNotification(notificationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+    },
+  });
+}

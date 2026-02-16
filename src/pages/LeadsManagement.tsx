@@ -10,7 +10,8 @@ import type { Lead } from '@/lib/api/leads';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { Button } from '@/components/ui/button';
-import { Plus, Download, Upload, Bell, Settings, AlertCircle } from 'lucide-react';
+import { Plus, Download, Upload, Settings, AlertCircle } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useAuth';
@@ -142,9 +143,7 @@ export const LeadsManagement: React.FC = () => {
                       <Upload className="h-4 w-4 mr-2" />
                       Import
                     </Button>
-                    <Button variant="outline" size="sm" className="bg-white/60 backdrop-blur-sm" aria-label="Notifications">
-                      <Bell className="h-4 w-4" />
-                    </Button>
+                    <NotificationBell />
                     <Button 
                       variant="outline" 
                       size="sm" 

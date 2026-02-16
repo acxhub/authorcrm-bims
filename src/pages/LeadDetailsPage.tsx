@@ -4,10 +4,15 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/s
 import { AppSidebar } from '@/components/AppSidebar';
 import { LeadDetails } from '@/components/leads/LeadDetails';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ArrowLeft, FileText, Archive, RotateCcw, Trash2 } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { LeadForm } from '@/components/leads/LeadForm';
-import { useLead, useUpdateLead } from '@/hooks/useLeads';
+import { useLead, useUpdateLead, useRestoreLead, usePermanentlyDeleteLead } from '@/hooks/useLeads';
+import { useProfile } from '@/hooks/useAuth';
+import { canPermanentlyDelete, canRestore, daysUntilPermanentDelete } from '@/lib/permissions';
+import { format } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const LeadDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +20,38 @@ const LeadDetailsPage: React.FC = () => {
   const [editOpen, setEditOpen] = useState(false);
   const { data: lead, isLoading } = useLead(id!);
   const updateLead = useUpdateLead();
+  const restoreLead = useRestoreLead();
+  const permanentlyDeleteLead = usePermanentlyDeleteLead();
+  const { profile } = useProfile();
+
+  const isArchived = lead?.deleted_at != null;
+  const canRestoreThis = canRestore(profile);
+  const canPermanentlyDeleteThis = canPermanentlyDelete(profile, lead?.deleted_at || null);
+  const daysUntilDelete = daysUntilPermanentDelete(lead?.deleted_at || null);
+
+  const handleRestore = async () => {
+    if (!lead) return;
+    if (confirm('Restore this lead? It will become visible again in the leads list.')) {
+      try {
+        await restoreLead.mutateAsync(lead.id);
+        navigate('/leads');
+      } catch (error) {
+        console.error('Failed to restore lead:', error);
+      }
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!lead) return;
+    if (confirm('Permanently delete this lead? This action cannot be undone. All associated deals, activities, and comments will also be deleted.')) {
+      try {
+        await permanentlyDeleteLead.mutateAsync(lead.id);
+        navigate('/admin/archive');
+      } catch (error) {
+        console.error('Failed to permanently delete lead:', error);
+      }
+    }
+  };
 
   const handleBack = () => {
     navigate('/leads');
@@ -107,6 +144,7 @@ const LeadDetailsPage: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                <NotificationBell />
                 <Button variant="outline" onClick={handleBack}>
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Leads
@@ -116,10 +154,51 @@ const LeadDetailsPage: React.FC = () => {
           </header>
           
           <main className="p-6">
+            {/* Archived Banner */}
+            {isArchived && (
+              <Alert variant="destructive" className="mb-6 bg-amber-50 border-amber-200">
+                <Archive className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-800">This lead has been archived</AlertTitle>
+                <AlertDescription className="text-amber-700">
+                  <p>
+                    Archived on {lead?.deleted_at ? format(new Date(lead.deleted_at), 'PPP') : 'unknown date'}.
+                    {daysUntilDelete !== null && daysUntilDelete > 0 && (
+                      <> Eligible for permanent deletion in {daysUntilDelete} day{daysUntilDelete !== 1 ? 's' : ''}.</>
+                    )}
+                    {daysUntilDelete === 0 && <> Eligible for permanent deletion now.</>}
+                  </p>
+                  {canRestoreThis && (
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleRestore}
+                        disabled={restoreLead.isPending}
+                        className="bg-white"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-1" />
+                        {restoreLead.isPending ? 'Restoring...' : 'Restore Lead'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={handlePermanentDelete}
+                        disabled={!canPermanentlyDeleteThis || permanentlyDeleteLead.isPending}
+                        title={!canPermanentlyDeleteThis ? `Cannot permanently delete until ${daysUntilDelete} days have passed` : undefined}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        {permanentlyDeleteLead.isPending ? 'Deleting...' : 'Permanently Delete'}
+                      </Button>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
             <LeadDetails
               leadId={id}
               onBack={handleBack}
-              onEdit={handleEdit}
+              onEdit={isArchived ? undefined : handleEdit}
             />
           </main>
         </SidebarInset>

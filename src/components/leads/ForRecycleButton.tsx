@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth, useProfile } from '@/hooks/useAuth';
 import { useManageLeadTags } from '@/hooks/useLeads';
+import { notify } from '@/lib/notifications/notify';
 import type { Lead } from '@/lib/api/leads';
 import type { Tag } from '@/lib/api/tags';
 
@@ -23,6 +25,8 @@ export const ForRecycleButton: React.FC<ForRecycleButtonProps> = ({
   const queryClient = useQueryClient();
   const { removeTags } = useManageLeadTags();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { profile } = useProfile();
 
   const handleForRecycle = async () => {
     setIsLoading(true);
@@ -44,6 +48,15 @@ export const ForRecycleButton: React.FC<ForRecycleButtonProps> = ({
         title: 'Success',
         description: 'Lead has been recycled and is ready for reassignment.',
       });
+
+      if (user?.id) {
+        notify.leadRecycled({
+          actorId: user.id,
+          actorName: profile?.full_name || 'Someone',
+          lead: { id: lead.id, book_title: lead.book_title },
+          previousAssigneeId: lead.assigned_to || null,
+        });
+      }
     } catch (err) {
       toast({
         title: 'Error',

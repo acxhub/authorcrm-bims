@@ -1,6 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leadsApi, type Lead, type CreateLeadData, type UpdateLeadData, type LeadsFilter } from '@/lib/api/leads';
 import { toast } from '@/hooks/use-toast';
+import { useAuth, useProfile } from '@/hooks/useAuth';
+import { useUsersContext } from '@/contexts/UsersContext';
+import { notify, getManagers } from '@/lib/notifications/notify';
 
 export const useLeads = (filters: LeadsFilter = {}, page = 1, limit = 10) => {
   return useQuery({
@@ -21,6 +24,8 @@ export const useLead = (id: string) => {
 
 export const useCreateLead = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { users } = useUsersContext();
 
   return useMutation({
     mutationFn: (data: CreateLeadData) => leadsApi.createLead(data),
@@ -30,6 +35,13 @@ export const useCreateLead = () => {
         title: 'Lead created',
         description: `Lead for "${newLead.book_title}" has been created successfully.`,
       });
+      if (user?.id) {
+        notify.leadCreated({
+          actorId: user.id,
+          lead: { id: newLead.id, book_title: newLead.book_title, assigned_to: newLead.assigned_to },
+          managers: getManagers(users),
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -65,16 +77,64 @@ export const useUpdateLead = () => {
   });
 };
 
-export const useDeleteLead = () => {
+export const useArchiveLead = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => leadsApi.deleteLead(id),
+    mutationFn: ({ id, deletedBy }: { id: string; deletedBy: string }) =>
+      leadsApi.archiveLead(id, deletedBy),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-leads'] });
       toast({
-        title: 'Lead deleted',
-        description: 'Lead has been deleted successfully.',
+        title: 'Lead archived',
+        description: 'Lead has been archived successfully.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error archiving lead',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+};
+
+export const useRestoreLead = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => leadsApi.restoreLead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-leads'] });
+      toast({
+        title: 'Lead restored',
+        description: 'Lead has been restored successfully.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error restoring lead',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+};
+
+export const usePermanentlyDeleteLead = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => leadsApi.permanentlyDeleteLead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-leads'] });
+      toast({
+        title: 'Lead permanently deleted',
+        description: 'Lead has been permanently removed.',
       });
     },
     onError: (error: Error) => {
@@ -87,19 +147,38 @@ export const useDeleteLead = () => {
   });
 };
 
+export const useArchivedLeads = (page = 1, limit = 10) => {
+  return useQuery({
+    queryKey: ['archived-leads', page, limit],
+    queryFn: () => leadsApi.getArchivedLeads(page, limit),
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 export const useAssignLead = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { profile } = useProfile();
 
   return useMutation({
-    mutationFn: ({ leadId, assignedTo }: { leadId: string; assignedTo: string | null }) =>
+    mutationFn: ({ leadId, assignedTo, previousAssigneeId }: { leadId: string; assignedTo: string | null; previousAssigneeId?: string | null }) =>
       leadsApi.assignLead(leadId, assignedTo),
-    onSuccess: (updatedLead) => {
+    onSuccess: (updatedLead, { previousAssigneeId }) => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['lead', updatedLead.id] });
       toast({
         title: 'Lead assigned',
         description: `Lead has been ${updatedLead.assigned_to ? 'assigned' : 'unassigned'} successfully.`,
       });
+      if (user?.id && updatedLead.assigned_to) {
+        notify.leadAssigned({
+          actorId: user.id,
+          actorName: profile?.full_name || 'Someone',
+          lead: { id: updatedLead.id, book_title: updatedLead.book_title },
+          newAssigneeId: updatedLead.assigned_to,
+          previousAssigneeId: previousAssigneeId || null,
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -113,6 +192,9 @@ export const useAssignLead = () => {
 
 export const useUpdateLeadStatus = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { profile } = useProfile();
+  const { users } = useUsersContext();
 
   return useMutation({
     mutationFn: ({ leadId, statusId }: { leadId: string; statusId: string }) =>
@@ -124,6 +206,19 @@ export const useUpdateLeadStatus = () => {
         title: 'Status updated',
         description: `Lead status has been updated to "${updatedLead.status.name}".`,
       });
+      if (user?.id) {
+        const statusName = updatedLead.status?.name || '';
+        const terminalStatuses = ['closed won', 'closed lost', 'dead lead'];
+        const isTerminal = terminalStatuses.some(s => statusName.toLowerCase().includes(s.toLowerCase()));
+        notify.leadStatusChanged({
+          actorId: user.id,
+          actorName: profile?.full_name || 'Someone',
+          lead: { id: updatedLead.id, book_title: updatedLead.book_title, assigned_to: updatedLead.assigned_to },
+          newStatusName: statusName,
+          isTerminal,
+          managers: getManagers(users),
+        });
+      }
     },
     onError: (error: Error) => {
       toast({

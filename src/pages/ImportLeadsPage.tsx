@@ -14,8 +14,10 @@ import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { useCreateLead, useLeads } from '@/hooks/useLeads';
 import { useStatuses } from '@/hooks/useStatuses';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useProfile } from '@/hooks/useAuth';
 import { useUsers } from '@/hooks/useUsers';
+import { useUsersContext } from '@/contexts/UsersContext';
+import { notify, getManagers } from '@/lib/notifications/notify';
 import { useNavigate } from 'react-router-dom';
 
 // Database field definitions with length limits
@@ -84,6 +86,8 @@ const ImportLeadsPage: React.FC = () => {
   const [assignedUserId, setAssignedUserId] = useState<string>('');
 
   const { user } = useAuth();
+  const { profile } = useProfile();
+  const { users: allContextUsers } = useUsersContext();
   const { data: statuses } = useStatuses();
   const { data: existingLeadsData } = useLeads({}, 1, 1000);
   const { users = [] } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
@@ -574,6 +578,18 @@ const ImportLeadsPage: React.FC = () => {
     }
 
     setImportResults({ success: successCount, errors: errorCount, skipped: skippedCount });
+
+    // Send bulk import notification
+    if (user?.id && successCount > 0) {
+      notify.bulkLeadsImported({
+        actorId: user.id,
+        actorName: profile?.full_name || 'Someone',
+        count: successCount,
+        managers: getManagers(allContextUsers),
+        assigneeId: (assignedUserId && assignedUserId !== 'none') ? assignedUserId : null,
+      });
+    }
+
     setStep('complete');
   };
 

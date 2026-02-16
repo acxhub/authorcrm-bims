@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Edit, ExternalLink, Phone, Mail, Calendar, MapPin, User, Hash, MessageCircle, Activity, MoreHorizontal, Globe, Building2, TrendingUp, DollarSign, Briefcase } from 'lucide-react';
+import { ArrowLeft, Edit, ExternalLink, Phone, Mail, Calendar, MapPin, User, Hash, MessageCircle, Activity, MoreHorizontal, Globe, Building2, TrendingUp, DollarSign, Briefcase, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { LeadComments } from './LeadComments';
 import { LeadActivities } from './LeadActivities';
 import { LeadDeals } from './LeadDeals';
+import { RemindersList } from '@/components/reminders/RemindersList';
 import { SimpleTagAdd } from './SimpleTagAdd';
 import { SimpleLeadAssign } from './SimpleLeadAssign';
 import { ForRecycleButton } from './ForRecycleButton';
@@ -345,18 +346,22 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
             <CardContent className="p-0">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <div className="px-6 pt-6">
-                  <TabsList className="grid w-full grid-cols-3">
+                  <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="comments" className="flex items-center gap-2">
                       <MessageCircle className="h-4 w-4" />
                       Comments
                     </TabsTrigger>
                     <TabsTrigger value="activities" className="flex items-center gap-2">
                       <Activity className="h-4 w-4" />
-                      Recent Activities
+                      Activities
                     </TabsTrigger>
                     <TabsTrigger value="deals" className="flex items-center gap-2">
                       <TrendingUp className="h-4 w-4" />
                       Deals
+                    </TabsTrigger>
+                    <TabsTrigger value="reminders" className="flex items-center gap-2">
+                      <CheckSquare className="h-4 w-4" />
+                      Reminders
                     </TabsTrigger>
                   </TabsList>
                 </div>
@@ -371,6 +376,12 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
 
                 <TabsContent value="deals" className="px-6 pb-6 mt-6">
                   <LeadDeals lead={lead} />
+                </TabsContent>
+
+                <TabsContent value="reminders" className="px-6 pb-6 mt-6">
+                  {user?.id && (
+                    <RemindersList userId={user.id} leadId={leadId} />
+                  )}
                 </TabsContent>
               </Tabs>
             </CardContent>

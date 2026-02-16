@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Trophy, Target, TrendingUp, Award, Star, Medal, Crown, Zap, Calendar, Filter } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { useDeals } from '@/hooks/useDeals';
 import { useLeads } from '@/hooks/useLeads';
 import { useUsersContext } from '@/contexts/UsersContext';
@@ -398,8 +399,9 @@ export const SalesBoard = () => {
                 </div>
               </div>
               
-              {/* Filters */}
               <div className="flex items-center gap-2">
+                <NotificationBell />
+                {/* Filters */}
                 <Select value={timeFilter} onValueChange={setTimeFilter}>
                   <SelectTrigger className="w-36 bg-white/60 backdrop-blur-sm">
                     <SelectValue />

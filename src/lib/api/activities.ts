@@ -20,6 +20,7 @@ export const getActivitiesByLeadId = async (leadId: string): Promise<Activity[]>
       user_profile:profiles!activity_logs_user_id_fkey(*)
     `)
     .eq('lead_id', leadId)
+    .is('deleted_at', null)
     .order('activity_date', { ascending: false });
 
   if (error) throw error;
@@ -57,8 +58,28 @@ export const updateActivity = async (id: string, data: UpdateActivityData): Prom
   return activity;
 };
 
-// Delete an activity
-export const deleteActivity = async (id: string): Promise<void> => {
+// Archive an activity (soft delete)
+export const archiveActivity = async (id: string, deletedBy: string): Promise<void> => {
+  const { error } = await supabase
+    .from('activity_logs')
+    .update({ deleted_at: new Date().toISOString(), deleted_by: deletedBy })
+    .eq('id', id);
+
+  if (error) throw error;
+};
+
+// Restore an archived activity
+export const restoreActivity = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('activity_logs')
+    .update({ deleted_at: null, deleted_by: null })
+    .eq('id', id);
+
+  if (error) throw error;
+};
+
+// Permanently delete an activity
+export const permanentlyDeleteActivity = async (id: string): Promise<void> => {
   const { error } = await supabase
     .from('activity_logs')
     .delete()
@@ -93,6 +114,7 @@ export class ActivitiesAPI {
         *,
         user_profile:profiles!activity_logs_user_id_fkey(*)
       `)
+      .is('deleted_at', null)
       .order('activity_date', { ascending: false })
       .limit(limit);
 
@@ -136,6 +158,7 @@ export class ActivitiesAPI {
         *,
         user_profile:profiles!activity_logs_user_id_fkey(*)
       `)
+      .is('deleted_at', null)
       .gte('activity_date', cutoffDate.toISOString())
       .order('activity_date', { ascending: false });
 
@@ -153,7 +176,8 @@ export class ActivitiesAPI {
   }> {
     let query = supabase
       .from('activity_logs')
-      .select('activity_type, activity_date');
+      .select('activity_type, activity_date')
+      .is('deleted_at', null);
 
     if (leadId) {
       query = query.eq('lead_id', leadId);
@@ -187,6 +211,23 @@ export class ActivitiesAPI {
       activitiesByType,
       recentActivityCount,
     };
+  }
+  async getArchivedActivities(limit = 50): Promise<Activity[]> {
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .select(`
+        *,
+        user_profile:profiles!activity_logs_user_id_fkey(*)
+      `)
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw new Error(`Failed to fetch archived activities: ${error.message}`);
+    }
+
+    return data || [];
   }
 }
 

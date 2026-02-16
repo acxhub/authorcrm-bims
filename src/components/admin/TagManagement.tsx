@@ -8,15 +8,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  useTags, 
-  useDeleteAllTags, 
-  useInitializePredefinedTags, 
-  useCreateTag, 
-  useUpdateTag, 
-  useDeleteTag,
-  useTagStats 
+import {
+  useTags,
+  useArchiveAllTags,
+  useInitializePredefinedTags,
+  useCreateTag,
+  useUpdateTag,
+  useArchiveTag,
+  useTagStats
 } from '@/hooks/useTags';
+import { useAuth } from '@/hooks/useAuth';
 import { PREDEFINED_TAGS } from '@/lib/api/tags';
 import type { Tag, CreateTagRequest } from '@/lib/api/tags';
 
@@ -34,22 +35,23 @@ export const TagManagement: React.FC<TagManagementProps> = ({ onTagsUpdated }) =
     is_active: true,
   });
 
+  const { user } = useAuth();
   const { data: tags, isLoading: tagsLoading } = useTags();
   const { data: tagStats } = useTagStats();
-  const deleteAllTags = useDeleteAllTags();
+  const archiveAllTags = useArchiveAllTags();
   const initializePredefinedTags = useInitializePredefinedTags();
   const createTag = useCreateTag();
   const updateTag = useUpdateTag();
-  const deleteTag = useDeleteTag();
+  const archiveTag = useArchiveTag();
 
   const handleDeleteAllTags = async () => {
     const confirmed = confirm(
-      'Are you sure you want to delete ALL existing tags? This action cannot be undone.'
+      'Are you sure you want to archive ALL existing tags? They can be restored by an admin.'
     );
     
     if (confirmed) {
       try {
-        await deleteAllTags.mutateAsync();
+        await archiveAllTags.mutateAsync(user?.id || '');
         onTagsUpdated?.();
       } catch (error) {
         console.error('Failed to delete all tags:', error);
@@ -102,11 +104,11 @@ export const TagManagement: React.FC<TagManagementProps> = ({ onTagsUpdated }) =
   };
 
   const handleDeleteTag = async (tagId: string) => {
-    const confirmed = confirm('Are you sure you want to delete this tag?');
+    const confirmed = confirm('Archive this tag? It can be restored by an admin.');
     
     if (confirmed) {
       try {
-        await deleteTag.mutateAsync(tagId);
+        await archiveTag.mutateAsync({ id: tagId, deletedBy: user?.id || '' });
         onTagsUpdated?.();
       } catch (error) {
         console.error('Failed to delete tag:', error);
@@ -114,8 +116,8 @@ export const TagManagement: React.FC<TagManagementProps> = ({ onTagsUpdated }) =
     }
   };
 
-  const isLoading = deleteAllTags.isPending || initializePredefinedTags.isPending || 
-                   createTag.isPending || updateTag.isPending || deleteTag.isPending;
+  const isLoading = archiveAllTags.isPending || initializePredefinedTags.isPending ||
+                   createTag.isPending || updateTag.isPending || archiveTag.isPending;
 
   const predefinedTagNames = PREDEFINED_TAGS.map(tag => tag.name);
   const existingTagNames = tags?.map(tag => tag.name) || [];
@@ -234,7 +236,7 @@ export const TagManagement: React.FC<TagManagementProps> = ({ onTagsUpdated }) =
             className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50"
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            Delete All Tags
+            Archive All Tags
           </Button>
         )}
 

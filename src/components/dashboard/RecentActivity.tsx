@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Edit, User, DollarSign, Clock, ArrowRight } from 'lucide-react';
 import { useLeads } from '@/hooks/useLeads';
 import { useDeals } from '@/hooks/useDeals';
+import { useAuth, useProfile } from '@/hooks/useAuth';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
@@ -29,8 +30,13 @@ interface ActivityItem {
 
 export const RecentActivity: React.FC = () => {
   const navigate = useNavigate();
-  const { data: leadsData, isLoading: leadsLoading } = useLeads({}, 1, 10);
-  const { data: dealsData, isLoading: dealsLoading } = useDeals({}, 1, 10);
+  const { user } = useAuth();
+  const { profile } = useProfile();
+  const isAgent = profile?.role === 'sales';
+  const agentFilter = isAgent && user?.id ? { assigned_to: user.id } : {};
+
+  const { data: leadsData, isLoading: leadsLoading } = useLeads(agentFilter, 1, 10);
+  const { data: dealsData, isLoading: dealsLoading } = useDeals(agentFilter, 1, 10);
 
   const getInitials = (name: string) => {
     return name

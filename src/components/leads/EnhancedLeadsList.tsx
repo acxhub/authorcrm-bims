@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useLeads, useDeleteLead, useUpdateLead } from '@/hooks/useLeads';
+import { useLeads, useArchiveLead, useUpdateLead } from '@/hooks/useLeads';
 import { useStatuses } from '@/hooks/useStatuses';
 import { BulkLeadActions } from './BulkLeadActions';
 import { formatDistanceToNow } from 'date-fns';
@@ -22,8 +22,6 @@ import { useTagsRealtime } from '@/hooks/useTagsRealtime';
 import { useStatusesRealtime } from '@/hooks/useStatusesRealtime';
 import { useUsers } from '@/hooks/useUsers';
 import { useLeadsState } from '@/hooks/useLeadsState';
-import { useNotifications } from '@/hooks/useNotifications';
-import { NotificationsContainer } from '@/components/ui/notifications';
 import { useCreateActivity } from '@/hooks/useActivities';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -45,9 +43,6 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
   // State management with persistence
   const leadsState = useLeadsState();
   const { state, updateFilters, updatePage, updatePageSize, updateScrollPosition, preserveScrollPosition, isLoaded } = leadsState;
-  
-  // Notifications
-  const notifications = useNotifications();
   
   // Hooks
   const { user } = useAuth();
@@ -75,7 +70,7 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
 
   const { data: statuses } = useStatuses();
   const { users = [] } = useUsers({}, 1, 100); // Fetch up to 100 users to ensure all are shown
-  const deleteLead = useDeleteLead();
+  const archiveLead = useArchiveLead();
   const { data: tags } = useTags();
 
   // Filter users to show only active ones
@@ -132,21 +127,21 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
     navigate(`/leads/${lead.id}`);
   };
 
-  const handleDeleteLead = (leadId: string) => {
-    if (confirm('Are you sure you want to delete this lead?')) {
+  const handleArchiveLead = (leadId: string) => {
+    if (confirm('Archive this lead? It will be hidden and can be restored by an admin. After 30 days, it can be permanently deleted.')) {
       saveScrollPosition();
-      deleteLead.mutate(leadId, {
+      archiveLead.mutate({ id: leadId, deletedBy: user?.id || '' }, {
         onSuccess: () => {
           notifications.addNotification({
             type: 'success',
-            title: 'Lead deleted successfully',
+            title: 'Lead archived successfully',
           });
           preserveScrollPosition();
         },
         onError: () => {
           notifications.addNotification({
             type: 'error',
-            title: 'Failed to delete lead',
+            title: 'Failed to archive lead',
           });
         }
       });
@@ -261,12 +256,6 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Notifications */}
-      <NotificationsContainer 
-        notifications={notifications.notifications}
-        onClose={notifications.removeNotification}
-      />
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -679,12 +668,12 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
                                   Edit
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem 
-                                onClick={() => handleDeleteLead(lead.id)}
+                              <DropdownMenuItem
+                                onClick={() => handleArchiveLead(lead.id)}
                                 className="text-red-600"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
+                                Archive
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

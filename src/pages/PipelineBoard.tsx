@@ -2,6 +2,7 @@ import { PipelineBoard } from '@/components/pipeline/PipelineBoard';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { BarChart3 } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 export const PipelinePage: React.FC = () => {
   return (
@@ -21,6 +22,9 @@ export const PipelinePage: React.FC = () => {
                     <p className="text-sm text-gray-600">Track and manage your deals through the sales process</p>
                   </div>
                 </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <NotificationBell />
               </div>
             </div>
           </header>

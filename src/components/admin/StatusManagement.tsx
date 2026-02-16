@@ -28,7 +28,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useStatuses, useCreateStatus, useUpdateStatus, useDeleteStatus, useCreateDefaultStatuses, useReorderStatuses } from '@/hooks/useStatuses';
+import { useStatuses, useCreateStatus, useUpdateStatus, useArchiveStatus, useCreateDefaultStatuses, useReorderStatuses } from '@/hooks/useStatuses';
+import { useAuth } from '@/hooks/useAuth';
 import { Plus, Edit, Trash2, GripVertical, Settings, Loader2 } from 'lucide-react';
 import type { Status } from '@/lib/api/statuses';
 
@@ -135,10 +136,11 @@ export const StatusManagement: React.FC<StatusManagementProps> = ({ onStatusesUp
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingStatus, setEditingStatus] = useState<Status | null>(null);
   
+  const { user } = useAuth();
   const { data: statuses, isLoading, error, refetch } = useStatuses();
   const createStatus = useCreateStatus();
   const updateStatus = useUpdateStatus();
-  const deleteStatus = useDeleteStatus();
+  const archiveStatus = useArchiveStatus();
   const createDefaultStatuses = useCreateDefaultStatuses();
   const reorderStatuses = useReorderStatuses();
 
@@ -215,7 +217,7 @@ export const StatusManagement: React.FC<StatusManagementProps> = ({ onStatusesUp
     }
 
     try {
-      await deleteStatus.mutateAsync(statusId);
+      await archiveStatus.mutateAsync({ id: statusId, deletedBy: user?.id || '' });
       onStatusesUpdated?.();
     } catch (error) {
       // Error handling is done in the hooks
@@ -258,7 +260,7 @@ export const StatusManagement: React.FC<StatusManagementProps> = ({ onStatusesUp
   };
 
   const isFormLoading = createStatus.isPending || updateStatus.isPending;
-  const isDeleteLoading = deleteStatus.isPending;
+  const isDeleteLoading = archiveStatus.isPending;
   const isDefaultStatusesLoading = createDefaultStatuses.isPending;
   const isReorderLoading = reorderStatuses.isPending;
 

@@ -147,15 +147,51 @@ export class CommissionTemplatesAPI {
     return data;
   }
 
-  async deleteTier(id: string): Promise<void> {
+  async archiveTier(id: string, deletedBy: string): Promise<void> {
+    const { error } = await supabase
+      .from('commission_tiers')
+      .update({ deleted_at: new Date().toISOString(), deleted_by: deletedBy })
+      .eq('id', id);
+
+    if (error) {
+      throw new Error(`Failed to archive commission tier: ${error.message}`);
+    }
+  }
+
+  async restoreTier(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('commission_tiers')
+      .update({ deleted_at: null, deleted_by: null })
+      .eq('id', id);
+
+    if (error) {
+      throw new Error(`Failed to restore commission tier: ${error.message}`);
+    }
+  }
+
+  async permanentlyDeleteTier(id: string): Promise<void> {
     const { error } = await supabase
       .from('commission_tiers')
       .delete()
       .eq('id', id);
 
     if (error) {
-      throw new Error(`Failed to delete commission tier: ${error.message}`);
+      throw new Error(`Failed to permanently delete commission tier: ${error.message}`);
     }
+  }
+
+  async getArchivedTiers(): Promise<CommissionTier[]> {
+    const { data, error } = await supabase
+      .from('commission_tiers')
+      .select('*')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch archived commission tiers: ${error.message}`);
+    }
+
+    return data || [];
   }
 }
 

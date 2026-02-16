@@ -13,13 +13,14 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useUsersContext } from '@/contexts/UsersContext';
-import { useUpdateLead, useDeleteLead, useManageLeadTags } from '@/hooks/useLeads';
+import { useUpdateLead, useArchiveLead, useManageLeadTags } from '@/hooks/useLeads';
 import { useTags } from '@/hooks/useTags';
 import { useStatuses } from '@/hooks/useStatuses';
 import { useCreateActivity } from '@/hooks/useActivities';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useProfile } from '@/hooks/useAuth';
 import type { Lead } from '@/lib/api/leads';
 import { supabase } from '@/integrations/supabase/client';
+import { notify, getManagers } from '@/lib/notifications/notify';
 
 interface BulkLeadActionsProps {
   selectedLeads: Lead[];
@@ -41,11 +42,12 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
   const [openUserCombobox, setOpenUserCombobox] = useState(false);
 
   const { user } = useAuth();
-  const { activeUsers: assignableUsers, loading: usersLoading } = useUsersContext();
+  const { profile } = useProfile();
+  const { activeUsers: assignableUsers, users: allUsers, loading: usersLoading } = useUsersContext();
   const { data: allTags, isLoading: tagsLoading } = useTags();
   const { data: statuses, isLoading: statusesLoading } = useStatuses();
   const updateLead = useUpdateLead();
-  const deleteLead = useDeleteLead();
+  const archiveLead = useArchiveLead();
   const { addTags } = useManageLeadTags();
   const createActivity = useCreateActivity();
 
@@ -73,6 +75,16 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
           });
         })
       );
+
+      // Send a single bulk notification
+      if (user?.id && selectedUserId) {
+        notify.bulkLeadsAssigned({
+          actorId: user.id,
+          actorName: profile?.full_name || 'Someone',
+          assigneeId: selectedUserId,
+          count: selectedLeads.length,
+        });
+      }
 
       setIsAssignDialogOpen(false);
       setSelectedUserId('');
@@ -128,6 +140,17 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
         })
       );
 
+      // Send a single bulk notification
+      if (user?.id && selectedStatus) {
+        notify.bulkLeadsStatusChanged({
+          actorId: user.id,
+          actorName: profile?.full_name || 'Someone',
+          count: selectedLeads.length,
+          newStatusName: selectedStatus.name,
+          managers: getManagers(allUsers),
+        });
+      }
+
       setIsStatusDialogOpen(false);
       setSelectedStatusId('');
       onSelectionChange([]);
@@ -141,7 +164,7 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
     if (selectedLeads.length === 0) return;
 
     const confirmed = confirm(
-      `Are you sure you want to delete ${selectedLeads.length} lead${selectedLeads.length > 1 ? 's' : ''}? This action cannot be undone.`
+      `Are you sure you want to archive ${selectedLeads.length} lead${selectedLeads.length > 1 ? 's' : ''}?`
     );
 
     if (!confirmed) return;
@@ -150,9 +173,19 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
       // Delete all selected leads
       await Promise.all(
         selectedLeads.map(async (lead) => {
-          await deleteLead.mutateAsync(lead.id);
+          await archiveLead.mutateAsync({ id: lead.id, deletedBy: user?.id || '' });
         })
       );
+
+      // Send a single bulk notification
+      if (user?.id) {
+        notify.bulkLeadsDeleted({
+          actorId: user.id,
+          actorName: profile?.full_name || 'Someone',
+          count: selectedLeads.length,
+          managers: getManagers(allUsers),
+        });
+      }
 
       onSelectionChange([]);
       onActionsComplete();
@@ -197,6 +230,21 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
         await supabase.from('leads').update({ status_id: defaultStatus.id }).in('id', assignedLeadIds);
       }
 
+      // Send a single bulk notification
+      if (user?.id) {
+        const previousAssigneeIds = selectedLeads
+          .filter(lead => lead.assigned_to)
+          .map(lead => lead.assigned_to as string);
+
+        notify.bulkLeadsRecycled({
+          actorId: user.id,
+          actorName: profile?.full_name || 'Someone',
+          count: assignedLeadIds.length,
+          previousAssigneeIds,
+          managers: getManagers(allUsers),
+        });
+      }
+
       onSelectionChange([]);
       onActionsComplete();
     } catch (error) {
@@ -222,7 +270,7 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
       .slice(0, 2);
   };
 
-  const isLoading = updateLead.isPending || deleteLead.isPending || addTags.isPending;
+  const isLoading = updateLead.isPending || archiveLead.isPending || addTags.isPending;
 
   if (selectedLeads.length === 0) {
     return null;
@@ -548,7 +596,7 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
             Recycle Selected
           </Button>
 
-          {/* Bulk Delete */}
+          {/* Bulk Archive */}
           <Button
             variant="outline"
             size="sm"
@@ -557,7 +605,7 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
             className="text-red-600 hover:text-red-700"
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            Delete Selected
+            Archive Selected
           </Button>
 
           {/* Clear Selection */}

@@ -68,50 +68,93 @@ export const useUpdateTag = () => {
   });
 };
 
-export const useDeleteTag = () => {
+export const useArchiveTag = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (id: string) => tagsApi.deleteTag(id),
+    mutationFn: ({ id, deletedBy }: { id: string; deletedBy: string }) =>
+      tagsApi.archiveTag(id, deletedBy),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tags'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-tags'] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast({
-        title: 'Tag deleted',
-        description: 'Tag has been deleted successfully.',
+        title: 'Tag archived',
+        description: 'Tag has been archived successfully.',
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Error deleting tag',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error archiving tag', description: error.message, variant: 'destructive' });
     },
   });
 };
 
-export const useDeleteAllTags = () => {
+export const useArchiveAllTags = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: () => tagsApi.deleteAllTags(),
+    mutationFn: (deletedBy: string) => tagsApi.archiveAllTags(deletedBy),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tags'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-tags'] });
       toast({
-        title: 'All tags deleted',
-        description: 'All existing tags have been removed.',
+        title: 'All tags archived',
+        description: 'All existing tags have been archived.',
       });
     },
     onError: (error: Error) => {
+      toast({ title: 'Error archiving tags', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useRestoreTag = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (id: string) => tagsApi.restoreTag(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-tags'] });
       toast({
-        title: 'Error deleting tags',
-        description: error.message,
-        variant: 'destructive',
+        title: 'Tag restored',
+        description: 'Tag has been restored successfully.',
       });
     },
+    onError: (error: Error) => {
+      toast({ title: 'Error restoring tag', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const usePermanentlyDeleteTag = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (id: string) => tagsApi.permanentlyDeleteTag(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-tags'] });
+      toast({
+        title: 'Tag permanently deleted',
+        description: 'Tag has been permanently removed.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error deleting tag', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useArchivedTags = () => {
+  return useQuery({
+    queryKey: ['archived-tags'],
+    queryFn: () => tagsApi.getArchivedTags(),
+    staleTime: 10 * 60 * 1000,
   });
 };
 

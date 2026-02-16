@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getCommentsByLeadId, createComment, updateComment, deleteComment } from '@/lib/api/comments';
+import { getCommentsByLeadId, createComment, updateComment, archiveComment, restoreComment, permanentlyDeleteComment, commentsApi } from '@/lib/api/comments';
 import type { CreateCommentData, UpdateCommentData } from '@/lib/api/comments';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth, useProfile } from '@/hooks/useAuth';
+import { notify } from '@/lib/notifications/notify';
 
 // Query keys
 export const commentKeys = {
@@ -19,23 +21,35 @@ export const useCommentsByLeadId = (leadId: string) => {
   });
 };
 
-// Create comment mutation
+// Create comment mutation - accepts optional notifyContext for lead info
 export const useCreateComment = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { profile } = useProfile();
 
   return useMutation({
-    mutationFn: createComment,
-    onSuccess: (newComment) => {
-      // Invalidate and refetch comments for this lead
+    mutationFn: (params: { data: CreateCommentData; leadContext?: { book_title?: string; assigned_to?: string | null }; parentCommentUserId?: string | null }) =>
+      createComment(params.data),
+    onSuccess: (newComment, { leadContext, parentCommentUserId }) => {
       queryClient.invalidateQueries({
         queryKey: commentKeys.byLeadId(newComment.lead_id),
       });
-      
+
       toast({
         title: 'Success',
         description: 'Comment added successfully',
       });
+
+      if (user?.id && leadContext) {
+        notify.commentAdded({
+          actorId: user.id,
+          actorName: profile?.full_name || 'Someone',
+          lead: { id: newComment.lead_id, book_title: leadContext.book_title, assigned_to: leadContext.assigned_to },
+          isReply: !!newComment.parent_comment_id,
+          parentCommentUserId: parentCommentUserId || null,
+        });
+      }
     },
     onError: (error) => {
       toast({
@@ -76,30 +90,66 @@ export const useUpdateComment = () => {
   });
 };
 
-// Delete comment mutation
-export const useDeleteComment = () => {
+// Archive comment mutation (soft delete)
+export const useArchiveComment = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: deleteComment,
-    onSuccess: (_, deletedId) => {
-      // Invalidate all comment queries since we don't know which lead this belonged to
-      queryClient.invalidateQueries({
-        queryKey: commentKeys.all,
-      });
-      
-      toast({
-        title: 'Success',
-        description: 'Comment deleted successfully',
-      });
+    mutationFn: ({ id, deletedBy }: { id: string; deletedBy: string }) =>
+      archiveComment(id, deletedBy),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: commentKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['archived-comments'] });
+      toast({ title: 'Success', description: 'Comment archived successfully' });
     },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete comment',
-        variant: 'destructive',
-      });
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to archive comment', variant: 'destructive' });
     },
+  });
+};
+
+// Restore comment mutation
+export const useRestoreComment = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (id: string) => restoreComment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: commentKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['archived-comments'] });
+      toast({ title: 'Success', description: 'Comment restored successfully' });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to restore comment', variant: 'destructive' });
+    },
+  });
+};
+
+// Permanently delete comment mutation
+export const usePermanentlyDeleteComment = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (id: string) => permanentlyDeleteComment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: commentKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['archived-comments'] });
+      toast({ title: 'Success', description: 'Comment permanently deleted' });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to delete comment', variant: 'destructive' });
+    },
+  });
+};
+
+// Archived comments query
+export const useArchivedComments = (limit = 50) => {
+  return useQuery({
+    queryKey: ['archived-comments', limit],
+    queryFn: () => commentsApi.getArchivedComments(limit),
+    staleTime: 2 * 60 * 1000,
   });
 }; 

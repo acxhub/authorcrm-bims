@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { DollarSign } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
@@ -49,6 +50,9 @@ export const CommissionsPage: React.FC = () => {
                     <p className="text-sm text-gray-600">Track and manage commission earnings</p>
                   </div>
                 </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <NotificationBell />
               </div>
             </div>
           </header>

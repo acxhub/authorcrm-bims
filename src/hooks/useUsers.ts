@@ -1,9 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi, type UserProfile, type UsersFilter, type CreateUserRequest, type UpdateUserRequest } from '@/lib/api/users';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth, useProfile } from '@/hooks/useAuth';
+import { notify } from '@/lib/notifications/notify';
 
 export function useUsers(filters?: UsersFilter, page = 1, limit = 10) {
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
+  const { profile: currentProfile } = useProfile();
   
   const { data, isLoading, error } = useQuery({
     queryKey: ['users', filters, page, limit],
@@ -45,9 +49,9 @@ export function useUsers(filters?: UsersFilter, page = 1, limit = 10) {
   };
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: UpdateUserRequest }) => 
+    mutationFn: ({ id, updates }: { id: string; updates: UpdateUserRequest }) =>
       usersApi.update(id, updates),
-    onSuccess: (updatedUser) => {
+    onSuccess: (updatedUser, { updates }) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.setQueryData(['user', updatedUser.id], updatedUser);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
@@ -56,6 +60,15 @@ export function useUsers(filters?: UsersFilter, page = 1, limit = 10) {
         title: 'Success',
         description: 'User updated successfully',
       });
+
+      if (currentUser?.id && updates.role) {
+        notify.userRoleChanged({
+          actorId: currentUser.id,
+          actorName: currentProfile?.full_name || 'An admin',
+          targetUserId: updatedUser.id,
+          newRole: updates.role,
+        });
+      }
     },
     onError: (err: Error) => {
       toast({
@@ -111,6 +124,15 @@ export function useUsers(filters?: UsersFilter, page = 1, limit = 10) {
         title: 'Success',
         description: `User ${updatedUser.is_active ? 'activated' : 'deactivated'} successfully`,
       });
+
+      if (currentUser?.id) {
+        notify.userStatusChanged({
+          actorId: currentUser.id,
+          actorName: currentProfile?.full_name || 'An admin',
+          targetUserId: updatedUser.id,
+          isActive: updatedUser.is_active,
+        });
+      }
     },
     onError: (err: Error) => {
       toast({

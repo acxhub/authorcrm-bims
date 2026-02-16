@@ -8,6 +8,9 @@ import { useDeals, useUpdateDeal, useCreateDeal } from '@/hooks/useDeals';
 import { useStatuses } from '@/hooks/useStatuses';
 import { useUsers } from '@/hooks/useUsers';
 import { useCreateCommissionFromDeal } from '@/hooks/useCreateCommissionFromDeal';
+import { useAuth, useProfile } from '@/hooks/useAuth';
+import { useUsersContext } from '@/contexts/UsersContext';
+import { notify, getManagers } from '@/lib/notifications/notify';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +42,9 @@ export const PipelineBoard: React.FC = () => {
   const { data: dealsData, isLoading: dealsLoading, refetch } = useDeals(filters, 1, 1000);
   const { data: statuses = [], isLoading: statusesLoading } = useStatuses();
   const { users = [] } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
+  const { user: currentUser } = useAuth();
+  const { profile: currentProfile } = useProfile();
+  const { users: allUsers } = useUsersContext();
   const updateDealMutation = useUpdateDeal();
   const createDealMutation = useCreateDeal();
   const createCommissionMutation = useCreateCommissionFromDeal();
@@ -65,6 +71,17 @@ export const PipelineBoard: React.FC = () => {
         agentId: deal.assigned_to,
         dealValue: deal.deal_value,
       });
+
+      // Send commission notification
+      if (currentUser?.id) {
+        const commissionRate = 0.10; // default rate if not available
+        notify.commissionCreated({
+          actorId: currentUser.id,
+          deal: { id: deal.id, offer_title: deal.offer_title, assigned_to: deal.assigned_to },
+          commissionAmount: deal.deal_value * commissionRate,
+          managers: getManagers(allUsers),
+        });
+      }
     } catch {
       // Error toast is handled by the mutation hook
     }
@@ -92,6 +109,21 @@ export const PipelineBoard: React.FC = () => {
         id: dealId,
         data: { status_id: newStatusId }
       });
+
+      // Send deal status changed notification
+      if (currentUser?.id) {
+        const newStatus = statuses.find(s => s.id === newStatusId);
+        const statusName = newStatus?.name || '';
+        const isClosedWon = statusName.toLowerCase().includes('won') || statusName.toLowerCase().includes('sold');
+        notify.dealStatusChanged({
+          actorId: currentUser.id,
+          actorName: currentProfile?.full_name || 'Someone',
+          deal: { id: deal.id, offer_title: deal.offer_title, assigned_to: deal.assigned_to, deal_value: deal.deal_value },
+          newStatusName: statusName,
+          isClosedWon,
+          managers: getManagers(allUsers),
+        });
+      }
 
       // Auto-create commission when deal moves to "Closed Won"
       await tryCreateCommission(deal, newStatusId, previousStatusId);

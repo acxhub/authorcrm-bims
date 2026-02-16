@@ -1,0 +1,33 @@
+import type { Tables } from '@/integrations/supabase/types';
+
+type Profile = Tables<'profiles'>;
+
+export function canPermanentlyDelete(
+  profile: Profile | null,
+  deletedAt: string | null
+): boolean {
+  if (!profile || profile.role !== 'leads_manager') return false;
+  if (!deletedAt) return false;
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  return new Date(deletedAt) < thirtyDaysAgo;
+}
+
+export function canRestore(profile: Profile | null): boolean {
+  return profile?.role === 'leads_manager';
+}
+
+export function canArchive(profile: Profile | null): boolean {
+  if (!profile) return false;
+  return ['leads_manager', 'sales_manager'].includes(profile.role || '');
+}
+
+export function daysUntilPermanentDelete(deletedAt: string | null): number | null {
+  if (!deletedAt) return null;
+  const deletedDate = new Date(deletedAt);
+  const eligibleDate = new Date(deletedDate);
+  eligibleDate.setDate(eligibleDate.getDate() + 30);
+  const now = new Date();
+  const diffMs = eligibleDate.getTime() - now.getTime();
+  return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+}

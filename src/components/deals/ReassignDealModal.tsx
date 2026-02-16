@@ -17,7 +17,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { useUsers } from '@/hooks/useUsers';
 import { useUpdateDeal } from '@/hooks/useDeals';
 import { useLogActivity } from '@/hooks/useActivities';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useProfile } from '@/hooks/useAuth';
+import { useUsersContext } from '@/contexts/UsersContext';
+import { notify, getManagers } from '@/lib/notifications/notify';
 import type { Deal } from '@/lib/api/deals';
 
 const reassignSchema = z.object({
@@ -39,7 +41,9 @@ export const ReassignDealModal: React.FC<ReassignDealModalProps> = ({
   deal,
 }) => {
   const { user } = useAuth();
+  const { profile } = useProfile();
   const { users } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
+  const { users: allUsers } = useUsersContext();
   const updateDealMutation = useUpdateDeal();
   const logActivityMutation = useLogActivity();
 
@@ -74,6 +78,18 @@ export const ReassignDealModal: React.FC<ReassignDealModalProps> = ({
         summary: `Deal reassigned from ${previousUser?.full_name || 'Unassigned'} to ${assignedUser?.full_name || 'Unknown'}`,
         outcome: data.notes || undefined,
       });
+
+      // Send notification for deal reassignment
+      if (user?.id) {
+        notify.dealAssigned({
+          actorId: user.id,
+          actorName: profile?.full_name || 'Someone',
+          deal: { id: deal.id, offer_title: deal.offer_title },
+          newAssigneeId: data.assigned_to,
+          previousAssigneeId: deal.assigned_to || null,
+          managers: getManagers(allUsers),
+        });
+      }
 
       form.reset();
       onClose();

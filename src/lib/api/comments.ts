@@ -19,6 +19,7 @@ export const getCommentsByLeadId = async (leadId: string): Promise<Comment[]> =>
     `)
     .eq('lead_id', leadId)
     .is('parent_comment_id', null)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -33,6 +34,7 @@ export const getCommentsByLeadId = async (leadId: string): Promise<Comment[]> =>
           user_profile:profiles!comments_user_id_fkey(*)
         `)
         .eq('parent_comment_id', comment.id)
+        .is('deleted_at', null)
         .order('created_at', { ascending: true });
 
       if (repliesError) throw repliesError;
@@ -78,8 +80,28 @@ export const updateComment = async (id: string, data: UpdateCommentData): Promis
   return comment;
 };
 
-// Delete a comment
-export const deleteComment = async (id: string): Promise<void> => {
+// Archive a comment (soft delete)
+export const archiveComment = async (id: string, deletedBy: string): Promise<void> => {
+  const { error } = await supabase
+    .from('comments')
+    .update({ deleted_at: new Date().toISOString(), deleted_by: deletedBy })
+    .eq('id', id);
+
+  if (error) throw error;
+};
+
+// Restore an archived comment
+export const restoreComment = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('comments')
+    .update({ deleted_at: null, deleted_by: null })
+    .eq('id', id);
+
+  if (error) throw error;
+};
+
+// Permanently delete a comment
+export const permanentlyDeleteComment = async (id: string): Promise<void> => {
   const { error } = await supabase
     .from('comments')
     .delete()
@@ -98,6 +120,7 @@ export class CommentsAPI {
       `)
       .eq('lead_id', leadId)
       .is('parent_comment_id', null)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -126,6 +149,7 @@ export class CommentsAPI {
         user_profile:profiles!comments_user_id_fkey(*)
       `)
       .eq('parent_comment_id', parentCommentId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -158,7 +182,8 @@ export class CommentsAPI {
   }> {
     let query = supabase
       .from('comments')
-      .select('created_at');
+      .select('created_at')
+      .is('deleted_at', null);
 
     if (leadId) {
       query = query.eq('lead_id', leadId);
@@ -184,6 +209,23 @@ export class CommentsAPI {
       totalComments,
       recentCommentCount,
     };
+  }
+  async getArchivedComments(limit = 50): Promise<Comment[]> {
+    const { data, error } = await supabase
+      .from('comments')
+      .select(`
+        *,
+        user_profile:profiles!comments_user_id_fkey(*)
+      `)
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw new Error(`Failed to fetch archived comments: ${error.message}`);
+    }
+
+    return data || [];
   }
 }
 

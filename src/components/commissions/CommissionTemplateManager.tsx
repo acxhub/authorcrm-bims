@@ -39,7 +39,7 @@ import {
   useSetDefaultCommissionTemplate,
   useCreateCommissionTier,
   useUpdateCommissionTier,
-  useDeleteCommissionTier,
+  useArchiveCommissionTier,
 } from '@/hooks/useCommissionTemplates';
 import { useAuth } from '@/hooks/useAuth';
 import type { CommissionTemplateWithTiers, CommissionTier } from '@/lib/api/commission-templates';
@@ -99,7 +99,7 @@ export const CommissionTemplateManager: React.FC = () => {
   const setDefaultTemplate = useSetDefaultCommissionTemplate();
   const createTier = useCreateCommissionTier();
   const updateTier = useUpdateCommissionTier();
-  const deleteTier = useDeleteCommissionTier();
+  const archiveTier = useArchiveCommissionTier();
 
   const toggleExpanded = (templateId: string) => {
     const newExpanded = new Set(expandedTemplates);
@@ -246,15 +246,15 @@ export const CommissionTemplateManager: React.FC = () => {
     }
   };
 
-  const handleDeleteTier = async (tierId: string) => {
-    if (!confirm('Are you sure you want to delete this commission tier?')) {
+  const handleArchiveTier = async (tierId: string) => {
+    if (!confirm('Archive this commission tier? It can be restored by an admin.')) {
       return;
     }
 
     try {
-      await deleteTier.mutateAsync(tierId);
+      await archiveTier.mutateAsync({ id: tierId, deletedBy: user?.id || '' });
     } catch (error) {
-      console.error('Failed to delete tier:', error);
+      console.error('Failed to archive tier:', error);
     }
   };
 
@@ -276,7 +276,7 @@ export const CommissionTemplateManager: React.FC = () => {
     setDefaultTemplate.isPending ||
     createTier.isPending ||
     updateTier.isPending ||
-    deleteTier.isPending;
+    archiveTier.isPending;
 
   if (isLoading) {
     return (
@@ -624,7 +624,7 @@ export const CommissionTemplateManager: React.FC = () => {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => handleDeleteTier(tier.id)}
+                                        onClick={() => handleArchiveTier(tier.id)}
                                         disabled={isLoading_}
                                         className="text-red-600 hover:text-red-700"
                                       >

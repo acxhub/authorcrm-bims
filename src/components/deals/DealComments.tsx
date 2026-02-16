@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useCommentsByLeadId, useCreateComment, useUpdateComment, useDeleteComment } from '@/hooks/useComments';
+import { useCommentsByLeadId, useCreateComment, useUpdateComment, useArchiveComment } from '@/hooks/useComments';
 import { useAuth, useProfile } from '@/hooks/useAuth';
 import type { Comment } from '@/lib/api/comments';
 
@@ -35,17 +35,19 @@ export const DealComments: React.FC<DealCommentsProps> = ({ leadId }) => {
   const { data: comments, isLoading } = useCommentsByLeadId(leadId);
   const createCommentMutation = useCreateComment();
   const updateCommentMutation = useUpdateComment();
-  const deleteCommentMutation = useDeleteComment();
+  const archiveCommentMutation = useArchiveComment();
 
   const handleAddComment = async () => {
     if (!newComment.trim() || !user) return;
 
     try {
       await createCommentMutation.mutateAsync({
-        lead_id: leadId,
-        user_id: user.id,
-        content: newComment.trim(),
-        parent_comment_id: null,
+        data: {
+          lead_id: leadId,
+          user_id: user.id,
+          content: newComment.trim(),
+          parent_comment_id: null,
+        },
       });
       setNewComment('');
     } catch (error) {
@@ -68,11 +70,11 @@ export const DealComments: React.FC<DealCommentsProps> = ({ leadId }) => {
     }
   };
 
-  const handleDeleteComment = async (commentId: string) => {
+  const handleArchiveComment = async (commentId: string) => {
     try {
-      await deleteCommentMutation.mutateAsync(commentId);
+      await archiveCommentMutation.mutateAsync({ id: commentId, deletedBy: user?.id || '' });
     } catch (error) {
-      console.error('Failed to delete comment:', error);
+      console.error('Failed to archive comment:', error);
     }
   };
 
@@ -80,11 +82,19 @@ export const DealComments: React.FC<DealCommentsProps> = ({ leadId }) => {
     if (!replyContent.trim() || !user) return;
 
     try {
+      // Find the parent comment's user_id for reply notification
+      const parentComment = comments?.find(c => c.id === parentId);
+      const parentUserId = parentComment?.user_id ||
+        comments?.flatMap(c => c.replies || []).find(r => r.id === parentId)?.user_id || null;
+
       await createCommentMutation.mutateAsync({
-        lead_id: leadId,
-        user_id: user.id,
-        content: replyContent.trim(),
-        parent_comment_id: parentId,
+        data: {
+          lead_id: leadId,
+          user_id: user.id,
+          content: replyContent.trim(),
+          parent_comment_id: parentId,
+        },
+        parentCommentUserId: parentUserId,
       });
       setReplyingTo(null);
       setReplyContent('');
@@ -203,11 +213,11 @@ export const DealComments: React.FC<DealCommentsProps> = ({ leadId }) => {
                             </DropdownMenuItem>
                             {profile?.role !== 'sales' && (
                               <DropdownMenuItem 
-                                onClick={() => handleDeleteComment(comment.id)}
+                                onClick={() => handleArchiveComment(comment.id)}
                                 className="text-red-600"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
+                                Archive
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
@@ -321,11 +331,11 @@ export const DealComments: React.FC<DealCommentsProps> = ({ leadId }) => {
                                   </DropdownMenuItem>
                                   {profile?.role !== 'sales' && (
                                     <DropdownMenuItem 
-                                      onClick={() => handleDeleteComment(reply.id)}
+                                      onClick={() => handleArchiveComment(reply.id)}
                                       className="text-red-600"
                                     >
                                       <Trash2 className="h-3 w-3 mr-2" />
-                                      Delete
+                                      Archive
                                     </DropdownMenuItem>
                                   )}
                                 </DropdownMenuContent>

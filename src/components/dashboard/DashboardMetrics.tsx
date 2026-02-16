@@ -1,11 +1,12 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Users, DollarSign, Target, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, Users, DollarSign, Target } from 'lucide-react';
 import { usePipelineMetrics } from '@/hooks/usePipelineMetrics';
 import { useDealsPipelineMetrics } from '@/hooks/useDealsPipelineMetrics';
 import { useLeads } from '@/hooks/useLeads';
 import { useDeals } from '@/hooks/useDeals';
+import { useProfile } from '@/hooks/useAuth';
 
 interface MetricCardProps {
   title: string;
@@ -84,11 +85,19 @@ const MetricCard: React.FC<MetricCardProps> = ({
   );
 };
 
-export const DashboardMetrics: React.FC = () => {
+interface DashboardMetricsProps {
+  userId?: string;
+}
+
+export const DashboardMetrics: React.FC<DashboardMetricsProps> = ({ userId }) => {
+  const { profile } = useProfile();
+  const isAgent = profile?.role === 'sales';
+  const agentFilter = isAgent && userId ? { assigned_to: userId } : {};
+
   const { metrics: leadsMetrics, isLoading: leadsMetricsLoading } = usePipelineMetrics();
   const { metrics: dealsMetrics, isLoading: dealsMetricsLoading } = useDealsPipelineMetrics();
-  const { data: leadsData, isLoading: leadsLoading } = useLeads({}, 1, 1000);
-  const { data: dealsData, isLoading: dealsLoading } = useDeals({}, 1, 1000);
+  const { data: leadsData, isLoading: leadsLoading } = useLeads(agentFilter, 1, 1000);
+  const { data: dealsData, isLoading: dealsLoading } = useDeals(agentFilter, 1, 1000);
 
   if (leadsMetricsLoading || dealsMetricsLoading || leadsLoading || dealsLoading) {
     return (
@@ -153,42 +162,48 @@ export const DashboardMetrics: React.FC = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <MetricCard
-        title="Total Leads"
-        value={leadsMetrics.totalLeads.toLocaleString()}
+        title={isAgent ? "My Leads" : "Total Leads"}
+        value={isAgent ? leads.length.toLocaleString() : leadsMetrics.totalLeads.toLocaleString()}
         change={formatPercentage(leadsChange)}
         trend={leadsChange >= 0 ? 'up' : 'down'}
         icon={Users}
-        description="All leads in system"
+        description={isAgent ? "Leads assigned to you" : "All leads in system"}
         color="blue"
       />
-      
+
       <MetricCard
-        title="Pipeline Deals"
-        value={dealsMetrics.activeDeals.toLocaleString()}
+        title={isAgent ? "My Active Deals" : "Pipeline Deals"}
+        value={isAgent ? deals.filter(d => {
+          const name = d.status?.name?.toLowerCase() || '';
+          return !name.includes('closed') && !name.includes('lost') && !name.includes('dead');
+        }).length.toLocaleString() : dealsMetrics.activeDeals.toLocaleString()}
         change={formatPercentage(dealsChange)}
         trend={dealsChange >= 0 ? 'up' : 'down'}
         icon={Target}
-        description="Active deals (excludes closed)"
+        description={isAgent ? "Your active deals" : "Active deals (excludes closed)"}
         color="green"
       />
-      
+
       <MetricCard
-        title="Pipeline Value"
-        value={formatCurrency(dealsMetrics.pipelineValue)}
+        title={isAgent ? "My Pipeline Value" : "Pipeline Value"}
+        value={formatCurrency(isAgent ? deals.filter(d => {
+          const name = d.status?.name?.toLowerCase() || '';
+          return !name.includes('closed') && !name.includes('lost') && !name.includes('dead');
+        }).reduce((s, d) => s + (d.deal_value || 0), 0) : dealsMetrics.pipelineValue)}
         change={dealsMetrics.averageDealValue > 0 ? `Avg: ${formatCurrency(dealsMetrics.averageDealValue)}` : 'No deals'}
         trend={dealsMetrics.pipelineValue > 0 ? 'up' : 'neutral'}
         icon={TrendingUp}
-        description="Total value of active deals"
+        description={isAgent ? "Value of your active deals" : "Total value of active deals"}
         color="purple"
       />
-      
+
       <MetricCard
-        title="Total Revenue"
+        title={isAgent ? "My Revenue" : "Total Revenue"}
         value={formatCurrency(totalRevenue)}
         change={avgDealValue > 0 ? `Avg: ${formatCurrency(avgDealValue)}` : 'No deals'}
         trend={totalRevenue > 0 ? 'up' : 'neutral'}
         icon={DollarSign}
-        description="All deal values"
+        description={isAgent ? "Your total deal values" : "All deal values"}
         color="orange"
       />
     </div>

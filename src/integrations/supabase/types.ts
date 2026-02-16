@@ -14,6 +14,8 @@ export type Database = {
           activity_date: string | null
           activity_type: Database["public"]["Enums"]["activity_type"]
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           lead_id: string
           outcome: string | null
@@ -25,6 +27,8 @@ export type Database = {
           activity_date?: string | null
           activity_type: Database["public"]["Enums"]["activity_type"]
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           lead_id: string
           outcome?: string | null
@@ -36,6 +40,8 @@ export type Database = {
           activity_date?: string | null
           activity_type?: Database["public"]["Enums"]["activity_type"]
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           lead_id?: string
           outcome?: string | null
@@ -122,6 +128,8 @@ export type Database = {
         Row: {
           content: string
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           lead_id: string
           parent_comment_id: string | null
@@ -131,6 +139,8 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           lead_id: string
           parent_comment_id?: string | null
@@ -140,6 +150,8 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           lead_id?: string
           parent_comment_id?: string | null
@@ -280,6 +292,8 @@ export type Database = {
           max_amount: number | null
           commission_percent: number
           sort_order: number | null
+          deleted_at: string | null
+          deleted_by: string | null
           created_at: string | null
         }
         Insert: {
@@ -289,6 +303,8 @@ export type Database = {
           max_amount?: number | null
           commission_percent: number
           sort_order?: number | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           created_at?: string | null
         }
         Update: {
@@ -298,6 +314,8 @@ export type Database = {
           max_amount?: number | null
           commission_percent?: number
           sort_order?: number | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           created_at?: string | null
         }
         Relationships: [
@@ -494,6 +512,8 @@ export type Database = {
           created_at: string | null
           created_by: string
           deal_value: number | null
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           lead_id: string
           notes: string | null
@@ -507,6 +527,8 @@ export type Database = {
           created_at?: string | null
           created_by: string
           deal_value?: number | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           lead_id: string
           notes?: string | null
@@ -520,6 +542,8 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           deal_value?: number | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           lead_id?: string
           notes?: string | null
@@ -618,6 +642,8 @@ export type Database = {
           created_at: string | null
           created_by: string
           deal_value: number | null
+          deleted_at: string | null
+          deleted_by: string | null
           first_name: string | null
           id: string
           last_name: string | null
@@ -649,6 +675,8 @@ export type Database = {
           created_at?: string | null
           created_by: string
           deal_value?: number | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
@@ -680,6 +708,8 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           deal_value?: number | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
@@ -777,6 +807,8 @@ export type Database = {
         Row: {
           color: string
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -786,6 +818,8 @@ export type Database = {
         Insert: {
           color?: string
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -795,6 +829,8 @@ export type Database = {
         Update: {
           color?: string
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
@@ -807,6 +843,8 @@ export type Database = {
         Row: {
           color: string
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           description: string | null
           id: string
           is_active: boolean | null
@@ -816,6 +854,8 @@ export type Database = {
         Insert: {
           color?: string
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -825,6 +865,8 @@ export type Database = {
         Update: {
           color?: string
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -832,6 +874,133 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      reminders: {
+        Row: {
+          id: string
+          user_id: string
+          lead_id: string | null
+          title: string
+          notes: string | null
+          is_completed: boolean
+          completed_at: string | null
+          due_date: string | null
+          priority: string
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          lead_id?: string | null
+          title: string
+          notes?: string | null
+          is_completed?: boolean
+          completed_at?: string | null
+          due_date?: string | null
+          priority?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          lead_id?: string | null
+          title?: string
+          notes?: string | null
+          is_completed?: boolean
+          completed_at?: string | null
+          due_date?: string | null
+          priority?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminders_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminders_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_with_author_name"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          id: string
+          recipient_id: string
+          actor_id: string | null
+          type: string
+          title: string
+          message: string
+          entity_type: string | null
+          entity_id: string | null
+          metadata: Json | null
+          is_read: boolean | null
+          read_at: string | null
+          created_at: string | null
+          group_key: string | null
+        }
+        Insert: {
+          id?: string
+          recipient_id: string
+          actor_id?: string | null
+          type: string
+          title: string
+          message: string
+          entity_type?: string | null
+          entity_id?: string | null
+          metadata?: Json | null
+          is_read?: boolean | null
+          read_at?: string | null
+          created_at?: string | null
+          group_key?: string | null
+        }
+        Update: {
+          id?: string
+          recipient_id?: string
+          actor_id?: string | null
+          type?: string
+          title?: string
+          message?: string
+          entity_type?: string | null
+          entity_id?: string | null
+          metadata?: Json | null
+          is_read?: boolean | null
+          read_at?: string | null
+          created_at?: string | null
+          group_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -946,9 +1115,17 @@ export type Database = {
       }
     }
     Functions: {
+      archive_lead_cascade: {
+        Args: { p_lead_id: string; p_deleted_by: string }
+        Returns: undefined
+      }
       get_author_name: {
         Args: { first_name: string; last_name: string }
         Returns: string
+      }
+      restore_lead_cascade: {
+        Args: { p_lead_id: string }
+        Returns: undefined
       }
     }
     Enums: {

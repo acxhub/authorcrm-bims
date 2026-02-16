@@ -11,6 +11,7 @@ export class StatusesAPI {
       .from('statuses')
       .select('*')
       .eq('is_active', true)
+      .is('deleted_at', null)
       .order('order_index', { ascending: true });
 
     if (error) {
@@ -63,12 +64,13 @@ export class StatusesAPI {
     return data;
   }
 
-  async deleteStatus(id: string): Promise<void> {
+  async archiveStatus(id: string, deletedBy: string): Promise<void> {
     // First check if any leads are using this status
     const { data: leadsUsingStatus, error: checkError } = await supabase
       .from('leads')
       .select('id')
       .eq('status_id', id)
+      .is('deleted_at', null)
       .limit(1);
 
     if (checkError) {
@@ -76,17 +78,53 @@ export class StatusesAPI {
     }
 
     if (leadsUsingStatus && leadsUsingStatus.length > 0) {
-      throw new Error('Cannot delete status that is currently assigned to leads. Please reassign leads first.');
+      throw new Error('Cannot archive status that is currently assigned to leads. Please reassign leads first.');
     }
 
+    const { error } = await supabase
+      .from('statuses')
+      .update({ deleted_at: new Date().toISOString(), deleted_by: deletedBy })
+      .eq('id', id);
+
+    if (error) {
+      throw new Error(`Failed to archive status: ${error.message}`);
+    }
+  }
+
+  async restoreStatus(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('statuses')
+      .update({ deleted_at: null, deleted_by: null })
+      .eq('id', id);
+
+    if (error) {
+      throw new Error(`Failed to restore status: ${error.message}`);
+    }
+  }
+
+  async permanentlyDeleteStatus(id: string): Promise<void> {
     const { error } = await supabase
       .from('statuses')
       .delete()
       .eq('id', id);
 
     if (error) {
-      throw new Error(`Failed to delete status: ${error.message}`);
+      throw new Error(`Failed to permanently delete status: ${error.message}`);
     }
+  }
+
+  async getArchivedStatuses(): Promise<Status[]> {
+    const { data, error } = await supabase
+      .from('statuses')
+      .select('*')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch archived statuses: ${error.message}`);
+    }
+
+    return data || [];
   }
 
   async reorderStatuses(statusUpdates: { id: string; order_index: number }[]): Promise<Status[]> {

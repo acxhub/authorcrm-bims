@@ -20,6 +20,7 @@ export class TagsAPI {
       .from('tags')
       .select('*')
       .eq('is_active', true)
+      .is('deleted_at', null)
       .order('name', { ascending: true });
 
     if (error) {
@@ -72,26 +73,65 @@ export class TagsAPI {
     return data;
   }
 
-  async deleteTag(id: string): Promise<void> {
+  async archiveTag(id: string, deletedBy: string): Promise<void> {
     const { error } = await supabase
       .from('tags')
-      .update({ is_active: false })
+      .update({ is_active: false, deleted_at: new Date().toISOString(), deleted_by: deletedBy })
       .eq('id', id);
 
     if (error) {
-      throw new Error(`Failed to delete tag: ${error.message}`);
+      throw new Error(`Failed to archive tag: ${error.message}`);
     }
   }
 
-  async deleteAllTags(): Promise<void> {
+  async archiveAllTags(deletedBy: string): Promise<void> {
     const { error } = await supabase
       .from('tags')
-      .update({ is_active: false })
+      .update({ is_active: false, deleted_at: new Date().toISOString(), deleted_by: deletedBy })
       .eq('is_active', true);
 
     if (error) {
-      throw new Error(`Failed to delete all tags: ${error.message}`);
+      throw new Error(`Failed to archive all tags: ${error.message}`);
     }
+  }
+
+  async restoreTag(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('tags')
+      .update({ is_active: true, deleted_at: null, deleted_by: null })
+      .eq('id', id);
+
+    if (error) {
+      throw new Error(`Failed to restore tag: ${error.message}`);
+    }
+  }
+
+  async permanentlyDeleteTag(id: string): Promise<void> {
+    // Remove tag associations first
+    await supabase.from('lead_tags').delete().eq('tag_id', id);
+
+    const { error } = await supabase
+      .from('tags')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      throw new Error(`Failed to permanently delete tag: ${error.message}`);
+    }
+  }
+
+  async getArchivedTags(): Promise<Tag[]> {
+    const { data, error } = await supabase
+      .from('tags')
+      .select('*')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch archived tags: ${error.message}`);
+    }
+
+    return data || [];
   }
 
   async initializePredefinedTags(): Promise<Tag[]> {
