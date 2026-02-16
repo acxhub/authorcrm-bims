@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 export type Tag = Tables<'tags'>;
+export type TagType = 'status' | 'service';
 export type CreateTagRequest = Omit<TablesInsert<'tags'>, 'id' | 'created_at' | 'updated_at'>;
 export type UpdateTagRequest = Partial<Omit<TablesUpdate<'tags'>, 'id' | 'created_at' | 'updated_at'>>;
 
@@ -15,13 +16,19 @@ export const PREDEFINED_TAGS = [
 ];
 
 export class TagsAPI {
-  async getTags(): Promise<Tag[]> {
-    const { data, error } = await supabase
+  async getTags(tagType?: TagType): Promise<Tag[]> {
+    let query = supabase
       .from('tags')
       .select('*')
       .eq('is_active', true)
       .is('deleted_at', null)
       .order('name', { ascending: true });
+
+    if (tagType) {
+      query = query.eq('tag_type', tagType);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       throw new Error(`Failed to fetch tags: ${error.message}`);
@@ -153,11 +160,11 @@ export class TagsAPI {
       tag => !existingTagNames.includes(tag.name)
     );
 
-    // Reactivate any inactive predefined tags
+    // Reactivate any inactive predefined tags and ensure tag_type is status
     if (inactiveTagNames.length > 0) {
       const { error: reactivateError } = await supabase
         .from('tags')
-        .update({ is_active: true })
+        .update({ is_active: true, tag_type: 'status' })
         .in('name', inactiveTagNames);
 
       if (reactivateError) {
@@ -165,13 +172,14 @@ export class TagsAPI {
       }
     }
 
-    // Create new tags that don't exist at all
+    // Create new tags that don't exist at all (all predefined tags are status type)
     if (tagsToCreate.length > 0) {
       const { data, error } = await supabase
         .from('tags')
         .insert(tagsToCreate.map(tag => ({
           ...tag,
-          is_active: true
+          is_active: true,
+          tag_type: 'status' as const,
         })))
         .select('*');
 

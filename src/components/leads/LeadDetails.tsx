@@ -474,19 +474,32 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
             </CardContent>
           </Card>
 
-          {/* Tags */}
+          {/* Tags: Status Tags and Service Tags */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Hash className="h-5 w-5" />
                 Tags
               </CardTitle>
+              <p className="text-sm text-gray-500">Status tags (lead state) and service tags (offering type)</p>
             </CardHeader>
-            <CardContent>
-              <SimpleTagAdd 
-                lead={lead} 
-                onTagsChange={handleTagsChange}
-              />
+            <CardContent className="space-y-6">
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Status Tags</h4>
+                <SimpleTagAdd 
+                  lead={lead} 
+                  tagType="status"
+                  onTagsChange={handleTagsChange}
+                />
+              </div>
+              <div className="pt-4 border-t border-gray-100">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Service Tags</h4>
+                <SimpleTagAdd 
+                  lead={lead} 
+                  tagType="service"
+                  onTagsChange={handleTagsChange}
+                />
+              </div>
             </CardContent>
           </Card>
 

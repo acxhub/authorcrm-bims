@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { tagsApi, type CreateTagRequest, type UpdateTagRequest } from '@/lib/api/tags';
+import { tagsApi, type CreateTagRequest, type UpdateTagRequest, type TagType } from '@/lib/api/tags';
 import { useToast } from '@/hooks/use-toast';
 
-export const useTags = () => {
+export const useTags = (tagType?: TagType) => {
   return useQuery({
-    queryKey: ['tags'],
-    queryFn: () => tagsApi.getTags(),
+    queryKey: ['tags', tagType],
+    queryFn: () => tagsApi.getTags(tagType),
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 };

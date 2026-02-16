@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,42 +7,43 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useManageLeadTags } from '@/hooks/useLeads';
-import { PREDEFINED_TAGS } from '@/lib/api/tags';
 import { useTags } from '@/hooks/useTags';
 import type { Lead } from '@/lib/api/leads';
-import type { Tag as TagType } from '@/lib/api/tags';
+import type { Tag as TagType, TagType as TagCategory } from '@/lib/api/tags';
 
 interface SimpleTagAddProps {
   lead: Lead;
+  tagType: TagCategory;
   onTagsChange?: (tags: TagType[]) => void;
 }
 
+const TAG_TYPE_LABELS: Record<TagCategory, string> = {
+  status: 'Status Tags',
+  service: 'Service Tags',
+};
+
 export const SimpleTagAdd: React.FC<SimpleTagAddProps> = ({ 
   lead, 
+  tagType,
   onTagsChange 
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
-  const { data: allTags } = useTags();
+  const { data: tagsOfType } = useTags(tagType);
   const { addTags, removeTags } = useManageLeadTags();
 
-  // Filter to only show predefined tags that exist in the system
-  const predefinedTagNames = PREDEFINED_TAGS.map(tag => tag.name);
-  const availablePredefinedTags = allTags?.filter(tag => 
-    predefinedTagNames.includes(tag.name)
-  ) || [];
-
-  // Get current lead tags (all tags, not just predefined)
-  const currentTags = lead.tags || [];
-  
-  // Separate predefined from custom tags
-  const currentPredefinedTags = currentTags.filter(tag => 
-    predefinedTagNames.includes(tag.name)
+  const allLeadTags = lead.tags || [];
+  const currentTagsOfType = useMemo(() => 
+    allLeadTags.filter(tag => (tag.tag_type || 'status') === tagType),
+    [allLeadTags, tagType]
   );
-  const currentCustomTags = currentTags.filter(tag => 
-    !predefinedTagNames.includes(tag.name)
+  const availableTags = tagsOfType || [];
+  const availableToAdd = useMemo(() => 
+    availableTags.filter(tag => !currentTagsOfType.some(t => t.id === tag.id)),
+    [availableTags, currentTagsOfType]
   );
+  const currentTagIds = currentTagsOfType.map(t => t.id);
 
   const handleAddTags = async () => {
     if (selectedTagIds.length === 0) return;
@@ -74,104 +75,60 @@ export const SimpleTagAdd: React.FC<SimpleTagAddProps> = ({
   };
 
   const isLoading = addTags.isPending || removeTags.isPending;
-
-  // Tags that can be added (not already on the lead)
-  const currentTagIds = currentPredefinedTags.map(tag => tag.id);
-  const availableToAdd = availablePredefinedTags.filter(tag => 
-    !currentTagIds.includes(tag.id)
-  );
+  const label = TAG_TYPE_LABELS[tagType];
 
   return (
     <div className="space-y-3">
-      {/* All Current Tags */}
       <div className="space-y-2">
-        {/* Predefined Tags */}
-        {currentPredefinedTags.length > 0 && (
-          <div>
-            <div className="text-xs font-medium text-gray-600 mb-1">Predefined Tags</div>
-            <div className="flex flex-wrap gap-2">
-              {currentPredefinedTags.map((tag) => (
-                <Badge
-                  key={tag.id}
-                  variant="secondary"
-                  className="flex items-center gap-1 pr-1"
-                  style={{
-                    backgroundColor: `${tag.color}20`,
-                    color: tag.color,
-                    borderColor: tag.color
-                  }}
+        {currentTagsOfType.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {currentTagsOfType.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant="secondary"
+                className="flex items-center gap-1 pr-1"
+                style={{
+                  backgroundColor: `${tag.color}20`,
+                  color: tag.color,
+                  borderColor: tag.color
+                }}
+              >
+                {tag.name}
+                <button
+                  onClick={() => handleRemoveTag(tag.id)}
+                  disabled={isLoading}
+                  className="ml-1 hover:bg-red-100 rounded-full p-0.5 transition-colors"
                 >
-                  {tag.name}
-                  <button
-                    onClick={() => handleRemoveTag(tag.id)}
-                    disabled={isLoading}
-                    className="ml-1 hover:bg-red-100 rounded-full p-0.5 transition-colors"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
           </div>
-        )}
-        
-        {/* Custom Tags */}
-        {currentCustomTags.length > 0 && (
-          <div>
-            <div className="text-xs font-medium text-gray-600 mb-1">Custom Tags</div>
-            <div className="flex flex-wrap gap-2">
-              {currentCustomTags.map((tag) => (
-                <Badge
-                  key={tag.id}
-                  variant="outline"
-                  className="flex items-center gap-1 pr-1"
-                  style={{
-                    backgroundColor: tag.color ? `${tag.color}10` : undefined,
-                    color: tag.color || undefined,
-                    borderColor: tag.color || undefined
-                  }}
-                >
-                  {tag.name}
-                  <button
-                    onClick={() => handleRemoveTag(tag.id)}
-                    disabled={isLoading}
-                    className="ml-1 hover:bg-red-100 rounded-full p-0.5 transition-colors"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {/* No tags message */}
-        {currentTags.length === 0 && (
-          <div className="text-sm text-gray-500 italic">No tags applied</div>
+        ) : (
+          <div className="text-sm text-gray-500 italic">No {label.toLowerCase()} applied</div>
         )}
       </div>
 
-      {/* Add Tags Button */}
       {availableToAdd.length > 0 && (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="h-8">
               <Plus className="h-3 w-3 mr-1" />
-              Add Predefined Tags
+              Add {label}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Add Predefined Tags</DialogTitle>
+              <DialogTitle>Add {label}</DialogTitle>
             </DialogHeader>
             
             <div className="space-y-4">
               <div>
-                <Label>Available Predefined Tags</Label>
+                <Label>Available {label}</Label>
                 <ScrollArea className="h-48 mt-2 border rounded-md p-2">
                   {availableToAdd.length === 0 ? (
                     <div className="text-center py-4 text-sm text-gray-500">
-                      All predefined tags are already applied to this lead
+                      All {label.toLowerCase()} are already applied to this lead
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -257,10 +214,9 @@ export const SimpleTagAdd: React.FC<SimpleTagAddProps> = ({
         </Dialog>
       )}
 
-      {/* Info about predefined tags */}
-      {availablePredefinedTags.length === 0 && (
+      {availableTags.length === 0 && (
         <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
-          No predefined tags found. Please initialize them in the Admin Panel.
+          No {label.toLowerCase()} found. Add them in Admin → Tags.
         </div>
       )}
     </div>
