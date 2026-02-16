@@ -61,9 +61,9 @@ export const PipelineBoard: React.FC = () => {
     setSearchParams(params);
   };
   
-  // Filter state
+  // Filter state - show filters by default
   const [filters, setFilters] = useState<DealsFilter>({});
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: undefined,
     to: undefined,
@@ -316,15 +316,15 @@ export const PipelineBoard: React.FC = () => {
                   Refresh
                 </Button>
                 <Button 
-                  variant={showFilters ? "default" : "outline"}
+                  variant="outline"
                   size="sm"
                   onClick={() => setShowFilters(!showFilters)}
-                  className={showFilters ? "bg-blue-600 hover:bg-blue-700" : "bg-white/80 backdrop-blur-sm"}
+                  className="bg-white/80 backdrop-blur-sm"
                 >
                   <Filter className="h-4 w-4 mr-2" />
-                  Filters
+                  {showFilters ? 'Hide Filters' : 'Show Filters'}
                   {hasActiveFilters && (
-                    <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 text-xs bg-blue-100 text-blue-700">
+                    <Badge variant="secondary" className="ml-2 h-5 min-w-5 px-1.5 text-xs bg-blue-100 text-blue-700">
                       {Object.keys(filters).filter(key => filters[key as keyof DealsFilter] !== undefined).length}
                     </Badge>
                   )}
@@ -339,15 +339,44 @@ export const PipelineBoard: React.FC = () => {
               </div>
             </div>
 
-            {/* Filter Bar */}
+            {/* Filter Bar - Always visible by default */}
             {showFilters && (
-              <div className="bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200/60 p-4 animate-in slide-in-from-top-2 duration-200 shadow-sm">
-                <div className="flex items-center gap-4 flex-wrap">
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                {/* Filter Header with Clear Button */}
+                <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <UserCheck className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">Assigned to:</span>
+                    <Filter className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-semibold text-gray-700">Filters</span>
+                    {hasActiveFilters && (
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
+                        {Object.keys(filters).filter(key => filters[key as keyof DealsFilter] !== undefined).length} active
+                      </Badge>
+                    )}
+                  </div>
+                  <Button
+                    variant={hasActiveFilters ? "destructive" : "outline"}
+                    size="sm"
+                    onClick={clearFilters}
+                    className={hasActiveFilters 
+                      ? "bg-red-500 hover:bg-red-600 text-white" 
+                      : "text-gray-500 hover:text-gray-700"
+                    }
+                  >
+                    <FilterX className="h-4 w-4 mr-2" />
+                    Clear All Filters
+                  </Button>
+                </div>
+
+                {/* Filter Controls */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Assigned To Filter */}
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <UserCheck className="h-4 w-4 text-gray-400" />
+                      Assigned To
+                    </label>
                     <Select value={filters.assigned_to || 'all'} onValueChange={handleUserFilter}>
-                      <SelectTrigger className="w-48 bg-white">
+                      <SelectTrigger className="w-full bg-white border-gray-200 hover:border-gray-300 transition-colors">
                         <SelectValue placeholder="All users" />
                       </SelectTrigger>
                       <SelectContent className="max-h-[200px] overflow-y-auto">
@@ -361,11 +390,14 @@ export const PipelineBoard: React.FC = () => {
                     </Select>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">Category:</span>
+                  {/* Category Filter */}
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <Building2 className="h-4 w-4 text-gray-400" />
+                      Category
+                    </label>
                     <Select value={filters.category || 'all'} onValueChange={handleCategoryFilter}>
-                      <SelectTrigger className="w-48 bg-white">
+                      <SelectTrigger className="w-full bg-white border-gray-200 hover:border-gray-300 transition-colors">
                         <SelectValue placeholder="All categories" />
                       </SelectTrigger>
                       <SelectContent>
@@ -385,26 +417,28 @@ export const PipelineBoard: React.FC = () => {
                     </Select>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <CalendarIcon className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">Date Range:</span>
+                  {/* Date Range Filter */}
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <CalendarIcon className="h-4 w-4 text-gray-400" />
+                      Date Range
+                    </label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
-                          className="w-64 justify-start text-left font-normal bg-white"
+                          className="w-full justify-start text-left font-normal bg-white border-gray-200 hover:border-gray-300 transition-colors"
                         >
                           {dateRange.from ? (
                             dateRange.to ? (
                               <>
-                                {format(dateRange.from, "PPP")} -{" "}
-                                {format(dateRange.to, "PPP")}
+                                {format(dateRange.from, "MMM dd, yyyy")} - {format(dateRange.to, "MMM dd, yyyy")}
                               </>
                             ) : (
-                              format(dateRange.from, "PPP")
+                              format(dateRange.from, "MMM dd, yyyy")
                             )
                           ) : (
-                            <span className="text-gray-500">Pick a date range</span>
+                            <span className="text-gray-500">Select date range</span>
                           )}
                         </Button>
                       </PopoverTrigger>
@@ -424,53 +458,44 @@ export const PipelineBoard: React.FC = () => {
                       </PopoverContent>
                     </Popover>
                   </div>
-
-                  {hasActiveFilters && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearFilters}
-                      className="text-gray-500 hover:text-gray-700 ml-auto"
-                    >
-                      <FilterX className="h-4 w-4 mr-2" />
-                      Clear all filters
-                    </Button>
-                  )}
                 </div>
 
-                {/* Active Filters Display */}
+                {/* Active Filters Tags */}
                 {hasActiveFilters && (
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200">
-                    <span className="text-xs font-medium text-gray-500">Active filters:</span>
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                    <span className="text-xs font-medium text-gray-500">Active:</span>
                     {filters.assigned_to && (
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                        User: {users.find(u => u.id === filters.assigned_to)?.full_name || 'Unknown'}
+                      <Badge variant="secondary" className="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors">
+                        <UserCheck className="h-3 w-3 mr-1" />
+                        {users.find(u => u.id === filters.assigned_to)?.full_name || 'Unknown'}
                         <button
                           onClick={() => handleUserFilter('all')}
-                          className="ml-1 hover:bg-blue-200 rounded-full p-0.5"
+                          className="ml-1.5 hover:bg-blue-200 rounded-full p-0.5 transition-colors"
                         >
                           <X className="h-3 w-3" />
                         </button>
                       </Badge>
                     )}
                     {filters.category && (
-                      <Badge variant="secondary" className="bg-green-100 text-green-700">
-                        Category: {filters.category}
+                      <Badge variant="secondary" className="bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors">
+                        <Building2 className="h-3 w-3 mr-1" />
+                        {filters.category}
                         <button
                           onClick={() => handleCategoryFilter('all')}
-                          className="ml-1 hover:bg-green-200 rounded-full p-0.5"
+                          className="ml-1.5 hover:bg-green-200 rounded-full p-0.5 transition-colors"
                         >
                           <X className="h-3 w-3" />
                         </button>
                       </Badge>
                     )}
                     {(filters.date_from || filters.date_to) && (
-                      <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-                        Date: {dateRange.from && format(dateRange.from, "MMM dd")}
+                      <Badge variant="secondary" className="bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors">
+                        <CalendarIcon className="h-3 w-3 mr-1" />
+                        {dateRange.from && format(dateRange.from, "MMM dd")}
                         {dateRange.to && ` - ${format(dateRange.to, "MMM dd")}`}
                         <button
                           onClick={() => handleDateRangeChange(undefined, undefined)}
-                          className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
+                          className="ml-1.5 hover:bg-purple-200 rounded-full p-0.5 transition-colors"
                         >
                           <X className="h-3 w-3" />
                         </button>
