@@ -115,7 +115,7 @@ export const NeedsAttention: React.FC = () => {
         title: 'Stale Deals',
         description: `No activity in 14+ days`,
         count: staleDeals.length,
-        onClick: () => navigate('/pipeline')
+        onClick: () => navigate('/pipeline?view=table&filter=stale')
       });
     }
 
@@ -153,7 +153,7 @@ export const NeedsAttention: React.FC = () => {
         title: 'Deals Need Progress',
         description: `Stuck in early stages 7+ days`,
         count: stuckDeals.length,
-        onClick: () => navigate('/pipeline')
+        onClick: () => navigate('/pipeline?view=table&filter=stuck')
       });
     }
 

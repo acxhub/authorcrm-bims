@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { PipelineColumn } from './PipelineColumn';
+import { PipelineTableView } from './PipelineTableView';
 import { EditPipelineDealModal } from './EditPipelineDealModal';
 import { CreateDealModal } from '@/components/deals/CreateDealModal';
 import { useDeals, useUpdateDeal, useCreateDeal } from '@/hooks/useDeals';
@@ -17,8 +18,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { DollarSign, TrendingUp, Users, Target, Plus, Filter, RefreshCw, X, Building2, Megaphone, Briefcase, UserCheck, FilterX, CalendarIcon } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DollarSign, TrendingUp, Users, Target, Plus, Filter, RefreshCw, X, Building2, Megaphone, Briefcase, UserCheck, FilterX, CalendarIcon, LayoutGrid, Table as TableIcon } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import type { Deal, CreateDealData, UpdateDealData, DealsFilter } from '@/lib/api/deals';
 
@@ -30,6 +32,34 @@ const CATEGORIES = [
 
 export const PipelineBoard: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // View state from URL
+  const viewFromUrl = searchParams.get('view') as 'board' | 'table' | null;
+  const filterFromUrl = searchParams.get('filter') as 'stale' | 'stuck' | 'all' | null;
+  
+  const [viewMode, setViewMode] = useState<'board' | 'table'>(viewFromUrl || 'board');
+  const [attentionFilter, setAttentionFilter] = useState<'stale' | 'stuck' | 'all'>(filterFromUrl || 'all');
+  
+  // Sync URL params with state
+  useEffect(() => {
+    if (viewFromUrl) setViewMode(viewFromUrl);
+    if (filterFromUrl) setAttentionFilter(filterFromUrl);
+  }, [viewFromUrl, filterFromUrl]);
+  
+  // Update URL when view changes
+  const handleViewChange = (newView: 'board' | 'table') => {
+    setViewMode(newView);
+    const params = new URLSearchParams(searchParams);
+    if (newView === 'board') {
+      params.delete('view');
+      params.delete('filter');
+      setAttentionFilter('all');
+    } else {
+      params.set('view', newView);
+    }
+    setSearchParams(params);
+  };
   
   // Filter state
   const [filters, setFilters] = useState<DealsFilter>({});
@@ -261,6 +291,20 @@ export const PipelineBoard: React.FC = () => {
                 </p>
               </div>
               <div className="flex items-center gap-3">
+                {/* View Toggle */}
+                <Tabs value={viewMode} onValueChange={(v) => handleViewChange(v as 'board' | 'table')}>
+                  <TabsList className="bg-white/80 backdrop-blur-sm">
+                    <TabsTrigger value="board" className="gap-2">
+                      <LayoutGrid className="h-4 w-4" />
+                      Board
+                    </TabsTrigger>
+                    <TabsTrigger value="table" className="gap-2">
+                      <TableIcon className="h-4 w-4" />
+                      Table
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                
                 <Button 
                   variant="outline" 
                   size="sm"
@@ -506,67 +550,77 @@ export const PipelineBoard: React.FC = () => {
           </div>
         </div>
 
-        {/* Pipeline Board - Only this section scrolls */}
+        {/* Pipeline Content - Board or Table View */}
         <div className="flex-1 min-h-0 overflow-hidden p-6">
-          <Card className="h-full bg-white/60 backdrop-blur-sm border-gray-200/60 shadow-lg flex flex-col relative">
-            <CardHeader className="flex-shrink-0 bg-white/80 backdrop-blur-sm border-b border-gray-200/60">
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
-                Sales Pipeline
-                {hasActiveFilters && (
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                    Filtered
-                  </Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
-              <div className="h-full overflow-x-auto overflow-y-hidden p-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400 transition-colors">
-                {totalDeals === 0 ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <TrendingUp className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        {hasActiveFilters ? 'No deals match your filters' : 'No deals in pipeline'}
-                      </h3>
-                      <p className="text-gray-500 mb-4">
-                        {hasActiveFilters 
-                          ? 'Try adjusting your filters or create a new deal.'
-                          : 'Get started by creating your first deal.'
-                        }
-                      </p>
-                      {hasActiveFilters ? (
-                        <Button variant="outline" onClick={clearFilters}>
-                          <FilterX className="h-4 w-4 mr-2" />
-                          Clear filters
-                        </Button>
-                      ) : (
-                        <Button onClick={() => setShowCreateModal(true)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Create Deal
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex gap-6 h-full">
-                    {sortedStatuses
-                      .map((status) => (
-                      <div key={status.id} className="flex-shrink-0 w-[340px] h-full">
-                        <PipelineColumn
-                          status={status}
-                          deals={dealsByStatus[status.id] || []}
-                          onDealClick={handleDealClick}
-                          onDealEdit={handleDealEdit}
-                          onDealMove={handleDealMove}
-                        />
+          {viewMode === 'table' ? (
+            <div className="h-full overflow-auto">
+              <PipelineTableView 
+                deals={deals} 
+                filter={attentionFilter}
+                onDealClick={handleDealClick}
+              />
+            </div>
+          ) : (
+            <Card className="h-full bg-white/60 backdrop-blur-sm border-gray-200/60 shadow-lg flex flex-col relative">
+              <CardHeader className="flex-shrink-0 bg-white/80 backdrop-blur-sm border-b border-gray-200/60">
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                  Sales Pipeline
+                  {hasActiveFilters && (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                      Filtered
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
+                <div className="h-full overflow-x-auto overflow-y-hidden p-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400 transition-colors">
+                  {totalDeals === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <TrendingUp className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          {hasActiveFilters ? 'No deals match your filters' : 'No deals in pipeline'}
+                        </h3>
+                        <p className="text-gray-500 mb-4">
+                          {hasActiveFilters 
+                            ? 'Try adjusting your filters or create a new deal.'
+                            : 'Get started by creating your first deal.'
+                          }
+                        </p>
+                        {hasActiveFilters ? (
+                          <Button variant="outline" onClick={clearFilters}>
+                            <FilterX className="h-4 w-4 mr-2" />
+                            Clear filters
+                          </Button>
+                        ) : (
+                          <Button onClick={() => setShowCreateModal(true)}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create Deal
+                          </Button>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                    </div>
+                  ) : (
+                    <div className="flex gap-6 h-full">
+                      {sortedStatuses
+                        .map((status) => (
+                        <div key={status.id} className="flex-shrink-0 w-[340px] h-full">
+                          <PipelineColumn
+                            status={status}
+                            deals={dealsByStatus[status.id] || []}
+                            onDealClick={handleDealClick}
+                            onDealEdit={handleDealEdit}
+                            onDealMove={handleDealMove}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Edit Deal Modal */}
