@@ -223,9 +223,7 @@ export const LeadDeals: React.FC<LeadDealsProps> = ({ lead }) => {
         onClose={() => setIsCreateModalOpen(false)}
         onSave={handleCreateDeal}
         isLoading={createDealMutation.isPending}
-        initialData={{
-          author_name: lead.author_name,
-        }}
+        lead={lead}
       />
     </div>
   );

@@ -41,6 +41,8 @@ interface CreateDealModalProps {
   onSave: (data: CreateDealData) => void;
   isLoading?: boolean;
   initialData?: Partial<CreateDealFormData>;
+  /** Pass the lead directly when creating a deal from lead details page */
+  lead?: Lead;
 }
 
 export const CreateDealModal: React.FC<CreateDealModalProps> = ({
@@ -49,22 +51,27 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
   onSave,
   isLoading = false,
   initialData,
+  lead: providedLead,
 }) => {
   const { user } = useAuth();
   const { data: statuses = [] } = useStatuses();
   const { users = [] } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
+  // Only fetch leads if no lead was provided directly (i.e., creating from Pipeline page)
   const { data: leadsData } = useLeads({}, 1, 10000); // Fetch all leads (for sales users, RLS filters to their assigned leads)
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(providedLead || null);
   const [authorSearchOpen, setAuthorSearchOpen] = useState(false);
 
   // Check if user is sales manager
   const isSalesManager = user?.role === 'sales_manager';
+  
+  // If a lead was provided directly, use it
+  const isLeadProvided = !!providedLead;
 
   const form = useForm<CreateDealFormData>({
     resolver: zodResolver(createDealSchema),
     defaultValues: {
-      author_name: initialData?.author_name || '',
-      offer_title: initialData?.offer_title || '',
+      author_name: providedLead?.author_name || initialData?.author_name || '',
+      offer_title: providedLead ? `${providedLead.book_title} - Publishing Package` : (initialData?.offer_title || ''),
       deal_value: initialData?.deal_value || 0,
       category: initialData?.category || 'Publishing',
       assigned_to: initialData?.assigned_to || user?.id,
@@ -73,9 +80,20 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
 
   const watchedAuthorName = form.watch('author_name');
 
-  // Auto-populate fields when author is selected
+  // Initialize selectedLead when providedLead changes (e.g., modal opens)
   useEffect(() => {
-    if (watchedAuthorName && leadsData?.data) {
+    if (providedLead && open) {
+      setSelectedLead(providedLead);
+      form.setValue('author_name', providedLead.author_name);
+      if (!form.getValues('offer_title')) {
+        form.setValue('offer_title', `${providedLead.book_title} - Publishing Package`);
+      }
+    }
+  }, [providedLead, open, form]);
+
+  // Auto-populate fields when author is selected (only when no lead was provided)
+  useEffect(() => {
+    if (!isLeadProvided && watchedAuthorName && leadsData?.data) {
       const matchingLead = leadsData.data.find(
         lead => lead.author_name.toLowerCase().includes(watchedAuthorName.toLowerCase())
       );
@@ -88,7 +106,7 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
         }
       }
     }
-  }, [watchedAuthorName, leadsData, form]);
+  }, [watchedAuthorName, leadsData, form, isLeadProvided]);
 
   const handleSubmit = (data: CreateDealFormData) => {
     if (!data.author_name.trim()) {
@@ -132,7 +150,7 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
 
   const handleClose = () => {
     form.reset();
-    setSelectedLead(null);
+    setSelectedLead(providedLead || null);
     setAuthorSearchOpen(false);
     onClose();
   };
@@ -187,7 +205,14 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Author Name *</FormLabel>
-                  {selectedLead ? (
+                  {isLeadProvided ? (
+                    // Lead was provided directly - show read-only
+                    <Input 
+                      value={field.value} 
+                      readOnly
+                      className="bg-gray-50"
+                    />
+                  ) : selectedLead ? (
                     <div className="flex items-center gap-2">
                       <Input 
                         value={field.value} 
