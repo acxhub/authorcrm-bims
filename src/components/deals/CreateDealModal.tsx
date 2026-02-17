@@ -53,7 +53,7 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
   const { user } = useAuth();
   const { data: statuses = [] } = useStatuses();
   const { users = [] } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
-  const { data: leadsData } = useLeads();
+  const { data: leadsData } = useLeads({}, 1, 10000); // Fetch all leads (for sales users, RLS filters to their assigned leads)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [authorSearchOpen, setAuthorSearchOpen] = useState(false);
 
@@ -208,7 +208,7 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
                       </Button>
                     </div>
                   ) : (
-                    <Popover open={authorSearchOpen} onOpenChange={setAuthorSearchOpen}>
+                    <Popover open={authorSearchOpen} onOpenChange={setAuthorSearchOpen} modal={true}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -224,10 +224,10 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-full p-0">
+                      <PopoverContent className="w-full p-0 z-[9999]" onWheel={(e) => e.stopPropagation()}>
                         <Command>
                           <CommandInput placeholder="Search authors..." />
-                          <CommandList>
+                          <CommandList className="max-h-[300px] overflow-y-auto">
                             <CommandEmpty>No author found.</CommandEmpty>
                             <CommandGroup>
                               {finalAuthorOptions.map((option) => (
