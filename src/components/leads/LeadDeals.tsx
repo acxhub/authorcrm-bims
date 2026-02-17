@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
-import { useDealsByLeadId, useCreateDeal, useArchiveDeal } from '@/hooks/useDeals';
+import { useDealsByLeadId, useCreateDeal, useArchiveDeal, useUpdateDeal } from '@/hooks/useDeals';
 import { CreateDealModal } from '@/components/deals/CreateDealModal';
+import { EditPipelineDealModal } from '@/components/pipeline/EditPipelineDealModal';
 import { useAuth } from '@/hooks/useAuth';
 import type { Lead } from '@/lib/api/leads';
-import type { Deal } from '@/lib/api/deals';
+import type { Deal, UpdateDealData } from '@/lib/api/deals';
 
 interface LeadDealsProps {
   lead: Lead;
@@ -43,10 +44,12 @@ const getCategoryColor = (category: string) => {
 
 export const LeadDeals: React.FC<LeadDealsProps> = ({ lead }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   
   const { data: deals = [], isLoading } = useDealsByLeadId(lead.id);
   const createDealMutation = useCreateDeal();
   const archiveDealMutation = useArchiveDeal();
+  const updateDealMutation = useUpdateDeal();
   const { session } = useAuth();
 
   const handleCreateDeal = async (dealData: any) => {
@@ -65,6 +68,16 @@ export const LeadDeals: React.FC<LeadDealsProps> = ({ lead }) => {
       } catch (error) {
         console.error('Failed to archive deal:', error);
       }
+    }
+  };
+
+  const handleEditDeal = async (data: UpdateDealData) => {
+    if (!editingDeal) return;
+    try {
+      await updateDealMutation.mutateAsync({ id: editingDeal.id, data });
+      setEditingDeal(null);
+    } catch (error) {
+      console.error('Failed to update deal:', error);
     }
   };
 
@@ -137,7 +150,12 @@ export const LeadDeals: React.FC<LeadDealsProps> = ({ lead }) => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => setEditingDeal(deal)}
+                      title="Edit deal"
+                    >
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
@@ -224,6 +242,14 @@ export const LeadDeals: React.FC<LeadDealsProps> = ({ lead }) => {
         onSave={handleCreateDeal}
         isLoading={createDealMutation.isPending}
         lead={lead}
+      />
+
+      <EditPipelineDealModal
+        open={!!editingDeal}
+        onClose={() => setEditingDeal(null)}
+        deal={editingDeal}
+        onSave={handleEditDeal}
+        isLoading={updateDealMutation.isPending}
       />
     </div>
   );
