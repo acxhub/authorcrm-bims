@@ -2,9 +2,11 @@ import { useAuth, useProfile } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { ForcePasswordReset } from '@/components/auth/ForcePasswordReset';
 
+type UserRole = 'leads_manager' | 'sales_manager' | 'sales';
+
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'leads_manager' | 'sales_manager' | 'sales';
+  requiredRole?: UserRole | UserRole[];
 }
 
 const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
@@ -45,8 +47,11 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
     );
   }
 
-  if (requiredRole && profile && profile.role !== requiredRole) {
-    return <Navigate to="/" replace />;
+  if (requiredRole && profile) {
+    const allowedRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    if (!allowedRoles.includes(profile.role as UserRole)) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return <>{children}</>;

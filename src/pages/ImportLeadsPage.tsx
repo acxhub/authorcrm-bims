@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDropzone } from 'react-dropzone';
-import * as XLSX from 'xlsx';
+import readXlsxFile from 'read-excel-file';
 import Papa from 'papaparse';
 import { useCreateLead, useLeads } from '@/hooks/useLeads';
 import { useStatuses } from '@/hooks/useStatuses';
@@ -103,89 +103,79 @@ const ImportLeadsPage: React.FC = () => {
     }
   }, [statuses, selectedStatusId]);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const data = e.target?.result;
-      if (!data) return;
+    try {
+      let parsed: ParsedData;
 
-      try {
-        let parsed: ParsedData;
+      if (file.name.endsWith('.csv')) {
+        // Parse CSV using FileReader
+        const text = await file.text();
+        const result = Papa.parse(text, {
+          header: false,
+          skipEmptyLines: true,
+        });
 
-        if (file.name.endsWith('.csv')) {
-          // Parse CSV
-          const result = Papa.parse(data as string, {
-            header: false,
-            skipEmptyLines: true,
-          });
-          
-          parsed = {
-            headers: result.data[0] as string[],
-            rows: result.data.slice(1) as any[][],
-            fileName: file.name,
-          };
-        } else {
-          // Parse Excel
-          const workbook = XLSX.read(data, { type: 'binary' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-          
-          parsed = {
-            headers: jsonData[0] as string[],
-            rows: jsonData.slice(1) as any[][],
-            fileName: file.name,
-          };
-        }
+        parsed = {
+          headers: result.data[0] as string[],
+          rows: result.data.slice(1) as any[][],
+          fileName: file.name,
+        };
+      } else {
+        // Parse Excel using read-excel-file
+        const rows = await readXlsxFile(file);
+        const stringRows = rows.map(row => row.map(cell => cell != null ? String(cell) : ''));
 
-        setParsedData(parsed);
-        setStep('mapping');
-        
-        // Auto-map fields
-        const autoMapping: FieldMapping = {};
-        parsed.headers.forEach((header) => {
-          const normalizedHeader = header.toLowerCase().trim();
-          
-          // Direct field matches
-          Object.entries(DB_FIELDS).forEach(([field, config]) => {
-            if (normalizedHeader === config.label.toLowerCase() || normalizedHeader === field.toLowerCase()) {
-              autoMapping[header] = field;
-            }
-          });
-          
-          // Special handling for first/last name fields
-          if (normalizedHeader.includes('first') && normalizedHeader.includes('name')) {
-            autoMapping[header] = 'first_name';
-          }
-          if (normalizedHeader.includes('last') && normalizedHeader.includes('name')) {
-            autoMapping[header] = 'last_name';
-          }
-          if (normalizedHeader === 'name' || normalizedHeader === 'full name') {
-            // Try to find additional first/last name columns before using as author_name
-            const hasFirstName = parsed.headers.some(h => 
-              h.toLowerCase().includes('first') && h.toLowerCase().includes('name')
-            );
-            const hasLastName = parsed.headers.some(h => 
-              h.toLowerCase().includes('last') && h.toLowerCase().includes('name')
-            );
-            
-            if (!hasFirstName && !hasLastName) {
-              autoMapping[header] = 'author_name';
-            }
+        parsed = {
+          headers: stringRows[0] as string[],
+          rows: stringRows.slice(1) as any[][],
+          fileName: file.name,
+        };
+      }
+
+      setParsedData(parsed);
+      setStep('mapping');
+
+      // Auto-map fields
+      const autoMapping: FieldMapping = {};
+      parsed.headers.forEach((header) => {
+        const normalizedHeader = header.toLowerCase().trim();
+
+        // Direct field matches
+        Object.entries(DB_FIELDS).forEach(([field, config]) => {
+          if (normalizedHeader === config.label.toLowerCase() || normalizedHeader === field.toLowerCase()) {
+            autoMapping[header] = field;
           }
         });
-        
-        setFieldMapping(autoMapping);
-      } catch (error) {
-        console.error('Error parsing file:', error);
-        // TODO: Show error message to user
-      }
-    };
 
-    reader.readAsBinaryString(file);
+        // Special handling for first/last name fields
+        if (normalizedHeader.includes('first') && normalizedHeader.includes('name')) {
+          autoMapping[header] = 'first_name';
+        }
+        if (normalizedHeader.includes('last') && normalizedHeader.includes('name')) {
+          autoMapping[header] = 'last_name';
+        }
+        if (normalizedHeader === 'name' || normalizedHeader === 'full name') {
+          // Try to find additional first/last name columns before using as author_name
+          const hasFirstName = parsed.headers.some(h =>
+            h.toLowerCase().includes('first') && h.toLowerCase().includes('name')
+          );
+          const hasLastName = parsed.headers.some(h =>
+            h.toLowerCase().includes('last') && h.toLowerCase().includes('name')
+          );
+
+          if (!hasFirstName && !hasLastName) {
+            autoMapping[header] = 'author_name';
+          }
+        }
+      });
+
+      setFieldMapping(autoMapping);
+    } catch (error) {
+      console.error('Error parsing file:', error);
+    }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

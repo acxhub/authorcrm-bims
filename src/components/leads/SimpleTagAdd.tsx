@@ -3,6 +3,17 @@ import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -94,13 +105,33 @@ export const SimpleTagAdd: React.FC<SimpleTagAddProps> = ({
                 }}
               >
                 {tag.name}
-                <button
-                  onClick={() => handleRemoveTag(tag.id)}
-                  disabled={isLoading}
-                  className="ml-1 hover:bg-red-100 rounded-full p-0.5 transition-colors"
-                >
-                  <X className="h-3 w-3" />
-                </button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      disabled={isLoading}
+                      className="ml-1 hover:bg-red-100 rounded-full p-0.5 transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Remove Tag</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to remove the tag "{tag.name}" from this lead?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleRemoveTag(tag.id)}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Remove
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </Badge>
             ))}
           </div>

@@ -44,7 +44,8 @@ export const AdminPanel: React.FC = () => {
   }, [urlTab, setSearchParams]);
 
   // Only redirect if loading is done and user/profile/role is not correct
-  if (!loading && (!user || !profile || profile.role !== 'leads_manager')) {
+  const isAdmin = profile?.role === 'leads_manager' || profile?.role === 'sales_manager';
+  if (!loading && (!user || !profile || !isAdmin)) {
     return <Navigate to="/" replace />;
   }
 

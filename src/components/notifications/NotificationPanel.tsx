@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Bell, CheckCheck } from 'lucide-react';
+import { Bell, CheckCheck, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -74,7 +75,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
       <Separator />
 
       {/* Notification list */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 max-h-[350px]">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
@@ -98,6 +99,19 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
           </div>
         )}
       </ScrollArea>
+
+      {/* See All link */}
+      <Separator />
+      <div className="px-4 py-2">
+        <Link
+          to="/notifications"
+          onClick={onClose}
+          className="flex items-center justify-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium py-1 transition-colors"
+        >
+          See all notifications
+          <ExternalLink className="h-3 w-3" />
+        </Link>
+      </div>
     </div>
   );
 };

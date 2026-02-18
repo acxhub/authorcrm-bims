@@ -646,12 +646,14 @@ export type Database = {
           deleted_by: string | null
           first_name: string | null
           id: string
+          is_pinned: boolean
           last_name: string | null
           multiple_titles: boolean | null
           offer_title: string | null
           other_titles: Json | null
           phone_number_1: string | null
           phone_number_2: string | null
+          pinned_at: string | null
           primary_email: string | null
           publisher: string | null
           recycled_at: string | null
@@ -679,12 +681,14 @@ export type Database = {
           deleted_by?: string | null
           first_name?: string | null
           id?: string
+          is_pinned?: boolean
           last_name?: string | null
           multiple_titles?: boolean | null
           offer_title?: string | null
           other_titles?: Json | null
           phone_number_1?: string | null
           phone_number_2?: string | null
+          pinned_at?: string | null
           primary_email?: string | null
           publisher?: string | null
           recycled_at?: string | null
@@ -712,12 +716,14 @@ export type Database = {
           deleted_by?: string | null
           first_name?: string | null
           id?: string
+          is_pinned?: boolean
           last_name?: string | null
           multiple_titles?: boolean | null
           offer_title?: string | null
           other_titles?: Json | null
           phone_number_1?: string | null
           phone_number_2?: string | null
+          pinned_at?: string | null
           primary_email?: string | null
           publisher?: string | null
           recycled_at?: string | null

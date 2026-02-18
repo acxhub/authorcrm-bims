@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, UserPlus, Hash, Trash2, CheckSquare, RefreshCw, Search, Check } from 'lucide-react';
+import { Users, UserPlus, Hash, Trash2, CheckSquare, RefreshCw, Search, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,6 +14,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { useUsersContext } from '@/contexts/UsersContext';
 import { useUpdateLead, useArchiveLead, useManageLeadTags } from '@/hooks/useLeads';
+import { leadsApi } from '@/lib/api/leads';
+import { toast } from '@/hooks/use-toast';
 import { useTags } from '@/hooks/useTags';
 import { useStatuses } from '@/hooks/useStatuses';
 import { useCreateActivity } from '@/hooks/useActivities';
@@ -38,6 +40,8 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [isRemoveTagDialogOpen, setIsRemoveTagDialogOpen] = useState(false);
+  const [selectedRemoveTagIds, setSelectedRemoveTagIds] = useState<string[]>([]);
   const [selectedStatusId, setSelectedStatusId] = useState<string>('');
   const [openUserCombobox, setOpenUserCombobox] = useState(false);
 
@@ -48,7 +52,7 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
   const { data: statuses, isLoading: statusesLoading } = useStatuses();
   const updateLead = useUpdateLead();
   const archiveLead = useArchiveLead();
-  const { addTags } = useManageLeadTags();
+  const { addTags, removeTags } = useManageLeadTags();
   const createActivity = useCreateActivity();
 
   const handleBulkAssign = async () => {
@@ -261,6 +265,50 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
     }
   };
 
+  const handleRemoveTagToggle = (tagId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedRemoveTagIds(prev => [...prev, tagId]);
+    } else {
+      setSelectedRemoveTagIds(prev => prev.filter(id => id !== tagId));
+    }
+  };
+
+  const handleBulkRemoveTags = async () => {
+    if (selectedRemoveTagIds.length === 0 || selectedLeads.length === 0) return;
+
+    try {
+      // Use raw API to avoid per-lead toast spam from the mutation hook
+      await Promise.all(
+        selectedLeads.map(async (lead) => {
+          const leadTagIds = lead.tags?.map(t => t.id) || [];
+          const tagsToRemove = selectedRemoveTagIds.filter(id => leadTagIds.includes(id));
+          if (tagsToRemove.length > 0) {
+            await leadsApi.removeTagsFromLead(lead.id, tagsToRemove);
+          }
+        })
+      );
+
+      toast({
+        title: 'Tags removed',
+        description: `Tags removed from ${selectedLeads.length} lead${selectedLeads.length > 1 ? 's' : ''}.`,
+      });
+
+      setIsRemoveTagDialogOpen(false);
+      setSelectedRemoveTagIds([]);
+      onSelectionChange([]);
+      onActionsComplete();
+    } catch (error) {
+      console.error('Bulk tag removal failed:', error);
+      toast({
+        title: 'Error removing tags',
+        description: 'Some tags could not be removed. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const canBulkRemoveTags = profile?.role === 'leads_manager' || profile?.role === 'sales_manager';
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -270,7 +318,7 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
       .slice(0, 2);
   };
 
-  const isLoading = updateLead.isPending || archiveLead.isPending || addTags.isPending;
+  const isLoading = updateLead.isPending || archiveLead.isPending || addTags.isPending || removeTags.isPending;
 
   if (selectedLeads.length === 0) {
     return null;
@@ -583,6 +631,112 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Bulk Remove Tags - managers only */}
+          {canBulkRemoveTags && (
+            <Dialog open={isRemoveTagDialogOpen} onOpenChange={(open) => { setIsRemoveTagDialogOpen(open); if (!open) setSelectedRemoveTagIds([]); }}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-orange-600 hover:text-orange-700">
+                  <X className="h-4 w-4 mr-2" />
+                  Remove Tags
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Bulk Remove Tags</DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label>Removing tags from {selectedLeads.length} lead{selectedLeads.length > 1 ? 's' : ''}:</Label>
+                    <div className="mt-2 max-h-48 overflow-y-auto border rounded-md p-2">
+                      {tagsLoading ? (
+                        <div className="text-center py-4 text-sm text-gray-500">
+                          Loading tags...
+                        </div>
+                      ) : allTags?.length === 0 ? (
+                        <div className="text-center py-4 text-sm text-gray-500">
+                          No tags available
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {allTags?.map((tag) => (
+                            <div key={tag.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`bulk-remove-tag-${tag.id}`}
+                                checked={selectedRemoveTagIds.includes(tag.id)}
+                                onCheckedChange={(checked) =>
+                                  handleRemoveTagToggle(tag.id, checked as boolean)
+                                }
+                              />
+                              <label
+                                htmlFor={`bulk-remove-tag-${tag.id}`}
+                                className="flex-1 flex items-center gap-2 cursor-pointer"
+                              >
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: tag.color }}
+                                />
+                                <div className="flex-1">
+                                  <div className="font-medium text-sm">{tag.name}</div>
+                                </div>
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {selectedRemoveTagIds.length > 0 && (
+                    <div>
+                      <Label>Tags to Remove ({selectedRemoveTagIds.length})</Label>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {selectedRemoveTagIds.map((tagId) => {
+                          const tag = allTags?.find(t => t.id === tagId);
+                          if (!tag) return null;
+                          return (
+                            <Badge
+                              key={tagId}
+                              variant="secondary"
+                              className="text-xs"
+                              style={{
+                                backgroundColor: `${tag.color}20`,
+                                color: tag.color,
+                                borderColor: tag.color
+                              }}
+                            >
+                              {tag.name}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsRemoveTagDialogOpen(false);
+                        setSelectedRemoveTagIds([]);
+                      }}
+                      disabled={isLoading}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleBulkRemoveTags}
+                      disabled={selectedRemoveTagIds.length === 0 || isLoading}
+                      variant="destructive"
+                    >
+                      {isLoading ? 'Removing...' : 'Remove Tags'}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
 
           {/* Bulk Recycle */}
           <Button

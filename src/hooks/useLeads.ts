@@ -230,6 +230,41 @@ export const useUpdateLeadStatus = () => {
   });
 };
 
+export const usePinLead = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ leadId, pin }: { leadId: string; pin: boolean }) => {
+      if (pin) {
+        const pinnedCount = await leadsApi.getPinnedLeadsCount();
+        if (pinnedCount >= 10) {
+          throw new Error('Maximum of 10 pinned leads reached. Unpin a lead first.');
+        }
+        return leadsApi.pinLead(leadId);
+      } else {
+        return leadsApi.unpinLead(leadId);
+      }
+    },
+    onSuccess: (updatedLead) => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['lead', updatedLead.id] });
+      toast({
+        title: updatedLead.is_pinned ? 'Lead pinned' : 'Lead unpinned',
+        description: updatedLead.is_pinned
+          ? 'Lead will appear at the top of the list.'
+          : 'Lead has been unpinned.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error updating pin status',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+};
+
 export const useManageLeadTags = () => {
   const queryClient = useQueryClient();
 

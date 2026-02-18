@@ -21,6 +21,8 @@ export interface LeadsFilter {
   date_from?: string;
   date_to?: string;
   include_archived?: boolean;
+  no_tags?: boolean;
+  no_activities?: boolean;
 }
 
 export interface PaginatedLeadsResponse {
@@ -37,6 +39,12 @@ export class LeadsAPI {
     page = 1,
     limit = 10
   ): Promise<PaginatedLeadsResponse> {
+    // For no_tags or no_activities filters, we need client-side filtering
+    // to avoid URL length limits with large .not.in() queries
+    if (filters.no_tags || filters.no_activities) {
+      return this.getLeadsWithClientSideFiltering(filters, page, limit);
+    }
+
     let query = supabase
       .from('leads')
       .select(`
@@ -71,7 +79,7 @@ export class LeadsAPI {
         .from('lead_tags')
         .select('lead_id')
         .in('tag_id', filters.tag_ids);
-      
+
       if (leadIdsWithTags?.length) {
         const leadIds = leadIdsWithTags.map(lt => lt.lead_id);
         query = query.in('id', leadIds);
@@ -115,8 +123,12 @@ export class LeadsAPI {
     const to = from + limit - 1;
     query = query.range(from, to);
 
-    // Order by assigned_at desc (newly distributed first), then created_at desc. Nulls last so unassigned follow.
-    query = query.order('assigned_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false });
+    // Order: pinned first, then by assigned_at desc (newly distributed first), then created_at desc.
+    query = query
+      .order('is_pinned', { ascending: false })
+      .order('pinned_at', { ascending: false, nullsFirst: false })
+      .order('assigned_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false });
 
     const { data, error, count } = await query;
 
@@ -136,6 +148,183 @@ export class LeadsAPI {
       page,
       limit,
       total_pages: Math.ceil((count || 0) / limit)
+    };
+  }
+
+  /**
+   * Client-side filtering for no_tags and no_activities filters.
+   * This avoids URL length limits when using .not.in() with large ID lists.
+   */
+  private async getLeadsWithClientSideFiltering(
+    filters: LeadsFilter,
+    page: number,
+    limit: number
+  ): Promise<PaginatedLeadsResponse> {
+    // Step 1: Fetch all lead IDs (just IDs to minimize data transfer)
+    let leadIdsQuery = supabase
+      .from('leads')
+      .select('id');
+
+    if (!filters.include_archived) {
+      leadIdsQuery = leadIdsQuery.is('deleted_at', null);
+    }
+
+    // Apply basic filters that can be done server-side
+    if (filters.status_ids?.length) {
+      leadIdsQuery = leadIdsQuery.in('status_id', filters.status_ids);
+    }
+    if (filters.assigned_to) {
+      leadIdsQuery = leadIdsQuery.eq('assigned_to', filters.assigned_to);
+    }
+    if (filters.assignment_status === 'assigned') {
+      leadIdsQuery = leadIdsQuery.not('assigned_to', 'is', null);
+    } else if (filters.assignment_status === 'unassigned') {
+      leadIdsQuery = leadIdsQuery.is('assigned_to', null);
+    }
+    if (filters.created_by) {
+      leadIdsQuery = leadIdsQuery.eq('created_by', filters.created_by);
+    }
+    if (filters.date_from) {
+      leadIdsQuery = leadIdsQuery.gte('created_at', filters.date_from);
+    }
+    if (filters.date_to) {
+      leadIdsQuery = leadIdsQuery.lte('created_at', filters.date_to);
+    }
+
+    const { data: allLeadIds, error: leadIdsError } = await leadIdsQuery;
+    if (leadIdsError) {
+      throw new Error(`Failed to fetch lead IDs: ${leadIdsError.message}`);
+    }
+
+    let candidateLeadIds = new Set((allLeadIds || []).map(l => l.id));
+
+    // Step 2: Apply no_tags filter client-side
+    if (filters.no_tags && candidateLeadIds.size > 0) {
+      const { data: leadTagsData } = await supabase
+        .from('lead_tags')
+        .select('lead_id');
+
+      const leadsWithTags = new Set((leadTagsData || []).map(lt => lt.lead_id));
+      
+      // Keep only leads that have NO tags
+      candidateLeadIds = new Set(
+        [...candidateLeadIds].filter(id => !leadsWithTags.has(id))
+      );
+    }
+
+    // Step 3: Apply no_activities filter client-side
+    if (filters.no_activities && candidateLeadIds.size > 0) {
+      const { data: activitiesData } = await supabase
+        .from('activity_logs')
+        .select('lead_id')
+        .is('deleted_at', null);
+
+      const leadsWithActivities = new Set((activitiesData || []).map(a => a.lead_id));
+      
+      // Keep only leads that have NO activities
+      candidateLeadIds = new Set(
+        [...candidateLeadIds].filter(id => !leadsWithActivities.has(id))
+      );
+    }
+
+    // Step 4: If no matching leads, return empty
+    if (candidateLeadIds.size === 0) {
+      return {
+        data: [],
+        count: 0,
+        page,
+        limit,
+        total_pages: 0
+      };
+    }
+
+    // Step 5: Fetch full lead data for the paginated subset
+    // First, get the sorted order by fetching minimal data
+    const candidateIdsArray = [...candidateLeadIds];
+    
+    // Fetch leads with ordering to determine correct pagination
+    let orderedQuery = supabase
+      .from('leads')
+      .select('id, is_pinned, pinned_at, assigned_at, created_at')
+      .in('id', candidateIdsArray)
+      .order('is_pinned', { ascending: false })
+      .order('pinned_at', { ascending: false, nullsFirst: false })
+      .order('assigned_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false });
+
+    const { data: orderedLeads, error: orderedError } = await orderedQuery;
+    if (orderedError) {
+      throw new Error(`Failed to fetch ordered leads: ${orderedError.message}`);
+    }
+
+    const totalCount = orderedLeads?.length || 0;
+    const totalPages = Math.ceil(totalCount / limit);
+
+    // Get the IDs for the current page
+    const from = (page - 1) * limit;
+    const pageIds = (orderedLeads || []).slice(from, from + limit).map(l => l.id);
+
+    if (pageIds.length === 0) {
+      return {
+        data: [],
+        count: totalCount,
+        page,
+        limit,
+        total_pages: totalPages
+      };
+    }
+
+    // Fetch full data for the page
+    const { data: fullLeads, error: fullError } = await supabase
+      .from('leads')
+      .select(`
+        *,
+        status:statuses(*),
+        assigned_to_profile:profiles!leads_assigned_to_fkey(*),
+        created_by_profile:profiles!leads_created_by_fkey(*),
+        tags:lead_tags(
+          tag:tags(*)
+        )
+      `)
+      .in('id', pageIds);
+
+    if (fullError) {
+      throw new Error(`Failed to fetch full lead data: ${fullError.message}`);
+    }
+
+    // Sort the results to match the ordered IDs
+    const idToLead = new Map((fullLeads || []).map(l => [l.id, l]));
+    const sortedLeads = pageIds.map(id => idToLead.get(id)).filter(Boolean);
+
+    // Apply search filter client-side if present
+    let filteredLeads = sortedLeads;
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filteredLeads = sortedLeads.filter(lead => {
+        return (
+          lead.book_title?.toLowerCase().includes(searchLower) ||
+          lead.author_name?.toLowerCase().includes(searchLower) ||
+          lead.first_name?.toLowerCase().includes(searchLower) ||
+          lead.last_name?.toLowerCase().includes(searchLower) ||
+          lead.primary_email?.toLowerCase().includes(searchLower) ||
+          lead.phone_number_1?.toLowerCase().includes(searchLower) ||
+          lead.publisher?.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+
+    // Transform the data to flatten tags
+    const transformedData = filteredLeads.map(lead => ({
+      ...lead,
+      tags: lead.tags?.map((lt: { tag?: Tables<'tags'> }) => lt.tag).filter(Boolean) || []
+    }));
+
+    return {
+      data: transformedData,
+      count: totalCount,
+      page,
+      limit,
+      total_pages: totalPages
     };
   }
 
@@ -334,6 +523,36 @@ export class LeadsAPI {
     if (error) {
       throw new Error(`Failed to remove tags from lead: ${error.message}`);
     }
+  }
+
+  async pinLead(leadId: string): Promise<Lead> {
+    return this.updateLead(leadId, {
+      is_pinned: true,
+      pinned_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  async unpinLead(leadId: string): Promise<Lead> {
+    return this.updateLead(leadId, {
+      is_pinned: false,
+      pinned_at: null,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  async getPinnedLeadsCount(): Promise<number> {
+    const { count, error } = await supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_pinned', true)
+      .is('deleted_at', null);
+
+    if (error) {
+      throw new Error(`Failed to count pinned leads: ${error.message}`);
+    }
+
+    return count || 0;
   }
 }
 

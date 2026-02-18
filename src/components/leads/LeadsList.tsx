@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Mail, Phone, MoreHorizontal, Edit, Trash2, Eye, UserPlus, Calendar, X, RefreshCw } from 'lucide-react';
+import { Plus, Search, Filter, Mail, Phone, MoreHorizontal, Edit, Trash2, Eye, UserPlus, Calendar, X, RefreshCw, Pin, PinOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useLeads, useArchiveLead, useUpdateLead } from '@/hooks/useLeads';
+import { useLeads, useArchiveLead, useUpdateLead, usePinLead } from '@/hooks/useLeads';
+import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 import { useStatuses } from '@/hooks/useStatuses';
 import { BulkLeadActions } from './BulkLeadActions';
 import { formatDistanceToNow } from 'date-fns';
@@ -51,6 +53,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
   const { profile } = useProfile();
   const updateLead = useUpdateLead();
   const createActivity = useCreateActivity();
+  const pinLead = usePinLead();
 
   // Enable realtime updates
   useLeadsRealtime();
@@ -66,6 +69,8 @@ export const LeadsList: React.FC<LeadsListProps> = ({
       assignment_status: state.filters.assignmentStatusFilter || undefined,
       date_from: state.filters.dateFromFilter || undefined,
       date_to: state.filters.dateToFilter || undefined,
+      no_tags: state.filters.noTags || undefined,
+      no_activities: state.filters.noActivities || undefined,
     },
     state.page,
     state.pageSize
@@ -108,14 +113,30 @@ export const LeadsList: React.FC<LeadsListProps> = ({
 
   const handleTagFilter = (tagId: string, checked: boolean) => {
     const currentTags = state.filters.tagFilter || [];
-    const newTags = checked 
+    const newTags = checked
       ? [...currentTags, tagId]
       : currentTags.filter(id => id !== tagId);
-    updateFilters({ tagFilter: newTags });
+    updateFilters({ tagFilter: newTags, noTags: false });
   };
 
   const handleClearTagFilter = () => {
-    updateFilters({ tagFilter: [] });
+    updateFilters({ tagFilter: [], noTags: false });
+  };
+
+  const handleNoTagsFilter = (checked: boolean) => {
+    if (checked) {
+      updateFilters({ noTags: true, tagFilter: [] });
+    } else {
+      updateFilters({ noTags: false });
+    }
+  };
+
+  const handleTogglePin = (lead: Lead, e: React.MouseEvent) => {
+    e.stopPropagation();
+    pinLead.mutate({
+      leadId: lead.id,
+      pin: !lead.is_pinned,
+    });
   };
 
   const handlePageSizeChange = (newPageSize: string) => {
@@ -130,20 +151,10 @@ export const LeadsList: React.FC<LeadsListProps> = ({
   const handleArchiveLead = (leadId: string) => {
     if (confirm('Archive this lead? It will be hidden and can be restored by an admin. After 30 days, it can be permanently deleted.')) {
       saveScrollPosition();
-      archiveLead.mutate({ id: leadId, deletedBy: session?.user?.id || '' }, {
+      archiveLead.mutate({ id: leadId, deletedBy: user?.id || '' }, {
         onSuccess: () => {
-          notifications.addNotification({
-            type: 'success',
-            title: 'Lead archived successfully',
-          });
           preserveScrollPosition();
         },
-        onError: () => {
-          notifications.addNotification({
-            type: 'error',
-            title: 'Failed to archive lead',
-          });
-        }
       });
     }
   };
@@ -164,18 +175,19 @@ export const LeadsList: React.FC<LeadsListProps> = ({
           await supabase.from('leads').update({ status_id: defaultStatus.id }).eq('id', leadId);
         }
 
-        notifications.addNotification({
-          type: 'success',
-          title: 'Lead recycled successfully',
+        toast({
+          title: 'Lead recycled',
+          description: 'Lead has been recycled successfully.',
         });
 
         // Refresh the leads list
         refetch();
         preserveScrollPosition();
       } catch (error) {
-        notifications.addNotification({
-          type: 'error',
+        toast({
           title: 'Failed to recycle lead',
+          description: 'Please try again.',
+          variant: 'destructive',
         });
       }
     }
@@ -202,18 +214,17 @@ export const LeadsList: React.FC<LeadsListProps> = ({
         });
       }
 
-      notifications.addNotification({
-        type: 'success',
-        title: assignedTo ? 'Lead assigned successfully' : 'Lead unassigned successfully',
-        message: assignedTo ? `Assigned to ${assignedUser?.full_name}` : 'Lead is now unassigned',
+      toast({
+        title: assignedTo ? 'Lead assigned' : 'Lead unassigned',
+        description: assignedTo ? `Assigned to ${assignedUser?.full_name}` : 'Lead is now unassigned',
       });
 
       preserveScrollPosition();
     } catch (error) {
-      notifications.addNotification({
-        type: 'error',
+      toast({
         title: 'Assignment failed',
-        message: 'Please try again',
+        description: 'Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsAssigning(null);
@@ -272,16 +283,20 @@ export const LeadsList: React.FC<LeadsListProps> = ({
       dateFromFilter: '',
       dateToFilter: '',
       tagFilter: [],
+      noTags: false,
+      noActivities: false,
     });
   };
 
-  const hasActiveFilters = state.filters.search || 
-    state.filters.statusFilter || 
-    state.filters.assignedToFilter || 
+  const hasActiveFilters = state.filters.search ||
+    state.filters.statusFilter ||
+    state.filters.assignedToFilter ||
     state.filters.assignmentStatusFilter !== 'all' ||
     state.filters.dateFromFilter ||
     state.filters.dateToFilter ||
-    (state.filters.tagFilter && state.filters.tagFilter.length > 0);
+    (state.filters.tagFilter && state.filters.tagFilter.length > 0) ||
+    state.filters.noTags ||
+    state.filters.noActivities;
 
   if (!isLoaded) {
     return <div className="text-center py-8"><div className="text-gray-500">Loading...</div></div>;
@@ -404,7 +419,11 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start">
                       <Filter className="h-4 w-4 mr-2" />
-                      Tags ({state.filters.tagFilter?.length || 0})
+                      {state.filters.noTags ? (
+                        <>Tags: No Tags</>
+                      ) : (
+                        <>Tags ({state.filters.tagFilter?.length || 0})</>
+                      )}
                       {(state.filters.tagFilter && state.filters.tagFilter.length > 0) && (
                         <span className="ml-2 flex flex-wrap gap-1">
                           {tags?.filter(t => state.filters.tagFilter?.includes(t.id)).map(tag => (
@@ -418,19 +437,33 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                   </PopoverTrigger>
                   <PopoverContent className="w-56 p-2">
                     <div className="max-h-60 overflow-y-auto space-y-1">
+                      {/* No Tags option */}
+                      <label className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-gray-50 border-b pb-2 mb-1">
+                        <input
+                          type="checkbox"
+                          checked={state.filters.noTags || false}
+                          onChange={e => handleNoTagsFilter(e.target.checked)}
+                          className="accent-blue-600"
+                        />
+                        <span className="text-xs font-medium text-gray-700">No Tags</span>
+                      </label>
                       {tags?.length ? tags.map(tag => (
-                        <label key={tag.id} className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-gray-50">
+                        <label key={tag.id} className={cn(
+                          "flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-gray-50",
+                          state.filters.noTags && "opacity-50 pointer-events-none"
+                        )}>
                           <input
                             type="checkbox"
                             checked={state.filters.tagFilter?.includes(tag.id) || false}
                             onChange={e => handleTagFilter(tag.id, e.target.checked)}
                             className="accent-blue-600"
+                            disabled={state.filters.noTags}
                           />
                           <span className="text-xs" style={{ color: tag.color }}>{tag.name}</span>
                         </label>
                       )) : <span className="text-xs text-gray-400">No tags</span>}
                     </div>
-                    {(state.filters.tagFilter && state.filters.tagFilter.length > 0) && (
+                    {((state.filters.tagFilter && state.filters.tagFilter.length > 0) || state.filters.noTags) && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -442,6 +475,16 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                     )}
                   </PopoverContent>
                 </Popover>
+              </div>
+              <div className="w-48 min-w-[160px]">
+                <Button
+                  variant={state.filters.noActivities ? "default" : "outline"}
+                  className="w-full justify-start"
+                  onClick={() => updateFilters({ noActivities: !state.filters.noActivities })}
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  Untouched Leads
+                </Button>
               </div>
             </div>
           </div>
@@ -484,6 +527,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                         aria-label="Select all leads"
                       />
                     </TableHead>
+                    <TableHead className="w-12">Pin</TableHead>
                     <TableHead>Author</TableHead>
                     <TableHead>Book Title</TableHead>
                     <TableHead>Publisher</TableHead>
@@ -496,9 +540,12 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                 </TableHeader>
                 <TableBody>
                   {leadsData?.data.map((lead) => (
-                    <TableRow 
+                    <TableRow
                       key={lead.id}
-                      className="cursor-pointer hover:bg-gray-50"
+                      className={cn(
+                        "cursor-pointer hover:bg-gray-50",
+                        lead.is_pinned && "bg-amber-50/50 border-l-2 border-l-amber-400"
+                      )}
                       onClick={() => handleViewDetails(lead)}
                     >
                       <TableCell onClick={(e) => e.stopPropagation()}>
@@ -507,6 +554,25 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                           onCheckedChange={(checked) => handleSelectLead(lead, checked as boolean)}
                           aria-label={`Select lead ${lead.author_name}`}
                         />
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={cn(
+                            "h-8 w-8 p-0",
+                            lead.is_pinned && "text-amber-500"
+                          )}
+                          onClick={(e) => handleTogglePin(lead, e)}
+                          disabled={pinLead.isPending}
+                          title={lead.is_pinned ? 'Unpin lead' : 'Pin to top'}
+                        >
+                          {lead.is_pinned ? (
+                            <PinOff className="h-4 w-4" />
+                          ) : (
+                            <Pin className="h-4 w-4" />
+                          )}
+                        </Button>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">

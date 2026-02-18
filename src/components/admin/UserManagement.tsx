@@ -68,7 +68,7 @@ export const UserManagement: React.FC = () => {
   } = useUsers(filters, page, 10);
 
   // Check if current user has permission to manage users
-  const canManageUsers = profile?.role === 'leads_manager';
+  const canManageUsers = profile?.role === 'leads_manager' || profile?.role === 'sales_manager';
 
   React.useEffect(() => {
     const delayedSearch = setTimeout(() => {

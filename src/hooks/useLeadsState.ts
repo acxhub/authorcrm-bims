@@ -9,6 +9,8 @@ export interface LeadsStateFilters {
   dateFromFilter?: string;
   dateToFilter?: string;
   tagFilter?: string[];
+  noTags?: boolean;
+  noActivities?: boolean;
 }
 
 export interface LeadsStateConfig {
@@ -21,7 +23,7 @@ export interface LeadsStateConfig {
 const STORAGE_KEY = 'leads-list-state';
 const DEFAULT_STATE: LeadsStateConfig = {
   page: 1,
-  pageSize: 10,
+  pageSize: 50,
   filters: {
     search: '',
     statusFilter: '',
@@ -30,6 +32,8 @@ const DEFAULT_STATE: LeadsStateConfig = {
     dateFromFilter: '',
     dateToFilter: '',
     tagFilter: [],
+    noTags: false,
+    noActivities: false,
   },
   scrollPosition: 0,
 };
@@ -68,6 +72,8 @@ export const useLeadsState = () => {
           dateFromFilter: urlParams.dateFrom || initialState.filters.dateFromFilter,
           dateToFilter: urlParams.dateTo || initialState.filters.dateToFilter,
           tagFilter: urlParams.tags ? urlParams.tags.split(',') : initialState.filters.tagFilter,
+          noTags: urlParams.noTags === 'true' || initialState.filters.noTags,
+          noActivities: urlParams.noActivities === 'true' || initialState.filters.noActivities,
         },
       };
     }
@@ -89,7 +95,7 @@ export const useLeadsState = () => {
       const params = new URLSearchParams();
       
       if (state.page > 1) params.set('page', state.page.toString());
-      if (state.pageSize !== 10) params.set('pageSize', state.pageSize.toString());
+      if (state.pageSize !== 50) params.set('pageSize', state.pageSize.toString());
       if (state.filters.search) params.set('search', state.filters.search);
       if (state.filters.statusFilter) params.set('status', state.filters.statusFilter);
       if (state.filters.assignedToFilter) params.set('assignedTo', state.filters.assignedToFilter);
@@ -99,6 +105,8 @@ export const useLeadsState = () => {
       if (state.filters.tagFilter && state.filters.tagFilter.length > 0) {
         params.set('tags', state.filters.tagFilter.join(','));
       }
+      if (state.filters.noTags) params.set('noTags', 'true');
+      if (state.filters.noActivities) params.set('noActivities', 'true');
 
       setSearchParams(params, { replace: true });
     }

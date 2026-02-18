@@ -23,6 +23,8 @@ import { SoldDashboard } from "./pages/SoldDashboard";
 import { CommissionsPage } from "./pages/CommissionsPage";
 import { RemindersPage } from "./pages/RemindersPage";
 import { AdminArchive } from "./pages/AdminArchive";
+import { LeadManager } from "./pages/LeadManager";
+import { NotificationsPage } from "./pages/NotificationsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -106,18 +108,28 @@ const App = () => {
                   </ProtectedRoute>
                 } />
                 <Route path="/admin" element={
-                  <ProtectedRoute requiredRole="leads_manager">
+                  <ProtectedRoute requiredRole={["leads_manager", "sales_manager"]}>
                     <AdminPanel />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/users" element={
-                  <ProtectedRoute requiredRole="leads_manager">
+                  <ProtectedRoute requiredRole={["leads_manager", "sales_manager"]}>
                     <UserManagementPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/archive" element={
-                  <ProtectedRoute requiredRole="leads_manager">
+                  <ProtectedRoute requiredRole={["leads_manager", "sales_manager"]}>
                     <AdminArchive />
+                  </ProtectedRoute>
+                } />
+                <Route path="/notifications" element={
+                  <ProtectedRoute>
+                    <NotificationsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/lead-manager" element={
+                  <ProtectedRoute requiredRole="leads_manager">
+                    <LeadManager />
                   </ProtectedRoute>
                 } />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

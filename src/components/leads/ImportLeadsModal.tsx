@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDropzone } from 'react-dropzone';
-import * as XLSX from 'xlsx';
+import readXlsxFile from 'read-excel-file';
 import Papa from 'papaparse';
 import { useCreateLead, useLeads } from '@/hooks/useLeads';
 import { useStatuses } from '@/hooks/useStatuses';
@@ -84,91 +84,78 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
   const { data: existingLeadsData } = useLeads({}, 1, 1000); // Get existing leads for duplicate checking
   const createLead = useCreateLead();
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const data = e.target?.result;
-      if (!data) return;
+    try {
+      let parsed: ParsedData;
 
-      try {
-        let parsed: ParsedData;
-
-        if (file.name.endsWith('.csv')) {
-          // Parse CSV
-          const result = Papa.parse(data as string, {
-            header: false,
-            skipEmptyLines: true,
-          });
-          
-          parsed = {
-            headers: result.data[0] as string[],
-            rows: result.data.slice(1) as any[][],
-            fileName: file.name,
-          };
-        } else {
-          // Parse Excel
-          const workbook = XLSX.read(data, { type: 'binary' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-          
-          parsed = {
-            headers: jsonData[0] as string[],
-            rows: jsonData.slice(1) as any[][],
-            fileName: file.name,
-          };
-        }
-
-        setParsedData(parsed);
-        setStep('mapping');
-        
-        // Auto-map obvious fields
-        const autoMapping: FieldMapping = {};
-        parsed.headers.forEach((header, index) => {
-          const lowerHeader = header.toLowerCase().trim();
-          
-          // Auto-mapping logic
-          if (lowerHeader.includes('book') && lowerHeader.includes('title')) {
-            autoMapping[header] = 'book_title';
-          } else if (lowerHeader.includes('author') && lowerHeader.includes('name')) {
-            autoMapping[header] = 'author_name';
-          } else if (lowerHeader.includes('email') && lowerHeader.includes('primary')) {
-            autoMapping[header] = 'primary_email';
-          } else if (lowerHeader.includes('email') && !lowerHeader.includes('secondary')) {
-            autoMapping[header] = 'primary_email';
-          } else if (lowerHeader.includes('phone') && lowerHeader.includes('primary')) {
-            autoMapping[header] = 'phone_number_1';
-          } else if (lowerHeader.includes('phone') && !lowerHeader.includes('secondary')) {
-            autoMapping[header] = 'phone_number_1';
-          } else if (lowerHeader.includes('amazon')) {
-            autoMapping[header] = 'amazon_link';
-          } else if (lowerHeader.includes('website')) {
-            autoMapping[header] = 'website';
-          } else if (lowerHeader.includes('publisher')) {
-            autoMapping[header] = 'publisher';
-          } else if (lowerHeader.includes('bio')) {
-            autoMapping[header] = 'author_bio';
-          } else if (lowerHeader.includes('state')) {
-            autoMapping[header] = 'state';
-          } else if (lowerHeader.includes('country')) {
-            autoMapping[header] = 'country';
-          }
+      if (file.name.endsWith('.csv')) {
+        // Parse CSV
+        const text = await file.text();
+        const result = Papa.parse(text, {
+          header: false,
+          skipEmptyLines: true,
         });
-        
-        setFieldMapping(autoMapping);
-      } catch (error) {
-        console.error('Error parsing file:', error);
-        alert('Error parsing file. Please check the format and try again.');
-      }
-    };
 
-    if (file.name.endsWith('.csv')) {
-      reader.readAsText(file);
-    } else {
-      reader.readAsBinaryString(file);
+        parsed = {
+          headers: result.data[0] as string[],
+          rows: result.data.slice(1) as any[][],
+          fileName: file.name,
+        };
+      } else {
+        // Parse Excel using read-excel-file
+        const rows = await readXlsxFile(file);
+        const stringRows = rows.map(row => row.map(cell => cell != null ? String(cell) : ''));
+
+        parsed = {
+          headers: stringRows[0] as string[],
+          rows: stringRows.slice(1) as any[][],
+          fileName: file.name,
+        };
+      }
+
+      setParsedData(parsed);
+      setStep('mapping');
+
+      // Auto-map obvious fields
+      const autoMapping: FieldMapping = {};
+      parsed.headers.forEach((header, index) => {
+        const lowerHeader = header.toLowerCase().trim();
+
+        // Auto-mapping logic
+        if (lowerHeader.includes('book') && lowerHeader.includes('title')) {
+          autoMapping[header] = 'book_title';
+        } else if (lowerHeader.includes('author') && lowerHeader.includes('name')) {
+          autoMapping[header] = 'author_name';
+        } else if (lowerHeader.includes('email') && lowerHeader.includes('primary')) {
+          autoMapping[header] = 'primary_email';
+        } else if (lowerHeader.includes('email') && !lowerHeader.includes('secondary')) {
+          autoMapping[header] = 'primary_email';
+        } else if (lowerHeader.includes('phone') && lowerHeader.includes('primary')) {
+          autoMapping[header] = 'phone_number_1';
+        } else if (lowerHeader.includes('phone') && !lowerHeader.includes('secondary')) {
+          autoMapping[header] = 'phone_number_1';
+        } else if (lowerHeader.includes('amazon')) {
+          autoMapping[header] = 'amazon_link';
+        } else if (lowerHeader.includes('website')) {
+          autoMapping[header] = 'website';
+        } else if (lowerHeader.includes('publisher')) {
+          autoMapping[header] = 'publisher';
+        } else if (lowerHeader.includes('bio')) {
+          autoMapping[header] = 'author_bio';
+        } else if (lowerHeader.includes('state')) {
+          autoMapping[header] = 'state';
+        } else if (lowerHeader.includes('country')) {
+          autoMapping[header] = 'country';
+        }
+      });
+
+      setFieldMapping(autoMapping);
+    } catch (error) {
+      console.error('Error parsing file:', error);
+      alert('Error parsing file. Please check the format and try again.');
     }
   }, []);
 
