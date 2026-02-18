@@ -31,6 +31,7 @@ export const useCreateLead = () => {
     mutationFn: (data: CreateLeadData) => leadsApi.createLead(data),
     onSuccess: (newLead) => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-quick-stats'] });
       toast({
         title: 'Lead created',
         description: `Lead for "${newLead.book_title}" has been created successfully.`,
@@ -62,6 +63,7 @@ export const useUpdateLead = () => {
     onSuccess: (updatedLead) => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['lead', updatedLead.id] });
+      queryClient.invalidateQueries({ queryKey: ['leads-quick-stats'] });
       toast({
         title: 'Lead updated',
         description: `Lead for "${updatedLead.book_title}" has been updated successfully.`,
@@ -86,6 +88,7 @@ export const useArchiveLead = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['archived-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-quick-stats'] });
       toast({
         title: 'Lead archived',
         description: 'Lead has been archived successfully.',
@@ -109,6 +112,7 @@ export const useRestoreLead = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['archived-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-quick-stats'] });
       toast({
         title: 'Lead restored',
         description: 'Lead has been restored successfully.',
@@ -132,6 +136,7 @@ export const usePermanentlyDeleteLead = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['archived-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-quick-stats'] });
       toast({
         title: 'Lead permanently deleted',
         description: 'Lead has been permanently removed.',
@@ -202,6 +207,7 @@ export const useUpdateLeadStatus = () => {
     onSuccess: (updatedLead) => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['lead', updatedLead.id] });
+      queryClient.invalidateQueries({ queryKey: ['leads-quick-stats'] });
       toast({
         title: 'Status updated',
         description: `Lead status has been updated to "${updatedLead.status.name}".`,

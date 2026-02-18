@@ -28,6 +28,8 @@ import { useLeadsState } from '@/hooks/useLeadsState';
 import { useCreateActivity } from '@/hooks/useActivities';
 import { useAuth, useProfile } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { LeadsQuickStats } from './LeadsQuickStats';
+import { useLeadsQuickStats } from '@/hooks/useLeadsQuickStats';
 
 interface LeadsListProps {
   onCreateLead?: () => void;
@@ -71,6 +73,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
       date_to: state.filters.dateToFilter || undefined,
       no_tags: state.filters.noTags || undefined,
       no_activities: state.filters.noActivities || undefined,
+      in_pipeline: state.filters.inPipeline || undefined,
     },
     state.page,
     state.pageSize
@@ -80,6 +83,10 @@ export const LeadsList: React.FC<LeadsListProps> = ({
   const { activeUsers, loading: usersLoading } = useUsersContext(); // Use context instead of hook
   const archiveLead = useArchiveLead();
   const { data: tags } = useTags();
+  const { data: quickStats, isLoading: quickStatsLoading } = useLeadsQuickStats();
+
+  // Track which quick stat filter is active
+  const [activeQuickFilter, setActiveQuickFilter] = React.useState<string | null>(null);
 
   // Save scroll position before actions
   const saveScrollPosition = () => {
@@ -128,6 +135,46 @@ export const LeadsList: React.FC<LeadsListProps> = ({
       updateFilters({ noTags: true, tagFilter: [] });
     } else {
       updateFilters({ noTags: false });
+    }
+  };
+
+  // Handle quick stat filter clicks
+  const handleQuickStatFilter = (filterKey: string, filterValue: any) => {
+    // If clicking the same filter, clear it
+    if (filterValue === null) {
+      setActiveQuickFilter(null);
+      resetFilters();
+      return;
+    }
+
+    // Clear other filters first
+    const baseFilters = {
+      search: '',
+      statusFilter: '',
+      assignedToFilter: '',
+      assignmentStatusFilter: 'all' as const,
+      dateFromFilter: '',
+      dateToFilter: '',
+      tagFilter: [],
+      noTags: false,
+      noActivities: false,
+      inPipeline: false,
+    };
+
+    if (filterKey === 'statusFilter') {
+      if (filterValue === 'new-lead' && quickStats?.new_lead_status_id) {
+        setActiveQuickFilter('new-lead');
+        updateFilters({ ...baseFilters, statusFilter: quickStats.new_lead_status_id });
+      } else if (filterValue === 'closed-won' && quickStats?.closed_won_status_id) {
+        setActiveQuickFilter('closed-won');
+        updateFilters({ ...baseFilters, statusFilter: quickStats.closed_won_status_id });
+      }
+    } else if (filterKey === 'noActivities') {
+      setActiveQuickFilter('untouched');
+      updateFilters({ ...baseFilters, noActivities: true });
+    } else if (filterKey === 'inPipeline') {
+      setActiveQuickFilter('in-pipeline');
+      updateFilters({ ...baseFilters, inPipeline: true });
     }
   };
 
@@ -275,6 +322,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
 
   // Reset filters
   const resetFilters = () => {
+    setActiveQuickFilter(null);
     updateFilters({
       search: '',
       statusFilter: '',
@@ -285,6 +333,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
       tagFilter: [],
       noTags: false,
       noActivities: false,
+      inPipeline: false,
     });
   };
 
@@ -296,7 +345,8 @@ export const LeadsList: React.FC<LeadsListProps> = ({
     state.filters.dateToFilter ||
     (state.filters.tagFilter && state.filters.tagFilter.length > 0) ||
     state.filters.noTags ||
-    state.filters.noActivities;
+    state.filters.noActivities ||
+    state.filters.inPipeline;
 
   if (!isLoaded) {
     return <div className="text-center py-8"><div className="text-gray-500">Loading...</div></div>;
@@ -317,6 +367,19 @@ export const LeadsList: React.FC<LeadsListProps> = ({
           </Button>
         )}
       </div>
+
+      {/* Quick Stats */}
+      <LeadsQuickStats
+        stats={{
+          newLead: quickStats?.new_lead ?? 0,
+          inPipeline: quickStats?.in_pipeline ?? 0,
+          closedWon: quickStats?.closed_won ?? 0,
+          untouched: quickStats?.untouched ?? 0,
+        }}
+        isLoading={quickStatsLoading}
+        activeFilter={activeQuickFilter}
+        onFilterClick={handleQuickStatFilter}
+      />
 
       {/* Enhanced Filters */}
       <Card>

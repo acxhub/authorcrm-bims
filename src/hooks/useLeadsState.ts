@@ -11,6 +11,7 @@ export interface LeadsStateFilters {
   tagFilter?: string[];
   noTags?: boolean;
   noActivities?: boolean;
+  inPipeline?: boolean;
 }
 
 export interface LeadsStateConfig {
@@ -34,6 +35,7 @@ const DEFAULT_STATE: LeadsStateConfig = {
     tagFilter: [],
     noTags: false,
     noActivities: false,
+    inPipeline: false,
   },
   scrollPosition: 0,
 };
@@ -74,6 +76,7 @@ export const useLeadsState = () => {
           tagFilter: urlParams.tags ? urlParams.tags.split(',') : initialState.filters.tagFilter,
           noTags: urlParams.noTags === 'true' || initialState.filters.noTags,
           noActivities: urlParams.noActivities === 'true' || initialState.filters.noActivities,
+          inPipeline: urlParams.inPipeline === 'true' || initialState.filters.inPipeline,
         },
       };
     }
@@ -107,6 +110,7 @@ export const useLeadsState = () => {
       }
       if (state.filters.noTags) params.set('noTags', 'true');
       if (state.filters.noActivities) params.set('noActivities', 'true');
+      if (state.filters.inPipeline) params.set('inPipeline', 'true');
 
       setSearchParams(params, { replace: true });
     }

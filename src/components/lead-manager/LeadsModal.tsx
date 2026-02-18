@@ -54,7 +54,7 @@ export const LeadsModal: React.FC<LeadsModalProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLeads, setSelectedLeads] = useState<any[]>([]);
   const queryClient = useQueryClient();
-  const limit = 20;
+  const limit = 50;
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -155,13 +155,13 @@ export const LeadsModal: React.FC<LeadsModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-6xl h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
 
-        <div className="flex items-center gap-4 py-2">
+        <div className="flex items-center gap-4 py-2 flex-shrink-0">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -178,132 +178,136 @@ export const LeadsModal: React.FC<LeadsModalProps> = ({
         </div>
 
         {selectedLeads.length > 0 && (
-          <ExtendedBulkActions
-            selectedLeads={selectedLeads}
-            onSelectionChange={setSelectedLeads}
-            onActionsComplete={handleActionsComplete}
-          />
+          <div className="flex-shrink-0">
+            <ExtendedBulkActions
+              selectedLeads={selectedLeads}
+              onSelectionChange={setSelectedLeads}
+              onActionsComplete={handleActionsComplete}
+            />
+          </div>
         )}
 
-        <ScrollArea className="flex-1 min-h-0">
-          {isLoading ? (
-            <div className="space-y-2 p-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-4 p-3 border rounded-lg">
-                  <Skeleton className="h-4 w-4" />
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-48" />
-                    <Skeleton className="h-3 w-32" />
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <ScrollArea className="h-full">
+            {isLoading ? (
+              <div className="space-y-2 p-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 p-3 border rounded-lg">
+                    <Skeleton className="h-4 w-4" />
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : filteredLeads.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              No leads found
-            </div>
-          ) : (
-            <div className="space-y-2 p-2">
-              <div className="flex items-center gap-4 p-2 border-b">
-                <Checkbox
-                  checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0}
-                  onCheckedChange={handleSelectAll}
-                />
-                <span className="text-sm text-muted-foreground">
-                  {selectedLeads.length > 0
-                    ? `${selectedLeads.length} selected`
-                    : `Select all (${filteredLeads.length})`}
-                </span>
+                ))}
               </div>
-
-              {filteredLeads.map((lead: any) => (
-                <div
-                  key={lead.id}
-                  className={`flex items-center gap-4 p-3 border rounded-lg hover:bg-muted/50 transition-colors ${
-                    isSelected(lead.id) ? 'bg-muted/50 border-primary' : ''
-                  }`}
-                >
+            ) : filteredLeads.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                No leads found
+              </div>
+            ) : (
+              <div className="space-y-2 p-2">
+                <div className="flex items-center gap-4 p-2 border-b">
                   <Checkbox
-                    checked={isSelected(lead.id)}
-                    onCheckedChange={(checked) => handleSelectLead(lead, checked as boolean)}
+                    checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0}
+                    onCheckedChange={handleSelectAll}
                   />
+                  <span className="text-sm text-muted-foreground">
+                    {selectedLeads.length > 0
+                      ? `${selectedLeads.length} selected`
+                      : `Select all (${filteredLeads.length})`}
+                  </span>
+                </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">
-                        {lead.book_title || 'Untitled'}
-                      </span>
-                      {lead.status && (
-                        <Badge
-                          variant="outline"
-                          style={{
-                            backgroundColor: `${lead.status.color}20`,
-                            color: lead.status.color,
-                            borderColor: lead.status.color,
-                          }}
-                        >
-                          {lead.status.name}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {lead.author_name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown Author'}
-                      {lead.primary_email && ` • ${lead.primary_email}`}
-                    </div>
-                    {lead.tags && lead.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {lead.tags.slice(0, 3).map((lt: any) => (
+                {filteredLeads.map((lead: any) => (
+                  <div
+                    key={lead.id}
+                    className={`flex items-center gap-4 p-3 border rounded-lg hover:bg-muted/50 transition-colors ${
+                      isSelected(lead.id) ? 'bg-muted/50 border-primary' : ''
+                    }`}
+                  >
+                    <Checkbox
+                      checked={isSelected(lead.id)}
+                      onCheckedChange={(checked) => handleSelectLead(lead, checked as boolean)}
+                    />
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium truncate">
+                          {lead.book_title || 'Untitled'}
+                        </span>
+                        {lead.status && (
                           <Badge
-                            key={lt.tag?.id}
-                            variant="secondary"
-                            className="text-xs"
+                            variant="outline"
                             style={{
-                              backgroundColor: `${lt.tag?.color}20`,
-                              color: lt.tag?.color,
+                              backgroundColor: `${lead.status.color}20`,
+                              color: lead.status.color,
+                              borderColor: lead.status.color,
                             }}
                           >
-                            {lt.tag?.name}
-                          </Badge>
-                        ))}
-                        {lead.tags.length > 3 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{lead.tags.length - 3}
+                            {lead.status.name}
                           </Badge>
                         )}
                       </div>
+                      <div className="text-sm text-muted-foreground">
+                        {lead.author_name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown Author'}
+                        {lead.primary_email && ` • ${lead.primary_email}`}
+                      </div>
+                      {lead.tags && lead.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {lead.tags.slice(0, 3).map((lt: any) => (
+                            <Badge
+                              key={lt.tag?.id}
+                              variant="secondary"
+                              className="text-xs"
+                              style={{
+                                backgroundColor: `${lt.tag?.color}20`,
+                                color: lt.tag?.color,
+                              }}
+                            >
+                              {lt.tag?.name}
+                            </Badge>
+                          ))}
+                          {lead.tags.length > 3 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{lead.tags.length - 3}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {lead.assigned_to_profile ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={lead.assigned_to_profile.avatar_url || ''} />
+                          <AvatarFallback className="text-xs">
+                            {getInitials(lead.assigned_to_profile.full_name || 'U')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="text-sm">
+                          <div className="font-medium">{lead.assigned_to_profile.full_name}</div>
+                          {!lead.assigned_to_profile.is_active && (
+                            <Badge variant="destructive" className="text-xs">
+                              Inactive
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <Badge variant="outline" className="text-orange-600 border-orange-300">
+                        Unassigned
+                      </Badge>
                     )}
                   </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
 
-                  {lead.assigned_to_profile ? (
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={lead.assigned_to_profile.avatar_url || ''} />
-                        <AvatarFallback className="text-xs">
-                          {getInitials(lead.assigned_to_profile.full_name || 'U')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="text-sm">
-                        <div className="font-medium">{lead.assigned_to_profile.full_name}</div>
-                        {!lead.assigned_to_profile.is_active && (
-                          <Badge variant="destructive" className="text-xs">
-                            Inactive
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <Badge variant="outline" className="text-orange-600 border-orange-300">
-                      Unassigned
-                    </Badge>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </ScrollArea>
-
-        <div className="flex items-center justify-between pt-4 border-t">
+        <div className="flex items-center justify-between pt-4 border-t flex-shrink-0">
           <div className="text-sm text-muted-foreground">
             Showing {filteredLeads.length} of {total} leads
           </div>

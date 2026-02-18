@@ -34,6 +34,8 @@ export const useCreateActivity = () => {
       queryClient.invalidateQueries({
         queryKey: activityKeys.byLeadId(newActivity.lead_id),
       });
+      // Invalidate quick stats (affects untouched and in-pipeline counts)
+      queryClient.invalidateQueries({ queryKey: ['leads-quick-stats'] });
       
       toast({
         title: 'Success',

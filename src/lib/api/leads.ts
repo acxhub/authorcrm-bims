@@ -23,6 +23,7 @@ export interface LeadsFilter {
   include_archived?: boolean;
   no_tags?: boolean;
   no_activities?: boolean;
+  in_pipeline?: boolean;
 }
 
 export interface PaginatedLeadsResponse {
@@ -34,247 +35,57 @@ export interface PaginatedLeadsResponse {
 }
 
 export class LeadsAPI {
+  /**
+   * Unified lead fetching via server-side RPC.
+   * All filtering (search, status, tags, no_tags, untouched, assignment, dates)
+   * is done in a single PostgreSQL function call (POST request, no URL length limits).
+   * Only the page's worth of full lead data is fetched (max `limit` rows).
+   */
   async getLeads(
     filters: LeadsFilter = {},
     page = 1,
-    limit = 10
+    limit = 50
   ): Promise<PaginatedLeadsResponse> {
-    // For no_tags or no_activities filters, we need client-side filtering
-    // to avoid URL length limits with large .not.in() queries
-    if (filters.no_tags || filters.no_activities) {
-      return this.getLeadsWithClientSideFiltering(filters, page, limit);
+    // Step 1: Call RPC to get filtered, sorted, paginated lead IDs + total count
+    const { data: rpcResult, error: rpcError } = await supabase.rpc('get_filtered_lead_ids', {
+      p_no_tags: filters.no_tags || false,
+      p_untouched: filters.no_activities || false,
+      p_search: filters.search || null,
+      p_status_ids: filters.status_ids?.length ? filters.status_ids : null,
+      p_assigned_to: filters.assigned_to || null,
+      p_assignment_status: filters.assignment_status || 'all',
+      p_created_by: filters.created_by || null,
+      p_date_from: filters.date_from || null,
+      p_date_to: filters.date_to || null,
+      p_tag_ids: filters.tag_ids?.length ? filters.tag_ids : null,
+      p_include_archived: filters.include_archived || false,
+      p_page: page,
+      p_limit: limit,
+      p_in_pipeline: filters.in_pipeline || false,
+    });
+
+    if (rpcError) {
+      throw new Error(`Failed to fetch filtered leads: ${rpcError.message}`);
     }
 
-    let query = supabase
-      .from('leads')
-      .select(`
-        *,
-        status:statuses(*),
-        assigned_to_profile:profiles!leads_assigned_to_fkey(*),
-        created_by_profile:profiles!leads_created_by_fkey(*),
-        tags:lead_tags(
-          tag:tags(*)
-        )
-      `, { count: 'exact' });
-
-    // Filter out archived leads unless explicitly requested
-    if (!filters.include_archived) {
-      query = query.is('deleted_at', null);
-    }
-
-    // Apply filters - Search across key fields
-    if (filters.search) {
-      // Limit search to the most important fields to avoid query complexity
-      query = query.or(`book_title.ilike.%${filters.search}%,author_name.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,primary_email.ilike.%${filters.search}%,phone_number_1.ilike.%${filters.search}%,publisher.ilike.%${filters.search}%`);
-    }
-
-    if (filters.status_ids?.length) {
-      query = query.in('status_id', filters.status_ids);
-    }
-
-    // Filter by tag IDs - leads that have ANY of the specified tags
-    if (filters.tag_ids?.length) {
-      // Use a subquery to find leads that have any of the specified tags
-      const { data: leadIdsWithTags } = await supabase
-        .from('lead_tags')
-        .select('lead_id')
-        .in('tag_id', filters.tag_ids);
-
-      if (leadIdsWithTags?.length) {
-        const leadIds = leadIdsWithTags.map(lt => lt.lead_id);
-        query = query.in('id', leadIds);
-      } else {
-        // No leads have these tags, return empty result
-        return {
-          data: [],
-          count: 0,
-          page,
-          limit,
-          total_pages: 0
-        };
-      }
-    }
-
-    if (filters.assigned_to) {
-      query = query.eq('assigned_to', filters.assigned_to);
-    }
-
-    // Filter by assignment status
-    if (filters.assignment_status === 'assigned') {
-      query = query.not('assigned_to', 'is', null);
-    } else if (filters.assignment_status === 'unassigned') {
-      query = query.is('assigned_to', null);
-    }
-
-    if (filters.created_by) {
-      query = query.eq('created_by', filters.created_by);
-    }
-
-    if (filters.date_from) {
-      query = query.gte('created_at', filters.date_from);
-    }
-
-    if (filters.date_to) {
-      query = query.lte('created_at', filters.date_to);
-    }
-
-    // Apply pagination
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    query = query.range(from, to);
-
-    // Order: pinned first, then by assigned_at desc (newly distributed first), then created_at desc.
-    query = query
-      .order('is_pinned', { ascending: false })
-      .order('pinned_at', { ascending: false, nullsFirst: false })
-      .order('assigned_at', { ascending: false, nullsFirst: false })
-      .order('created_at', { ascending: false });
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      throw new Error(`Failed to fetch leads: ${error.message}`);
-    }
-
-    // Transform the data to flatten tags
-    const transformedData = (data || []).map(lead => ({
-      ...lead,
-      tags: lead.tags?.map((lt: { tag?: Tables<'tags'> }) => lt.tag).filter(Boolean) || []
-    }));
-
-    return {
-      data: transformedData,
-      count: count || 0,
-      page,
-      limit,
-      total_pages: Math.ceil((count || 0) / limit)
+    const { ids, total, total_pages } = rpcResult as {
+      ids: string[];
+      total: number;
+      total_pages: number;
     };
-  }
 
-  /**
-   * Client-side filtering for no_tags and no_activities filters.
-   * This avoids URL length limits when using .not.in() with large ID lists.
-   */
-  private async getLeadsWithClientSideFiltering(
-    filters: LeadsFilter,
-    page: number,
-    limit: number
-  ): Promise<PaginatedLeadsResponse> {
-    // Step 1: Fetch all lead IDs (just IDs to minimize data transfer)
-    let leadIdsQuery = supabase
-      .from('leads')
-      .select('id');
-
-    if (!filters.include_archived) {
-      leadIdsQuery = leadIdsQuery.is('deleted_at', null);
-    }
-
-    // Apply basic filters that can be done server-side
-    if (filters.status_ids?.length) {
-      leadIdsQuery = leadIdsQuery.in('status_id', filters.status_ids);
-    }
-    if (filters.assigned_to) {
-      leadIdsQuery = leadIdsQuery.eq('assigned_to', filters.assigned_to);
-    }
-    if (filters.assignment_status === 'assigned') {
-      leadIdsQuery = leadIdsQuery.not('assigned_to', 'is', null);
-    } else if (filters.assignment_status === 'unassigned') {
-      leadIdsQuery = leadIdsQuery.is('assigned_to', null);
-    }
-    if (filters.created_by) {
-      leadIdsQuery = leadIdsQuery.eq('created_by', filters.created_by);
-    }
-    if (filters.date_from) {
-      leadIdsQuery = leadIdsQuery.gte('created_at', filters.date_from);
-    }
-    if (filters.date_to) {
-      leadIdsQuery = leadIdsQuery.lte('created_at', filters.date_to);
-    }
-
-    const { data: allLeadIds, error: leadIdsError } = await leadIdsQuery;
-    if (leadIdsError) {
-      throw new Error(`Failed to fetch lead IDs: ${leadIdsError.message}`);
-    }
-
-    let candidateLeadIds = new Set((allLeadIds || []).map(l => l.id));
-
-    // Step 2: Apply no_tags filter client-side
-    if (filters.no_tags && candidateLeadIds.size > 0) {
-      const { data: leadTagsData } = await supabase
-        .from('lead_tags')
-        .select('lead_id');
-
-      const leadsWithTags = new Set((leadTagsData || []).map(lt => lt.lead_id));
-      
-      // Keep only leads that have NO tags
-      candidateLeadIds = new Set(
-        [...candidateLeadIds].filter(id => !leadsWithTags.has(id))
-      );
-    }
-
-    // Step 3: Apply no_activities filter client-side
-    if (filters.no_activities && candidateLeadIds.size > 0) {
-      const { data: activitiesData } = await supabase
-        .from('activity_logs')
-        .select('lead_id')
-        .is('deleted_at', null);
-
-      const leadsWithActivities = new Set((activitiesData || []).map(a => a.lead_id));
-      
-      // Keep only leads that have NO activities
-      candidateLeadIds = new Set(
-        [...candidateLeadIds].filter(id => !leadsWithActivities.has(id))
-      );
-    }
-
-    // Step 4: If no matching leads, return empty
-    if (candidateLeadIds.size === 0) {
+    // Step 2: If no matching leads, return empty
+    if (!ids || ids.length === 0) {
       return {
         data: [],
-        count: 0,
+        count: total || 0,
         page,
         limit,
-        total_pages: 0
+        total_pages: total_pages || 0,
       };
     }
 
-    // Step 5: Fetch full lead data for the paginated subset
-    // First, get the sorted order by fetching minimal data
-    const candidateIdsArray = [...candidateLeadIds];
-    
-    // Fetch leads with ordering to determine correct pagination
-    let orderedQuery = supabase
-      .from('leads')
-      .select('id, is_pinned, pinned_at, assigned_at, created_at')
-      .in('id', candidateIdsArray)
-      .order('is_pinned', { ascending: false })
-      .order('pinned_at', { ascending: false, nullsFirst: false })
-      .order('assigned_at', { ascending: false, nullsFirst: false })
-      .order('created_at', { ascending: false });
-
-    const { data: orderedLeads, error: orderedError } = await orderedQuery;
-    if (orderedError) {
-      throw new Error(`Failed to fetch ordered leads: ${orderedError.message}`);
-    }
-
-    const totalCount = orderedLeads?.length || 0;
-    const totalPages = Math.ceil(totalCount / limit);
-
-    // Get the IDs for the current page
-    const from = (page - 1) * limit;
-    const pageIds = (orderedLeads || []).slice(from, from + limit).map(l => l.id);
-
-    if (pageIds.length === 0) {
-      return {
-        data: [],
-        count: totalCount,
-        page,
-        limit,
-        total_pages: totalPages
-      };
-    }
-
-    // Fetch full data for the page
+    // Step 3: Fetch full lead data for the page's IDs only (max `limit` rows)
     const { data: fullLeads, error: fullError } = await supabase
       .from('leads')
       .select(`
@@ -286,45 +97,28 @@ export class LeadsAPI {
           tag:tags(*)
         )
       `)
-      .in('id', pageIds);
+      .in('id', ids);
 
     if (fullError) {
-      throw new Error(`Failed to fetch full lead data: ${fullError.message}`);
+      throw new Error(`Failed to fetch lead details: ${fullError.message}`);
     }
 
-    // Sort the results to match the ordered IDs
+    // Step 4: Sort results to match the RPC's order (preserves pinned-first, assigned_at DESC)
     const idToLead = new Map((fullLeads || []).map(l => [l.id, l]));
-    const sortedLeads = pageIds.map(id => idToLead.get(id)).filter(Boolean);
+    const sortedLeads = ids.map(id => idToLead.get(id)).filter(Boolean);
 
-    // Apply search filter client-side if present
-    let filteredLeads = sortedLeads;
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      filteredLeads = sortedLeads.filter(lead => {
-        return (
-          lead.book_title?.toLowerCase().includes(searchLower) ||
-          lead.author_name?.toLowerCase().includes(searchLower) ||
-          lead.first_name?.toLowerCase().includes(searchLower) ||
-          lead.last_name?.toLowerCase().includes(searchLower) ||
-          lead.primary_email?.toLowerCase().includes(searchLower) ||
-          lead.phone_number_1?.toLowerCase().includes(searchLower) ||
-          lead.publisher?.toLowerCase().includes(searchLower)
-        );
-      });
-    }
-
-    // Transform the data to flatten tags
-    const transformedData = filteredLeads.map(lead => ({
+    // Step 5: Transform tags from nested join to flat array
+    const transformedData = sortedLeads.map(lead => ({
       ...lead,
       tags: lead.tags?.map((lt: { tag?: Tables<'tags'> }) => lt.tag).filter(Boolean) || []
     }));
 
     return {
       data: transformedData,
-      count: totalCount,
+      count: total,
       page,
       limit,
-      total_pages: totalPages
+      total_pages: total_pages,
     };
   }
 

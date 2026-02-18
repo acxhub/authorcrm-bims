@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Users, UserPlus, Hash, Trash2, CheckSquare, RefreshCw, Search, Check, X } from 'lucide-react';
+import { Users, UserPlus, UserMinus, Hash, Trash2, CheckSquare, RefreshCw, Search, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -96,6 +97,44 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
       onActionsComplete();
     } catch (error) {
       console.error('Bulk assignment failed:', error);
+    }
+  };
+
+  const handleBulkUnassign = async () => {
+    if (selectedLeads.length === 0) return;
+
+    try {
+      await Promise.all(
+        selectedLeads.map(async (lead) => {
+          await updateLead.mutateAsync({
+            id: lead.id,
+            data: { assigned_to: null }
+          });
+
+          await createActivity.mutateAsync({
+            lead_id: lead.id,
+            user_id: user?.id || '',
+            activity_type: 'assignment',
+            summary: `Lead unassigned by ${profile?.full_name || 'Unknown User'}`,
+            outcome: `Part of bulk unassignment of ${selectedLeads.length} leads`,
+          });
+        })
+      );
+
+      toast({
+        title: 'Leads Unassigned',
+        description: `${selectedLeads.length} lead${selectedLeads.length > 1 ? 's' : ''} have been unassigned`,
+      });
+
+      onSelectionChange([]);
+      onActionsComplete();
+    } catch (error) {
+      console.error('Bulk unassign failed:', error);
+      toast({
+        title: 'Unassign Failed',
+        description: 'Failed to unassign leads. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -462,6 +501,30 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Bulk Unassign */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <UserMinus className="h-4 w-4 mr-2" />
+                Unassign
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Unassign {selectedLeads.length} Lead{selectedLeads.length > 1 ? 's' : ''}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will remove the assigned user from all selected leads. They will appear in the unassigned queue.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleBulkUnassign} disabled={isLoading}>
+                  {isLoading ? 'Unassigning...' : 'Unassign'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           {/* Bulk Change Status */}
           <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
