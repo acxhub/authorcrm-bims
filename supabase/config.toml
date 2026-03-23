@@ -1,1 +1,8 @@
 project_id = "rvxyycuukrkjlmaytqok"
+
+# Local: restart after change (`supabase stop && supabase start`).
+# Hosted: also turn off "Confirm email" in Dashboard → Authentication → Providers → Email
+# (MCP cannot change that toggle; only Dashboard or Management API.)
+[auth.email]
+enable_signup = true
+enable_confirmations = false
