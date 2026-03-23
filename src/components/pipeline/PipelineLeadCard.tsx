@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Mail, Phone, User, Calendar } from 'lucide-react';
 import type { Lead } from '@/lib/api/leads';
+import { getLeadAuthorBaseName, getLeadDisplayName } from '@/lib/lead-display';
 
 interface PipelineLeadCardProps {
   lead: Lead;
@@ -66,13 +67,13 @@ export const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({ lead, isDrag
                 )}
               </h4>
               <p className="text-sm text-gray-600 truncate">
-                by {lead.author_name}
+                by {getLeadDisplayName(lead)}
               </p>
             </div>
             <div className="ml-2">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
-                  {getInitials(lead.author_name)}
+                  {getInitials(getLeadAuthorBaseName(lead))}
                 </AvatarFallback>
               </Avatar>
             </div>

@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 export type Reminder = Tables<'reminders'> & {
-  lead?: Pick<Tables<'leads'>, 'id' | 'first_name' | 'last_name' | 'author_name' | 'book_title'> | null;
+  lead?: Pick<Tables<'leads'>, 'id' | 'first_name' | 'last_name' | 'author_name' | 'pen_name' | 'book_title'> | null;
 };
 
 export type CreateReminderData = TablesInsert<'reminders'>;
@@ -27,7 +27,7 @@ export interface PaginatedRemindersResponse {
 
 const REMINDER_SELECT = `
   *,
-  lead:leads(id, first_name, last_name, author_name, book_title)
+  lead:leads(id, first_name, last_name, author_name, pen_name, book_title)
 `;
 
 export class RemindersAPI {

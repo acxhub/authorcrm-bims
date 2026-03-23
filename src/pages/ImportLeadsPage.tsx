@@ -19,6 +19,7 @@ import { useUsers } from '@/hooks/useUsers';
 import { useUsersContext } from '@/contexts/UsersContext';
 import { notify, getManagers } from '@/lib/notifications/notify';
 import { useNavigate } from 'react-router-dom';
+import { getLeadDisplayName } from '@/lib/lead-display';
 
 // Database field definitions with length limits
 const DB_FIELDS = {
@@ -26,6 +27,7 @@ const DB_FIELDS = {
   first_name: { label: 'First Name', required: false, type: 'text', maxLength: 100 },
   last_name: { label: 'Last Name', required: false, type: 'text', maxLength: 100 },
   author_name: { label: 'Author Name', required: false, type: 'text', maxLength: 255 },
+  pen_name: { label: 'Pen Name', required: false, type: 'text', maxLength: 255 },
   amazon_link: { label: 'Amazon Link', required: false, type: 'url', maxLength: null }, // No limit
   phone_number_1: { label: 'Home Phone', required: false, type: 'phone', maxLength: 20 },
   phone_number_2: { label: 'Mobile Phone', required: false, type: 'phone', maxLength: 20 },
@@ -156,6 +158,14 @@ const ImportLeadsPage: React.FC = () => {
         }
         if (normalizedHeader.includes('last') && normalizedHeader.includes('name')) {
           autoMapping[header] = 'last_name';
+        }
+        if (
+          (normalizedHeader.includes('pen') && normalizedHeader.includes('name')) ||
+          normalizedHeader === 'pseudonym' ||
+          normalizedHeader === 'pen_name' ||
+          normalizedHeader === 'alias'
+        ) {
+          autoMapping[header] = 'pen_name';
         }
         if (normalizedHeader === 'name' || normalizedHeader === 'full name') {
           // Try to find additional first/last name columns before using as author_name
@@ -398,7 +408,7 @@ const ImportLeadsPage: React.FC = () => {
             row: row._rowIndex,
             matchingFields,
             matchType: 'existing',
-            matchedWith: `${existingLead.author_name} - ${existingLead.book_title}`,
+            matchedWith: `${getLeadDisplayName(existingLead)} - ${existingLead.book_title}`,
           });
         }
       });
@@ -800,7 +810,9 @@ const ImportLeadsPage: React.FC = () => {
                               
                               <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                                 <div>
-                                  <div className="font-medium">Author: {rowData.author_name}</div>
+                                  <div className="font-medium">
+                                    Author: {getLeadDisplayName(rowData)}
+                                  </div>
                                   <div className="text-gray-600">Book: {rowData.book_title}</div>
                                 </div>
                                 <div>

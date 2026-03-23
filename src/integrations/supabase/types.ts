@@ -651,6 +651,7 @@ export type Database = {
           multiple_titles: boolean | null
           offer_title: string | null
           other_titles: Json | null
+          pen_name: string | null
           phone_number_1: string | null
           phone_number_2: string | null
           pinned_at: string | null
@@ -686,6 +687,7 @@ export type Database = {
           multiple_titles?: boolean | null
           offer_title?: string | null
           other_titles?: Json | null
+          pen_name?: string | null
           phone_number_1?: string | null
           phone_number_2?: string | null
           pinned_at?: string | null
@@ -721,6 +723,7 @@ export type Database = {
           multiple_titles?: boolean | null
           offer_title?: string | null
           other_titles?: Json | null
+          pen_name?: string | null
           phone_number_1?: string | null
           phone_number_2?: string | null
           pinned_at?: string | null
@@ -1032,6 +1035,7 @@ export type Database = {
           multiple_titles: boolean | null
           offer_title: string | null
           other_titles: Json | null
+          pen_name: string | null
           phone_number_1: string | null
           phone_number_2: string | null
           primary_email: string | null
@@ -1060,6 +1064,7 @@ export type Database = {
           multiple_titles?: boolean | null
           offer_title?: string | null
           other_titles?: Json | null
+          pen_name?: string | null
           phone_number_1?: string | null
           phone_number_2?: string | null
           primary_email?: string | null
@@ -1088,6 +1093,7 @@ export type Database = {
           multiple_titles?: boolean | null
           offer_title?: string | null
           other_titles?: Json | null
+          pen_name?: string | null
           phone_number_1?: string | null
           phone_number_2?: string | null
           primary_email?: string | null

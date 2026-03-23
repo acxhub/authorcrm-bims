@@ -24,6 +24,7 @@ import { useActivitiesRealtime } from '@/hooks/useActivitiesRealtime';
 import { DealCommissionInfo } from '@/components/deals/DealCommissionInfo';
 import { canPermanentlyDelete, canRestore, daysUntilPermanentDelete } from '@/lib/permissions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { getLeadDisplayName } from '@/lib/lead-display';
 
 const getCategoryIcon = (category: string | null) => {
   switch (category) {
@@ -403,7 +404,9 @@ export const DealDetailsPage: React.FC = () => {
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-700">Author</label>
-                          <p className="text-sm text-gray-900">{deal.lead?.author_name}</p>
+                          <p className="text-sm text-gray-900">
+                            {deal.lead ? getLeadDisplayName(deal.lead) : '—'}
+                          </p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-700">Lead Status</label>

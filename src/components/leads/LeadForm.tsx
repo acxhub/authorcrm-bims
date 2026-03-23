@@ -28,6 +28,7 @@ const leadFormSchema = z.object({
   website: z.string().url('Invalid URL format').optional().or(z.literal('')),
   state: z.string().optional(),
   country: z.string().optional(),
+  pen_name: z.string().optional(),
 });
 
 type LeadFormData = z.infer<typeof leadFormSchema>;
@@ -35,7 +36,7 @@ type LeadFormData = z.infer<typeof leadFormSchema>;
 interface LeadFormProps {
   onSubmit: (data: CreateLeadData) => void;
   isLoading?: boolean;
-  initialData?: Partial<LeadFormData & { author_name?: string }>;
+  initialData?: Partial<LeadFormData & { author_name?: string; pen_name?: string | null }>;
 }
 
 export const LeadForm: React.FC<LeadFormProps> = ({ 
@@ -65,6 +66,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
       website: initialData?.website || '',
       state: initialData?.state || '',
       country: initialData?.country || '',
+      pen_name: initialData?.pen_name || '',
     },
   });
 
@@ -94,6 +96,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
       website: data.website || null,
       state: data.state || null,
       country: data.country || null,
+      pen_name: data.pen_name?.trim() ? data.pen_name.trim() : null,
       status_id: data.status_id,
       created_by: user?.id || '',
       assigned_to: user?.role === 'sales' ? user.id : null,
@@ -146,6 +149,20 @@ export const LeadForm: React.FC<LeadFormProps> = ({
                   <FormLabel>Last Name *</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter last name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="pen_name"
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Pen Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Optional pen name / pseudonym" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

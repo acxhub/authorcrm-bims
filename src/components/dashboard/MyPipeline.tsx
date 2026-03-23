@@ -10,6 +10,7 @@ import { useDeals } from '@/hooks/useDeals';
 import { useStatuses } from '@/hooks/useStatuses';
 import { useProfile } from '@/hooks/useAuth';
 import type { Deal } from '@/lib/api/deals';
+import { getLeadDisplayName } from '@/lib/lead-display';
 
 interface MyPipelineProps {
   userId?: string;
@@ -51,7 +52,7 @@ const DealRow: React.FC<DealRowProps> = ({ deal, navigate, urgency }) => {
           </Badge>
         </div>
         <p className="text-xs text-gray-500 truncate">
-          {deal.lead?.author_name || `${deal.lead?.first_name || ''} ${deal.lead?.last_name || ''}`.trim() || 'No lead'}
+          {deal.lead ? getLeadDisplayName(deal.lead) : 'No lead'}
           {deal.updated_at && (
             <span className="ml-2 text-gray-400">
               {formatDistanceToNow(new Date(deal.updated_at), { addSuffix: true })}

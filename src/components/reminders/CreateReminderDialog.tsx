@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLeads } from '@/hooks/useLeads';
 import { useCreateReminder, useUpdateReminder } from '@/hooks/useReminders';
 import type { Reminder } from '@/lib/api/reminders';
+import { getLeadDisplayName } from '@/lib/lead-display';
 
 interface CreateReminderDialogProps {
   open: boolean;
@@ -226,7 +227,7 @@ export const CreateReminderDialog: React.FC<CreateReminderDialogProps> = ({
                 >
                   <BookOpen className="mr-2 h-4 w-4" />
                   {selectedLead
-                    ? (selectedLead.author_name || `${selectedLead.first_name || ''} ${selectedLead.last_name || ''}`.trim() || 'Unknown Lead')
+                    ? getLeadDisplayName(selectedLead)
                     : leadId
                       ? 'Loading...'
                       : 'No lead linked'}
@@ -267,7 +268,7 @@ export const CreateReminderDialog: React.FC<CreateReminderDialogProps> = ({
                         >
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium truncate">
-                              {lead.author_name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown'}
+                              {getLeadDisplayName(lead)}
                             </div>
                             {lead.book_title && (
                               <div className="text-xs text-gray-500 truncate">{lead.book_title}</div>

@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import type { Deal } from '@/lib/api/deals';
+import { getLeadDisplayName } from '@/lib/lead-display';
 
 interface PipelineDealCardProps {
   deal: Deal;
@@ -110,7 +111,9 @@ export const PipelineDealCard: React.FC<PipelineDealCardProps> = ({
                   {deal.offer_title}
                 </h4>
                 <p className="text-xs text-gray-600 truncate mt-1">
-                  {deal.lead?.author_name} • {deal.lead?.book_title}
+                  {deal.lead
+                    ? `${getLeadDisplayName(deal.lead)}${deal.lead.book_title ? ` • ${deal.lead.book_title}` : ''}`
+                    : ''}
                 </p>
               </div>
               

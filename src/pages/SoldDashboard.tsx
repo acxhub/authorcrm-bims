@@ -7,6 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { getLeadDisplayName } from '@/lib/lead-display';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns';
 import { CalendarIcon, DollarSign, TrendingUp, Users, Package, Trophy, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
@@ -35,6 +36,7 @@ interface ClosedDeal {
   lead?: {
     id: string;
     author_name: string;
+    pen_name: string | null;
     book_title: string;
     primary_email: string | null;
     first_name: string | null;
@@ -104,7 +106,7 @@ export const SoldDashboard: React.FC = () => {
           updated_at,
           lead_id,
           assigned_to,
-          lead:leads!deals_lead_id_fkey(id, author_name, book_title, primary_email, first_name, last_name),
+          lead:leads!deals_lead_id_fkey(id, author_name, pen_name, book_title, primary_email, first_name, last_name),
           assigned_to_profile:profiles!deals_assigned_to_fkey(id, email, full_name, avatar_url),
           status:statuses!deals_status_id_fkey(name, color)
         `)
@@ -527,7 +529,7 @@ export const SoldDashboard: React.FC = () => {
                                 )}
                               </div>
                               <p className="text-sm text-gray-600 truncate">
-                                {deal.lead?.author_name || `${deal.lead?.first_name || ''} ${deal.lead?.last_name || ''}`.trim()} 
+                                {deal.lead ? getLeadDisplayName(deal.lead) : 'Unknown'}
                                 {deal.lead?.book_title && <span className="text-gray-400"> • {deal.lead.book_title}</span>}
                               </p>
                               <p className="text-xs text-gray-400">

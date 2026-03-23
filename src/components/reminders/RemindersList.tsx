@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { useReminders, useToggleReminder, useDeleteReminder } from '@/hooks/useReminders';
 import { CreateReminderDialog } from './CreateReminderDialog';
 import type { Reminder } from '@/lib/api/reminders';
+import { getLeadDisplayName } from '@/lib/lead-display';
 
 interface RemindersListProps {
   userId: string;
@@ -130,7 +131,7 @@ const ReminderRow: React.FC<{
               className="flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 hover:underline"
             >
               <BookOpen className="h-3 w-3" />
-              {reminder.lead.author_name || `${reminder.lead.first_name || ''} ${reminder.lead.last_name || ''}`.trim()}
+              {getLeadDisplayName(reminder.lead)}
             </button>
           )}
         </div>

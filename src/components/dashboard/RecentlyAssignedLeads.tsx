@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLeads } from '@/hooks/useLeads';
 import { useAuth, useProfile } from '@/hooks/useAuth';
 import { formatDistanceToNow } from 'date-fns';
+import { getLeadDisplayName } from '@/lib/lead-display';
 
 export const RecentlyAssignedLeads: React.FC = () => {
   const navigate = useNavigate();
@@ -29,14 +30,6 @@ export const RecentlyAssignedLeads: React.FC = () => {
       })
       .slice(0, 10);
   }, [leadsData?.data]);
-
-  const getAuthorName = (lead: any) => {
-    if (lead.author_name) return lead.author_name;
-    if (lead.first_name || lead.last_name) {
-      return `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
-    }
-    return 'Unknown Author';
-  };
 
   if (isLoading) {
     return (
@@ -102,7 +95,7 @@ export const RecentlyAssignedLeads: React.FC = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-900 truncate text-sm">
-                  {getAuthorName(lead)}
+                  {getLeadDisplayName(lead)}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
                   {lead.publisher || 'No publisher'}

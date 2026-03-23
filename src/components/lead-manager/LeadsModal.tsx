@@ -19,6 +19,7 @@ import {
   useLeadsWithoutTags,
 } from '@/hooks/useLeadManagerMetrics';
 import { ExtendedBulkActions } from './ExtendedBulkActions';
+import { getLeadDisplayName } from '@/lib/lead-display';
 
 export type FilterType = 
   | 'unassigned' 
@@ -111,6 +112,7 @@ export const LeadsModal: React.FC<LeadsModalProps> = ({
       lead.first_name?.toLowerCase().includes(search) ||
       lead.last_name?.toLowerCase().includes(search) ||
       lead.author_name?.toLowerCase().includes(search) ||
+      lead.pen_name?.toLowerCase().includes(search) ||
       lead.primary_email?.toLowerCase().includes(search) ||
       lead.phone_number_1?.includes(search)
     );
@@ -251,7 +253,7 @@ export const LeadsModal: React.FC<LeadsModalProps> = ({
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {lead.author_name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown Author'}
+                        {getLeadDisplayName(lead)}
                         {lead.primary_email && ` • ${lead.primary_email}`}
                       </div>
                       {lead.tags && lead.tags.length > 0 && (

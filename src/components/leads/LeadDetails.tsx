@@ -17,6 +17,7 @@ import { SimpleLeadAssign } from './SimpleLeadAssign';
 import { ForRecycleButton } from './ForRecycleButton';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead } from '@/lib/api/leads';
+import { getLeadAuthorBaseName, getLeadDisplayName } from '@/lib/lead-display';
 
 interface LeadDetailsProps {
   leadId: string;
@@ -105,7 +106,7 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
             )}
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{lead.book_title}</h1>
-              <p className="text-gray-600">by {lead.author_name}</p>
+              <p className="text-gray-600">by {getLeadDisplayName(lead)}</p>
             </div>
           </div>
           
@@ -159,13 +160,13 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
                 <Avatar className="h-20 w-20">
                   <AvatarImage src="" />
                   <AvatarFallback className="bg-blue-100 text-blue-700 text-xl">
-                    {getInitials(lead.author_name)}
+                    {getInitials(getLeadAuthorBaseName(lead))}
                   </AvatarFallback>
                 </Avatar>
                 
                 <div className="flex-1 space-y-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">{lead.author_name}</h2>
+                    <h2 className="text-2xl font-bold text-gray-900">{getLeadDisplayName(lead)}</h2>
                     <p className="text-lg text-gray-600">{lead.book_title}</p>
                     
                     <div className="flex items-center gap-4 mt-3">

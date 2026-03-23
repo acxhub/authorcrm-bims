@@ -24,6 +24,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLeads } from '@/hooks/useLeads';
 import type { CreateDealData } from '@/lib/api/deals';
 import type { Lead } from '@/lib/api/leads';
+import { getLeadDisplayName } from '@/lib/lead-display';
 
 const createDealSchema = z.object({
   author_name: z.string().min(1, 'Author name is required'),
@@ -94,8 +95,11 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
   // Auto-populate fields when author is selected (only when no lead was provided)
   useEffect(() => {
     if (!isLeadProvided && watchedAuthorName && leadsData?.data) {
+      const q = watchedAuthorName.toLowerCase();
       const matchingLead = leadsData.data.find(
-        lead => lead.author_name.toLowerCase().includes(watchedAuthorName.toLowerCase())
+        (lead) =>
+          lead.author_name.toLowerCase().includes(q) ||
+          (lead.pen_name && lead.pen_name.toLowerCase().includes(q))
       );
       
       if (matchingLead) {
@@ -156,12 +160,13 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
   };
 
   // Get unique author names from leads with enhanced search
-  const authorOptions = leadsData?.data?.map(lead => ({
-    value: lead.author_name,
-    label: `${lead.author_name} - ${lead.book_title}`,
-    searchText: `${lead.author_name} ${lead.first_name || ''} ${lead.last_name || ''} ${lead.book_title} ${lead.primary_email || ''}`.toLowerCase(),
-    lead: lead
-  })) || [];
+  const authorOptions =
+    leadsData?.data?.map((lead) => ({
+      value: lead.author_name,
+      label: `${getLeadDisplayName(lead)} - ${lead.book_title}`,
+      searchText: `${lead.author_name} ${lead.pen_name || ''} ${lead.first_name || ''} ${lead.last_name || ''} ${lead.book_title} ${lead.primary_email || ''}`.toLowerCase(),
+      lead,
+    })) || [];
 
   // Group by author name to detect duplicates
   const authorGroups = authorOptions.reduce((acc, option) => {
@@ -207,15 +212,15 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
                   <FormLabel>Author Name *</FormLabel>
                   {isLeadProvided ? (
                     // Lead was provided directly - show read-only
-                    <Input 
-                      value={field.value} 
+                    <Input
+                      value={providedLead ? getLeadDisplayName(providedLead) : field.value}
                       readOnly
                       className="bg-gray-50"
                     />
                   ) : selectedLead ? (
                     <div className="flex items-center gap-2">
-                      <Input 
-                        value={field.value} 
+                      <Input
+                        value={field.value}
                         onChange={field.onChange}
                         placeholder="Author name"
                         className="flex-1"
@@ -242,9 +247,11 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
                             aria-expanded={authorSearchOpen}
                             className="w-full justify-between"
                           >
-                            {field.value
-                              ? field.value
-                              : "Search and select an author..."}
+                            {selectedLead
+                              ? getLeadDisplayName(selectedLead)
+                              : field.value
+                                ? field.value
+                                : 'Search and select an author...'}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </FormControl>

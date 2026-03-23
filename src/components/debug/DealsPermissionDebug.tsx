@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useDeals } from '@/hooks/useDeals';
 import { useAuth, useProfile } from '@/hooks/useAuth';
 import { AlertCircle, CheckCircle, XCircle, RefreshCw, User, Shield } from 'lucide-react';
+import { getLeadDisplayName } from '@/lib/lead-display';
 
 export const DealsPermissionDebug: React.FC = () => {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
@@ -228,7 +229,7 @@ export const DealsPermissionDebug: React.FC = () => {
                               <div>
                                 <p className="text-sm font-medium">{deal.offer_title}</p>
                                 <p className="text-xs text-gray-600">
-                                  Lead: {deal.lead?.author_name} • Created by: {deal.created_by_profile?.email}
+                                  Lead: {deal.lead ? getLeadDisplayName(deal.lead) : '—'} • Created by: {deal.created_by_profile?.email}
                                 </p>
                               </div>
                               <div className="text-right">

@@ -17,6 +17,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useLogActivity } from '@/hooks/useActivities';
 import { useAuth } from '@/hooks/useAuth';
 import type { Deal } from '@/lib/api/deals';
+import { getLeadDisplayName } from '@/lib/lead-display';
 
 const logCallSchema = z.object({
   summary: z.string().min(1, 'Please provide a call summary'),
@@ -85,7 +86,8 @@ export const LogCallModal: React.FC<LogCallModalProps> = ({
         <DialogHeader>
           <DialogTitle>Log Call</DialogTitle>
           <DialogDescription>
-            Record details about your call with {deal.lead?.author_name}.
+            Record details about your call with{' '}
+            {deal.lead ? getLeadDisplayName(deal.lead) : 'the author'}.
           </DialogDescription>
         </DialogHeader>
 

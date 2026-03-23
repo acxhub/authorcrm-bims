@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow, differenceInDays, startOfToday } from 'date-fns';
 import type { Deal } from '@/lib/api/deals';
+import { getLeadDisplayName } from '@/lib/lead-display';
 
 interface PipelineTableViewProps {
   deals: Deal[];
@@ -201,7 +202,7 @@ export const PipelineTableView: React.FC<PipelineTableViewProps> = ({
                           }}
                           className="text-blue-600 hover:text-blue-800 hover:underline text-sm"
                         >
-                          {deal.lead.author_name || `${deal.lead.first_name || ''} ${deal.lead.last_name || ''}`.trim() || 'Unknown'}
+                          {getLeadDisplayName(deal.lead)}
                         </button>
                       ) : (
                         <span className="text-gray-400 text-sm">No lead</span>

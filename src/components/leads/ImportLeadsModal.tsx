@@ -16,6 +16,7 @@ import Papa from 'papaparse';
 import { useCreateLead, useLeads } from '@/hooks/useLeads';
 import { useStatuses } from '@/hooks/useStatuses';
 import { useAuth } from '@/hooks/useAuth';
+import { getLeadDisplayName } from '@/lib/lead-display';
 
 interface ImportLeadsModalProps {
   open: boolean;
@@ -52,6 +53,7 @@ interface DuplicateInfo {
 const DB_FIELDS = {
   book_title: { label: 'Book Title', required: true, type: 'text' },
   author_name: { label: 'Author Name', required: true, type: 'text' },
+  pen_name: { label: 'Pen Name', required: false, type: 'text' },
   amazon_link: { label: 'Amazon Link', required: false, type: 'url' },
   phone_number_1: { label: 'Home Phone', required: false, type: 'phone' },
   phone_number_2: { label: 'Mobile Phone', required: false, type: 'phone' },
@@ -127,6 +129,13 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
         // Auto-mapping logic
         if (lowerHeader.includes('book') && lowerHeader.includes('title')) {
           autoMapping[header] = 'book_title';
+        } else if (
+          (lowerHeader.includes('pen') && lowerHeader.includes('name')) ||
+          lowerHeader === 'pseudonym' ||
+          lowerHeader === 'pen_name' ||
+          lowerHeader === 'alias'
+        ) {
+          autoMapping[header] = 'pen_name';
         } else if (lowerHeader.includes('author') && lowerHeader.includes('name')) {
           autoMapping[header] = 'author_name';
         } else if (lowerHeader.includes('email') && lowerHeader.includes('primary')) {
@@ -230,7 +239,7 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
             row: index + 1,
             matchingFields,
             matchType: 'existing',
-            matchedWith: `${existingLead.author_name} - ${existingLead.book_title}`,
+            matchedWith: `${getLeadDisplayName(existingLead)} - ${existingLead.book_title}`,
           });
         }
       });
@@ -677,7 +686,7 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
                                 
                                 <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                                   <div>
-                                    <div className="font-medium">Author: {rowData.author_name}</div>
+                                    <div className="font-medium">Author: {getLeadDisplayName(rowData)}</div>
                                     <div className="text-gray-600">Book: {rowData.book_title}</div>
                                   </div>
                                   <div>

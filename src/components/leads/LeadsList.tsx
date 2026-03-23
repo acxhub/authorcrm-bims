@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useLeads, useArchiveLead, useUpdateLead, usePinLead } from '@/hooks/useLeads';
 import { cn } from '@/lib/utils';
+import { getLeadAuthorBaseName, getLeadDisplayName } from '@/lib/lead-display';
 import { toast } from '@/hooks/use-toast';
 import { useStatuses } from '@/hooks/useStatuses';
 import { BulkLeadActions } from './BulkLeadActions';
@@ -615,7 +616,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                         <Checkbox
                           checked={isLeadSelected(lead.id)}
                           onCheckedChange={(checked) => handleSelectLead(lead, checked as boolean)}
-                          aria-label={`Select lead ${lead.author_name}`}
+                          aria-label={`Select lead ${getLeadDisplayName(lead)}`}
                         />
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
@@ -642,12 +643,12 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                           <Avatar className="h-8 w-8">
                             <AvatarImage src="" />
                             <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
-                              {getInitials(lead.author_name)}
+                              {getInitials(getLeadAuthorBaseName(lead))}
                             </AvatarFallback>
                           </Avatar>
                           <div>
                             <div className="font-medium text-gray-900">
-                              {lead.author_name}
+                              {getLeadDisplayName(lead)}
                             </div>
                           </div>
                         </div>
