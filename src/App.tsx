@@ -25,6 +25,7 @@ import { RemindersPage } from "./pages/RemindersPage";
 import { AdminArchive } from "./pages/AdminArchive";
 import { LeadManager } from "./pages/LeadManager";
 import { NotificationsPage } from "./pages/NotificationsPage";
+import { AttendanceReportPage } from "./pages/AttendanceReportPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -130,6 +131,11 @@ const App = () => {
                 <Route path="/lead-manager" element={
                   <ProtectedRoute requiredRole="leads_manager">
                     <LeadManager />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/attendance" element={
+                  <ProtectedRoute requiredRole={["leads_manager", "sales_manager"]}>
+                    <AttendanceReportPage />
                   </ProtectedRoute>
                 } />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

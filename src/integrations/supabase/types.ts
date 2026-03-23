@@ -73,6 +73,82 @@ export type Database = {
           },
         ]
       }
+      attendance_breaks: {
+        Row: {
+          id: string
+          shift_id: string
+          break_start_at: string
+          break_end_at: string | null
+          duration_seconds: number | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          shift_id: string
+          break_start_at: string
+          break_end_at?: string | null
+          duration_seconds?: number | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          shift_id?: string
+          break_start_at?: string
+          break_end_at?: string | null
+          duration_seconds?: number | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_breaks_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_shifts: {
+        Row: {
+          id: string
+          user_id: string
+          clock_in_at: string
+          clock_out_at: string | null
+          status: Database["public"]["Enums"]["attendance_shift_status"]
+          total_break_seconds: number
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          clock_in_at: string
+          clock_out_at?: string | null
+          status?: Database["public"]["Enums"]["attendance_shift_status"]
+          total_break_seconds?: number
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          clock_in_at?: string
+          clock_out_at?: string | null
+          status?: Database["public"]["Enums"]["attendance_shift_status"]
+          total_break_seconds?: number
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_shifts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_commission_settings: {
         Row: {
           id: string
@@ -1130,6 +1206,22 @@ export type Database = {
       }
     }
     Functions: {
+      attendance_clock_in: {
+        Args: { p_at?: string }
+        Returns: string
+      }
+      attendance_clock_out: {
+        Args: { p_shift_id: string; p_at?: string }
+        Returns: undefined
+      }
+      attendance_start_break: {
+        Args: { p_shift_id: string; p_at?: string }
+        Returns: string
+      }
+      attendance_end_break: {
+        Args: { p_break_id: string; p_at?: string }
+        Returns: undefined
+      }
       archive_lead_cascade: {
         Args: { p_lead_id: string; p_deleted_by: string }
         Returns: undefined
@@ -1151,6 +1243,7 @@ export type Database = {
         | "note"
         | "status_change"
         | "assignment"
+      attendance_shift_status: "active" | "on_break" | "clocked_out"
       user_role: "leads_manager" | "sales_manager" | "sales"
     }
     CompositeTypes: {
@@ -1275,6 +1368,7 @@ export const Constants = {
         "status_change",
         "assignment",
       ],
+      attendance_shift_status: ["active", "on_break", "clocked_out"],
       user_role: ["leads_manager", "sales_manager", "sales"],
     },
   },

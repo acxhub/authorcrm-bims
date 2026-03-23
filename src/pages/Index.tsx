@@ -11,6 +11,7 @@ import { CompactLeaderboard } from "@/components/dashboard/CompactLeaderboard";
 import { RecentlyAssignedLeads } from "@/components/dashboard/RecentlyAssignedLeads";
 import { MyPipeline } from "@/components/dashboard/MyPipeline";
 import { ActionCenter } from "@/components/dashboard/ActionCenter";
+import { AttendanceWidget } from "@/components/dashboard/AttendanceWidget";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -107,17 +108,20 @@ const Index = () => {
             {/* Row 2: Needs Attention (conditional) */}
             <NeedsAttention />
 
-            {/* Row 3: Pipeline + Action Center */}
+            {/* Row 3: Attendance + Action Center */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-              <div className="lg:col-span-3">
-                <MyPipeline userId={user?.id} />
-              </div>
               <div className="lg:col-span-2">
+                <AttendanceWidget />
+              </div>
+              <div className="lg:col-span-3">
                 <ActionCenter />
               </div>
             </div>
 
-            {/* Row 4: Activity + Recently Assigned */}
+            {/* Row 4: Pipeline */}
+            <MyPipeline userId={user?.id} />
+
+            {/* Row 5: Activity + Recently Assigned */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
               <div className="lg:col-span-3">
                 <RecentActivity />
@@ -127,7 +131,7 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Row 5: Top Performers */}
+            {/* Row 6: Top Performers */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
               <div className="lg:col-span-2 lg:col-start-4">
                 <CompactLeaderboard />
