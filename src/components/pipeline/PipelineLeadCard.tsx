@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Mail, Phone, User, Calendar } from 'lucide-react';
 import type { Lead } from '@/lib/api/leads';
-import { getLeadAuthorBaseName, getLeadDisplayName } from '@/lib/lead-display';
+import { getLeadAuthorBaseName, getLeadDisplayName, getLeadBookTitleDisplay } from '@/lib/lead-display';
 
 interface PipelineLeadCardProps {
   lead: Lead;
@@ -44,6 +44,8 @@ export const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({ lead, isDrag
     });
   };
 
+  const bookTitle = getLeadBookTitleDisplay(lead.book_title);
+
   return (
     <Card
       ref={setNodeRef}
@@ -60,10 +62,15 @@ export const PipelineLeadCard: React.FC<PipelineLeadCardProps> = ({ lead, isDrag
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <h4 className="font-medium text-gray-900 truncate">
-                {lead.book_title && lead.book_title.length > 24 ? (
-                  <span title={lead.book_title}>{lead.book_title.slice(0, 24) + '…'}</span>
+                {bookTitle.length > 24 ? (
+                  <span title={bookTitle}>{bookTitle.slice(0, 24) + '…'}</span>
                 ) : (
-                  <span title={lead.book_title}>{lead.book_title}</span>
+                  <span
+                    title={bookTitle}
+                    className={!lead.book_title?.trim() ? 'text-muted-foreground' : undefined}
+                  >
+                    {bookTitle}
+                  </span>
                 )}
               </h4>
               <p className="text-sm text-gray-600 truncate">

@@ -25,3 +25,11 @@ export function getLeadDisplayName(lead: LeadDisplayFields): string {
   }
   return base;
 }
+
+/** Label shown when book title is missing (matches form field name). */
+export const DEFAULT_BOOK_TITLE_DISPLAY = 'Book Title';
+
+export function getLeadBookTitleDisplay(bookTitle: string | null | undefined): string {
+  const t = bookTitle?.trim();
+  return t || DEFAULT_BOOK_TITLE_DISPLAY;
+}

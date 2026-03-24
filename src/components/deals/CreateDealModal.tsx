@@ -24,7 +24,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLeads } from '@/hooks/useLeads';
 import type { CreateDealData } from '@/lib/api/deals';
 import type { Lead } from '@/lib/api/leads';
-import { getLeadDisplayName } from '@/lib/lead-display';
+import { getLeadDisplayName, getLeadBookTitleDisplay } from '@/lib/lead-display';
 
 const createDealSchema = z.object({
   author_name: z.string().min(1, 'Author name is required'),
@@ -72,7 +72,9 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
     resolver: zodResolver(createDealSchema),
     defaultValues: {
       author_name: providedLead?.author_name || initialData?.author_name || '',
-      offer_title: providedLead ? `${providedLead.book_title} - Publishing Package` : (initialData?.offer_title || ''),
+      offer_title: providedLead
+        ? `${getLeadBookTitleDisplay(providedLead.book_title)} - Publishing Package`
+        : (initialData?.offer_title || ''),
       deal_value: initialData?.deal_value || 0,
       category: initialData?.category || 'Publishing',
       assigned_to: initialData?.assigned_to || user?.id,
@@ -87,7 +89,10 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
       setSelectedLead(providedLead);
       form.setValue('author_name', providedLead.author_name);
       if (!form.getValues('offer_title')) {
-        form.setValue('offer_title', `${providedLead.book_title} - Publishing Package`);
+        form.setValue(
+          'offer_title',
+          `${getLeadBookTitleDisplay(providedLead.book_title)} - Publishing Package`
+        );
       }
     }
   }, [providedLead, open, form]);
@@ -106,7 +111,10 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
         setSelectedLead(matchingLead);
         // Auto-populate offer title if not already set
         if (!form.getValues('offer_title')) {
-          form.setValue('offer_title', `${matchingLead.book_title} - Publishing Package`);
+          form.setValue(
+            'offer_title',
+            `${getLeadBookTitleDisplay(matchingLead.book_title)} - Publishing Package`
+          );
         }
       }
     }
@@ -163,8 +171,8 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
   const authorOptions =
     leadsData?.data?.map((lead) => ({
       value: lead.author_name,
-      label: `${getLeadDisplayName(lead)} - ${lead.book_title}`,
-      searchText: `${lead.author_name} ${lead.pen_name || ''} ${lead.first_name || ''} ${lead.last_name || ''} ${lead.book_title} ${lead.primary_email || ''}`.toLowerCase(),
+      label: `${getLeadDisplayName(lead)} - ${getLeadBookTitleDisplay(lead.book_title)}`,
+      searchText: `${lead.author_name} ${lead.pen_name || ''} ${lead.first_name || ''} ${lead.last_name || ''} ${getLeadBookTitleDisplay(lead.book_title)} ${lead.primary_email || ''}`.toLowerCase(),
       lead,
     })) || [];
 
@@ -269,7 +277,10 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
                                   onSelect={() => {
                                     field.onChange(option.value);
                                     setSelectedLead(option.lead);
-                                    form.setValue('offer_title', `${option.lead.book_title} - Publishing Package`);
+                                    form.setValue(
+                                      'offer_title',
+                                      `${getLeadBookTitleDisplay(option.lead.book_title)} - Publishing Package`
+                                    );
                                     setAuthorSearchOpen(false);
                                   }}
                                 >
@@ -326,11 +337,19 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
                   <div>
                     <span className="text-gray-600">Book:</span>
                     <p className="font-medium">
-                      {selectedLead.book_title && selectedLead.book_title.length > 24 ? (
-                        <span title={selectedLead.book_title}>{selectedLead.book_title.slice(0, 24) + '…'}</span>
-                      ) : (
-                        <span title={selectedLead.book_title}>{selectedLead.book_title}</span>
-                      )}
+                      {(() => {
+                        const t = getLeadBookTitleDisplay(selectedLead.book_title);
+                        return t.length > 24 ? (
+                          <span title={t}>{t.slice(0, 24) + '…'}</span>
+                        ) : (
+                          <span
+                            title={t}
+                            className={!selectedLead.book_title?.trim() ? 'text-muted-foreground' : undefined}
+                          >
+                            {t}
+                          </span>
+                        );
+                      })()}
                     </p>
                   </div>
                   <div>

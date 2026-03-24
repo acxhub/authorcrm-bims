@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useLeads, useArchiveLead, useUpdateLead, usePinLead } from '@/hooks/useLeads';
 import { cn } from '@/lib/utils';
-import { getLeadAuthorBaseName, getLeadDisplayName } from '@/lib/lead-display';
+import { getLeadAuthorBaseName, getLeadDisplayName, getLeadBookTitleDisplay } from '@/lib/lead-display';
 import { useStatuses } from '@/hooks/useStatuses';
 import { BulkLeadActions } from './BulkLeadActions';
 import { formatDistanceToNow } from 'date-fns';
@@ -548,11 +548,16 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
                       </TableCell>
                       <TableCell>
                         <div className="font-medium text-gray-900">
-                          {lead.book_title && lead.book_title.length > 24 ? (
-                            <span title={lead.book_title}>{lead.book_title.slice(0, 24) + '…'}</span>
-                          ) : (
-                            <span title={lead.book_title}>{lead.book_title}</span>
-                          )}
+                          {(() => {
+                            const t = getLeadBookTitleDisplay(lead.book_title);
+                            return t.length > 24 ? (
+                              <span title={t}>{t.slice(0, 24) + '…'}</span>
+                            ) : (
+                              <span title={t} className={!lead.book_title?.trim() ? 'text-muted-foreground' : undefined}>
+                                {t}
+                              </span>
+                            );
+                          })()}
                         </div>
                         {lead.multiple_titles && (
                           <Badge variant="secondary" className="mt-1">

@@ -7,7 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { getLeadDisplayName } from '@/lib/lead-display';
+import { getLeadDisplayName, getLeadBookTitleDisplay } from '@/lib/lead-display';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns';
 import { CalendarIcon, DollarSign, TrendingUp, Users, Package, Trophy, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
@@ -530,7 +530,12 @@ export const SoldDashboard: React.FC = () => {
                               </div>
                               <p className="text-sm text-gray-600 truncate">
                                 {deal.lead ? getLeadDisplayName(deal.lead) : 'Unknown'}
-                                {deal.lead?.book_title && <span className="text-gray-400"> • {deal.lead.book_title}</span>}
+                                {deal.lead && (
+                                  <span className="text-gray-400">
+                                    {' '}
+                                    • {getLeadBookTitleDisplay(deal.lead.book_title)}
+                                  </span>
+                                )}
                               </p>
                               <p className="text-xs text-gray-400">
                                 Closed {deal.updated_at ? format(new Date(deal.updated_at), 'MMM d, yyyy') : 'N/A'}

@@ -19,7 +19,7 @@ import { useArchivedStatuses, useRestoreStatus, usePermanentlyDeleteStatus } fro
 import { useArchivedTags, useRestoreTag, usePermanentlyDeleteTag } from '@/hooks/useTags';
 import { useArchivedCommissionTiers, useRestoreCommissionTier, usePermanentlyDeleteCommissionTier } from '@/hooks/useCommissionTemplates';
 import { canPermanentlyDelete, daysUntilPermanentDelete } from '@/lib/permissions';
-import { getLeadDisplayName } from '@/lib/lead-display';
+import { getLeadDisplayName, getLeadBookTitleDisplay } from '@/lib/lead-display';
 
 const TABS = ['leads', 'deals', 'activities', 'comments', 'statuses', 'tags', 'commissions'];
 
@@ -266,7 +266,7 @@ const ArchivedLeadsTab: React.FC<{ profile: any }> = ({ profile }) => {
                 <TableCell className="font-medium">
                   {getLeadDisplayName(lead)}
                 </TableCell>
-                <TableCell>{lead.book_title || '-'}</TableCell>
+                <TableCell>{getLeadBookTitleDisplay(lead.book_title)}</TableCell>
                 <TableCell>{lead.primary_email || '-'}</TableCell>
                 <TableCell className="text-sm text-gray-500">
                   {lead.deleted_at ? formatDistanceToNow(new Date(lead.deleted_at), { addSuffix: true }) : '-'}

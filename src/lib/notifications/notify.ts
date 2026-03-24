@@ -1,4 +1,5 @@
 import { notificationsApi, NOTIFICATION_TYPES, type CreateNotificationData } from '@/lib/api/notifications';
+import { getLeadBookTitleDisplay } from '@/lib/lead-display';
 
 interface UserRef {
   id: string;
@@ -33,7 +34,7 @@ export const notify = {
     managers: UserRef[];
   }) {
     const { actorId, lead, managers } = params;
-    const title = lead.book_title || 'Untitled Lead';
+    const title = getLeadBookTitleDisplay(lead.book_title);
     const notifications: CreateNotificationData[] = [];
 
     for (const mgr of managers) {
@@ -71,7 +72,7 @@ export const notify = {
     previousAssigneeId?: string | null;
   }) {
     const { actorId, actorName, lead, newAssigneeId, previousAssigneeId } = params;
-    const title = lead.book_title || 'Untitled Lead';
+    const title = getLeadBookTitleDisplay(lead.book_title);
     const notifications: CreateNotificationData[] = [];
 
     notifications.push({
@@ -108,7 +109,7 @@ export const notify = {
     managers: UserRef[];
   }) {
     const { actorId, actorName, lead, newStatusName, isTerminal, managers } = params;
-    const title = lead.book_title || 'Untitled Lead';
+    const title = getLeadBookTitleDisplay(lead.book_title);
     const notifications: CreateNotificationData[] = [];
 
     if (lead.assigned_to) {
@@ -150,7 +151,7 @@ export const notify = {
   }) {
     const { actorId, actorName, lead, previousAssigneeId } = params;
     if (!previousAssigneeId) return;
-    const title = lead.book_title || 'Untitled Lead';
+    const title = getLeadBookTitleDisplay(lead.book_title);
 
     await notificationsApi.createNotifications([{
       recipient_id: previousAssigneeId,
@@ -170,7 +171,7 @@ export const notify = {
     managers: UserRef[];
   }) {
     const { actorId, actorName, lead, managers } = params;
-    const title = lead.book_title || 'Untitled Lead';
+    const title = getLeadBookTitleDisplay(lead.book_title);
     const notifications: CreateNotificationData[] = [];
 
     if (lead.assigned_to) {
@@ -423,7 +424,7 @@ export const notify = {
     parentCommentUserId?: string | null;
   }) {
     const { actorId, actorName, lead, isReply, parentCommentUserId } = params;
-    const title = lead.book_title || 'Untitled Lead';
+    const title = getLeadBookTitleDisplay(lead.book_title);
     const notifications: CreateNotificationData[] = [];
 
     if (isReply && parentCommentUserId) {
@@ -465,7 +466,7 @@ export const notify = {
     managers: UserRef[];
   }) {
     const { actorId, actorName, lead, activityType, managers } = params;
-    const title = lead.book_title || 'Untitled Lead';
+    const title = getLeadBookTitleDisplay(lead.book_title);
     const typeLabel = activityType.replace('_', ' ');
 
     const notifications: CreateNotificationData[] = [];

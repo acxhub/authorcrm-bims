@@ -19,7 +19,7 @@ import { useUsers } from '@/hooks/useUsers';
 import { useUsersContext } from '@/contexts/UsersContext';
 import { notify, getManagers } from '@/lib/notifications/notify';
 import { useNavigate } from 'react-router-dom';
-import { getLeadDisplayName } from '@/lib/lead-display';
+import { getLeadDisplayName, getLeadBookTitleDisplay } from '@/lib/lead-display';
 
 // Database field definitions with length limits
 const DB_FIELDS = {
@@ -384,7 +384,7 @@ const ImportLeadsPage: React.FC = () => {
             row: row._rowIndex,
             matchingFields,
             matchType: 'existing',
-            matchedWith: `${getLeadDisplayName(existingLead)} - ${existingLead.book_title}`,
+            matchedWith: `${getLeadDisplayName(existingLead)} - ${getLeadBookTitleDisplay(existingLead.book_title)}`,
           });
         }
       });
@@ -791,7 +791,9 @@ const ImportLeadsPage: React.FC = () => {
                                   <div className="font-medium">
                                     Author: {getLeadDisplayName(rowData)}
                                   </div>
-                                  <div className="text-gray-600">Book: {rowData.book_title}</div>
+                                  <div className="text-gray-600">
+                                    Book: {getLeadBookTitleDisplay(rowData.book_title)}
+                                  </div>
                                 </div>
                                 <div>
                                   <div className="text-gray-600">Email: {rowData.primary_email}</div>
@@ -935,10 +937,20 @@ const ImportLeadsPage: React.FC = () => {
                         <TableCell>{row._rowIndex}</TableCell>
                         {Object.entries(fieldMapping).map(([csvColumn, dbField]) => (
                           <TableCell key={csvColumn}>
-                            {dbField === 'book_title' && row[dbField] ? (
-                              <span title={row[dbField]}>
-                                {row[dbField].length > 24 ? row[dbField].slice(0, 24) + '…' : row[dbField]}
-                              </span>
+                            {dbField === 'book_title' ? (
+                              (() => {
+                                const t = getLeadBookTitleDisplay(row[dbField]);
+                                return t.length > 24 ? (
+                                  <span title={t}>{t.slice(0, 24) + '…'}</span>
+                                ) : (
+                                  <span
+                                    title={t}
+                                    className={!String(row[dbField] ?? '').trim() ? 'text-muted-foreground' : undefined}
+                                  >
+                                    {t}
+                                  </span>
+                                );
+                              })()
                             ) : (
                               row[dbField] || '-'
                             )}

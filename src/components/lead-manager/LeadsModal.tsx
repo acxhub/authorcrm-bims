@@ -19,7 +19,7 @@ import {
   useLeadsWithoutTags,
 } from '@/hooks/useLeadManagerMetrics';
 import { ExtendedBulkActions } from './ExtendedBulkActions';
-import { getLeadDisplayName } from '@/lib/lead-display';
+import { getLeadDisplayName, getLeadBookTitleDisplay } from '@/lib/lead-display';
 
 export type FilterType = 
   | 'unassigned' 
@@ -236,8 +236,10 @@ export const LeadsModal: React.FC<LeadsModalProps> = ({
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium truncate">
-                          {lead.book_title || 'Untitled'}
+                        <span
+                          className={`font-medium truncate ${!lead.book_title?.trim() ? 'text-muted-foreground' : ''}`}
+                        >
+                          {getLeadBookTitleDisplay(lead.book_title)}
                         </span>
                         {lead.status && (
                           <Badge

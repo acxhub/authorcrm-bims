@@ -4,6 +4,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth, useProfile } from '@/hooks/useAuth';
 import { useUsersContext } from '@/contexts/UsersContext';
 import { notify, getManagers } from '@/lib/notifications/notify';
+import { getLeadBookTitleDisplay } from '@/lib/lead-display';
 
 export const useLeads = (filters: LeadsFilter = {}, page = 1, limit = 10) => {
   return useQuery({
@@ -34,7 +35,7 @@ export const useCreateLead = () => {
       queryClient.invalidateQueries({ queryKey: ['leads-quick-stats'] });
       toast({
         title: 'Lead created',
-        description: `Lead for "${newLead.book_title}" has been created successfully.`,
+        description: `Lead for "${getLeadBookTitleDisplay(newLead.book_title)}" has been created successfully.`,
       });
       if (user?.id) {
         notify.leadCreated({
@@ -66,7 +67,7 @@ export const useUpdateLead = () => {
       queryClient.invalidateQueries({ queryKey: ['leads-quick-stats'] });
       toast({
         title: 'Lead updated',
-        description: `Lead for "${updatedLead.book_title}" has been updated successfully.`,
+        description: `Lead for "${getLeadBookTitleDisplay(updatedLead.book_title)}" has been updated successfully.`,
       });
     },
     onError: (error: Error) => {

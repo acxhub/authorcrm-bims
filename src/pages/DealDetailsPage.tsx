@@ -24,7 +24,7 @@ import { useActivitiesRealtime } from '@/hooks/useActivitiesRealtime';
 import { DealCommissionInfo } from '@/components/deals/DealCommissionInfo';
 import { canPermanentlyDelete, canRestore, daysUntilPermanentDelete } from '@/lib/permissions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { getLeadDisplayName } from '@/lib/lead-display';
+import { getLeadDisplayName, getLeadBookTitleDisplay } from '@/lib/lead-display';
 
 const getCategoryIcon = (category: string | null) => {
   switch (category) {
@@ -395,11 +395,21 @@ export const DealDetailsPage: React.FC = () => {
                         <div>
                           <label className="text-sm font-medium text-gray-700">Book Title</label>
                           <p className="text-sm text-gray-900">
-                            {deal.lead?.book_title && deal.lead.book_title.length > 24 ? (
-                              <span title={deal.lead.book_title}>{deal.lead.book_title.slice(0, 24) + '…'}</span>
-                            ) : (
-                              <span title={deal.lead?.book_title}>{deal.lead?.book_title}</span>
-                            )}
+                            {deal.lead
+                              ? (() => {
+                                  const t = getLeadBookTitleDisplay(deal.lead.book_title);
+                                  return t.length > 24 ? (
+                                    <span title={t}>{t.slice(0, 24) + '…'}</span>
+                                  ) : (
+                                    <span
+                                      title={t}
+                                      className={!deal.lead.book_title?.trim() ? 'text-muted-foreground' : undefined}
+                                    >
+                                      {t}
+                                    </span>
+                                  );
+                                })()
+                              : '—'}
                           </p>
                         </div>
                         <div>

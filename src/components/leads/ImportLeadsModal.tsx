@@ -16,7 +16,7 @@ import Papa from 'papaparse';
 import { useCreateLead, useLeads } from '@/hooks/useLeads';
 import { useStatuses } from '@/hooks/useStatuses';
 import { useAuth } from '@/hooks/useAuth';
-import { getLeadDisplayName } from '@/lib/lead-display';
+import { getLeadDisplayName, getLeadBookTitleDisplay } from '@/lib/lead-display';
 
 interface ImportLeadsModalProps {
   open: boolean;
@@ -239,7 +239,7 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
             row: index + 1,
             matchingFields,
             matchType: 'existing',
-            matchedWith: `${getLeadDisplayName(existingLead)} - ${existingLead.book_title}`,
+            matchedWith: `${getLeadDisplayName(existingLead)} - ${getLeadBookTitleDisplay(existingLead.book_title)}`,
           });
         }
       });
@@ -687,7 +687,9 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
                                 <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                                   <div>
                                     <div className="font-medium">Author: {getLeadDisplayName(rowData)}</div>
-                                    <div className="text-gray-600">Book: {rowData.book_title}</div>
+                                    <div className="text-gray-600">
+                                      Book: {getLeadBookTitleDisplay(rowData.book_title)}
+                                    </div>
                                   </div>
                                   <div>
                                     <div className="text-gray-600">Email: {rowData.primary_email}</div>

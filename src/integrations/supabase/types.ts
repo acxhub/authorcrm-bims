@@ -712,7 +712,7 @@ export type Database = {
           assigned_to: string | null
           author_bio: string | null
           author_name: string
-          book_title: string
+          book_title: string | null
           category: string | null
           country: string | null
           created_at: string | null
@@ -748,7 +748,7 @@ export type Database = {
           assigned_to?: string | null
           author_bio?: string | null
           author_name: string
-          book_title: string
+          book_title?: string | null
           category?: string | null
           country?: string | null
           created_at?: string | null
@@ -784,7 +784,7 @@ export type Database = {
           assigned_to?: string | null
           author_bio?: string | null
           author_name?: string
-          book_title?: string
+          book_title?: string | null
           category?: string | null
           country?: string | null
           created_at?: string | null

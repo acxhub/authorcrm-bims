@@ -9,7 +9,7 @@ import { useDeals } from '@/hooks/useDeals';
 import { useAuth, useProfile } from '@/hooks/useAuth';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { getLeadDisplayName } from '@/lib/lead-display';
+import { getLeadDisplayName, getLeadBookTitleDisplay } from '@/lib/lead-display';
 
 interface ActivityItem {
   id: string;
@@ -114,7 +114,7 @@ export const RecentActivity: React.FC = () => {
         id: `lead-${lead.id}`,
         type: 'lead',
         title: `New lead: ${getLeadDisplayName(lead)}`,
-        description: lead.book_title || 'No book title',
+        description: getLeadBookTitleDisplay(lead.book_title),
         timestamp: lead.created_at!,
         user: lead.assigned_to_profile ? {
           name: lead.assigned_to_profile.full_name || 'Unknown',

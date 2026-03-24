@@ -15,7 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLeads } from '@/hooks/useLeads';
 import { useCreateReminder, useUpdateReminder } from '@/hooks/useReminders';
 import type { Reminder } from '@/lib/api/reminders';
-import { getLeadDisplayName } from '@/lib/lead-display';
+import { getLeadDisplayName, getLeadBookTitleDisplay } from '@/lib/lead-display';
 
 interface CreateReminderDialogProps {
   open: boolean;
@@ -270,9 +270,11 @@ export const CreateReminderDialog: React.FC<CreateReminderDialogProps> = ({
                             <div className="text-sm font-medium truncate">
                               {getLeadDisplayName(lead)}
                             </div>
-                            {lead.book_title && (
-                              <div className="text-xs text-gray-500 truncate">{lead.book_title}</div>
-                            )}
+                            <div
+                              className={`text-xs truncate ${lead.book_title?.trim() ? 'text-gray-500' : 'text-muted-foreground'}`}
+                            >
+                              {getLeadBookTitleDisplay(lead.book_title)}
+                            </div>
                           </div>
                           <Check className={cn('ml-auto h-4 w-4 flex-shrink-0', leadId === lead.id ? 'opacity-100' : 'opacity-0')} />
                         </CommandItem>

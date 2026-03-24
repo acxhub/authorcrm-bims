@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useStatuses } from '@/hooks/useStatuses';
 import { useAuth } from '@/hooks/useAuth';
 import type { CreateLeadData } from '@/lib/api/leads';
+import { DEFAULT_BOOK_TITLE_DISPLAY } from '@/lib/lead-display';
 
 const leadFormSchema = z.object({
   book_title: z.string().optional().or(z.literal('')),
@@ -80,7 +81,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
 
   const handleSubmit = (data: LeadFormData) => {
     const submitData: CreateLeadData = {
-      book_title: data.book_title,
+      book_title: data.book_title?.trim() || null,
       author_name: `${data.first_name} ${data.last_name}`.trim(),
       first_name: data.first_name,
       last_name: data.last_name,
@@ -120,7 +121,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
                 <FormItem>
                   <FormLabel>Book Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter book title" {...field} />
+                    <Input placeholder={DEFAULT_BOOK_TITLE_DISPLAY} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

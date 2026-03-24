@@ -17,7 +17,7 @@ import { SimpleLeadAssign } from './SimpleLeadAssign';
 import { ForRecycleButton } from './ForRecycleButton';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead } from '@/lib/api/leads';
-import { getLeadAuthorBaseName, getLeadDisplayName } from '@/lib/lead-display';
+import { getLeadAuthorBaseName, getLeadDisplayName, getLeadBookTitleDisplay } from '@/lib/lead-display';
 
 interface LeadDetailsProps {
   leadId: string;
@@ -92,6 +92,9 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
     );
   }
 
+  const bookTitleDisplay = getLeadBookTitleDisplay(lead.book_title);
+  const bookTitleIsPlaceholder = !lead.book_title?.trim();
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -105,7 +108,11 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
               </Button>
             )}
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{lead.book_title}</h1>
+              <h1
+                className={`text-2xl font-bold ${bookTitleIsPlaceholder ? 'text-muted-foreground' : 'text-gray-900'}`}
+              >
+                {bookTitleDisplay}
+              </h1>
               <p className="text-gray-600">by {getLeadDisplayName(lead)}</p>
             </div>
           </div>
@@ -167,7 +174,11 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
                 <div className="flex-1 space-y-4">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">{getLeadDisplayName(lead)}</h2>
-                    <p className="text-lg text-gray-600">{lead.book_title}</p>
+                    <p
+                      className={`text-lg ${bookTitleIsPlaceholder ? 'text-muted-foreground' : 'text-gray-600'}`}
+                    >
+                      {bookTitleDisplay}
+                    </p>
                     
                     <div className="flex items-center gap-4 mt-3">
                       <Badge 
