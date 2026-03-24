@@ -274,9 +274,11 @@ const ImportLeadsPage: React.FC = () => {
 
         // Validate other fields
         Object.entries(fieldMapping).forEach(([csvColumn, dbField]) => {
+          if (!dbField) return; // Skip unmapped columns ("Don't import")
           const columnIndex = parsedData.headers.indexOf(csvColumn);
           const value = row[columnIndex];
           const fieldConfig = DB_FIELDS[dbField as keyof typeof DB_FIELDS];
+          if (!fieldConfig) return; // Skip fields not in DB_FIELDS
 
           if (value && value.toString().trim() !== '') {
             const stringValue = value.toString().trim();
@@ -326,8 +328,9 @@ const ImportLeadsPage: React.FC = () => {
     // Get mapped data for duplicate checking
     const mappedRows = parsedData.rows.map((row, rowIndex) => {
       const mappedRow: any = { _rowIndex: rowIndex + 1 };
-      
+
       Object.entries(fieldMapping).forEach(([csvColumn, dbField]) => {
+        if (!dbField) return; // Skip unmapped columns
         const columnIndex = parsedData.headers.indexOf(csvColumn);
         mappedRow[dbField] = row[columnIndex] || '';
       });
@@ -538,9 +541,10 @@ const ImportLeadsPage: React.FC = () => {
 
         // Map the data
         Object.entries(fieldMapping).forEach(([csvColumn, dbField]) => {
+          if (!dbField) return; // Skip unmapped columns ("Don't import")
           const columnIndex = parsedData.headers.indexOf(csvColumn);
           const value = row[columnIndex];
-          
+
           if (value && value.toString().trim() !== '') {
             // Special handling for status field if it's mapped
             if (dbField === 'status_id') {
@@ -557,7 +561,8 @@ const ImportLeadsPage: React.FC = () => {
             } else if (dbField === 'multiple_titles') {
               leadData[dbField] = value.toString().toLowerCase() === 'true';
             } else {
-              leadData[dbField] = truncateField(value.toString().trim(), DB_FIELDS[dbField as keyof typeof DB_FIELDS].maxLength);
+              const fieldDef = DB_FIELDS[dbField as keyof typeof DB_FIELDS];
+              leadData[dbField] = truncateField(value.toString().trim(), fieldDef?.maxLength ?? null);
             }
           }
         });
