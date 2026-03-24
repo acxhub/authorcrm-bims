@@ -12,7 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import type { CreateLeadData } from '@/lib/api/leads';
 
 const leadFormSchema = z.object({
-  book_title: z.string().min(1, 'Book title is required'),
+  book_title: z.string().optional().or(z.literal('')),
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   amazon_link: z.string().url('Invalid URL format').optional().or(z.literal('')),
@@ -118,7 +118,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
               name="book_title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Book Title *</FormLabel>
+                  <FormLabel>Book Title</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter book title" {...field} />
                   </FormControl>

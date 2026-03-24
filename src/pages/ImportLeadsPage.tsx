@@ -23,7 +23,7 @@ import { getLeadDisplayName } from '@/lib/lead-display';
 
 // Database field definitions with length limits
 const DB_FIELDS = {
-  book_title: { label: 'Book Title', required: true, type: 'text', maxLength: 255 },
+  book_title: { label: 'Book Title', required: false, type: 'text', maxLength: 255 },
   first_name: { label: 'First Name', required: false, type: 'text', maxLength: 100 },
   last_name: { label: 'Last Name', required: false, type: 'text', maxLength: 100 },
   author_name: { label: 'Author Name', required: false, type: 'text', maxLength: 255 },
@@ -222,17 +222,6 @@ const ImportLeadsPage: React.FC = () => {
       });
     }
 
-    // Check required book_title field
-    const hasBookTitle = Object.values(fieldMapping).includes('book_title');
-    if (!hasBookTitle) {
-      errors.push({
-        row: -1,
-        field: 'book_title',
-        message: 'Book Title is required',
-        value: null,
-      });
-    }
-
     // Validate data in rows
     if (parsedData.rows.length > 0) {
       parsedData.rows.forEach((row, rowIndex) => {
@@ -251,22 +240,6 @@ const ImportLeadsPage: React.FC = () => {
                 field: 'name',
                 message: 'Both First Name and Last Name are required',
                 value: `${firstName || ''} ${lastName || ''}`.trim(),
-              });
-            }
-          }
-        }
-
-        // Check book_title in each row
-        if (hasBookTitle) {
-          const bookTitleCol = Object.entries(fieldMapping).find(([_, val]) => val === 'book_title')?.[0];
-          if (bookTitleCol) {
-            const bookTitle = row[parsedData.headers.indexOf(bookTitleCol)];
-            if (!bookTitle || bookTitle.toString().trim() === '') {
-              errors.push({
-                row: rowIndex + 1,
-                field: 'book_title',
-                message: 'Book Title is required',
-                value: bookTitle,
               });
             }
           }

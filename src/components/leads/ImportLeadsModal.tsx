@@ -51,7 +51,7 @@ interface DuplicateInfo {
 
 // Database field definitions
 const DB_FIELDS = {
-  book_title: { label: 'Book Title', required: true, type: 'text' },
+  book_title: { label: 'Book Title', required: false, type: 'text' },
   author_name: { label: 'Author Name', required: true, type: 'text' },
   pen_name: { label: 'Pen Name', required: false, type: 'text' },
   amazon_link: { label: 'Amazon Link', required: false, type: 'url' },
