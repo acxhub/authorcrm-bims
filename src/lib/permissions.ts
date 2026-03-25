@@ -22,6 +22,30 @@ export function canArchive(profile: Profile | null): boolean {
   return ['leads_manager', 'sales_manager'].includes(profile.role || '');
 }
 
+/** Recycle (unassign) via RPC: managers any lead; sales only leads assigned to them. */
+export function canRecycleLead(
+  profile: Profile | null,
+  leadAssignedTo: string | null | undefined,
+  userId: string | undefined
+): boolean {
+  if (!profile || !userId) return false;
+  if (profile.role === 'leads_manager' || profile.role === 'sales_manager') return true;
+  if (profile.role === 'sales') return leadAssignedTo === userId;
+  return false;
+}
+
+/** True if user may bulk-recycle at least one of the selected leads (assigned + role rules). */
+export function canBulkRecycleSomeSelected(
+  profile: Profile | null,
+  selectedLeads: { assigned_to?: string | null }[],
+  userId: string | undefined
+): boolean {
+  if (!selectedLeads.length || !userId) return false;
+  return selectedLeads.some((lead) =>
+    lead.assigned_to && canRecycleLead(profile, lead.assigned_to, userId)
+  );
+}
+
 export function daysUntilPermanentDelete(deletedAt: string | null): number | null {
   if (!deletedAt) return null;
   const deletedDate = new Date(deletedAt);

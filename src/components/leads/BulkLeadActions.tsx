@@ -24,6 +24,7 @@ import { useAuth, useProfile } from '@/hooks/useAuth';
 import type { Lead } from '@/lib/api/leads';
 import { supabase } from '@/integrations/supabase/client';
 import { notify, getManagers } from '@/lib/notifications/notify';
+import { canArchive, canBulkRecycleSomeSelected } from '@/lib/permissions';
 
 interface BulkLeadActionsProps {
   selectedLeads: Lead[];
@@ -247,10 +248,10 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
     if (!confirmed) return;
 
     try {
-      // Get only assigned leads
       const assignedLeadIds = selectedLeads
-        .filter(lead => lead.assigned_to)
-        .map(lead => lead.id);
+        .filter((lead) => lead.assigned_to)
+        .filter((lead) => canBulkRecycleSomeSelected(profile, [lead], user?.id))
+        .map((lead) => lead.id);
 
       if (assignedLeadIds.length === 0) {
         alert('No assigned leads selected to recycle.');
@@ -802,28 +803,32 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
           )}
 
           {/* Bulk Recycle */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleBulkRecycle}
-            disabled={isLoading}
-            className="text-orange-600 hover:text-orange-700"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Recycle Selected
-          </Button>
+          {canBulkRecycleSomeSelected(profile, selectedLeads, user?.id) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkRecycle}
+              disabled={isLoading}
+              className="text-orange-600 hover:text-orange-700"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Recycle Selected
+            </Button>
+          )}
 
           {/* Bulk Archive */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleBulkDelete}
-            disabled={isLoading}
-            className="text-red-600 hover:text-red-700"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Archive Selected
-          </Button>
+          {canArchive(profile) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkDelete}
+              disabled={isLoading}
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Archive Selected
+            </Button>
+          )}
 
           {/* Clear Selection */}
           <Button

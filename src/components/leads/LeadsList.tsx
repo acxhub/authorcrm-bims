@@ -28,6 +28,7 @@ import { SearchableUserSelect } from '@/components/ui/searchable-user-select';
 import { useLeadsState } from '@/hooks/useLeadsState';
 import { useCreateActivity } from '@/hooks/useActivities';
 import { useAuth, useProfile } from '@/hooks/useAuth';
+import { canRecycleLead } from '@/lib/permissions';
 import { supabase } from '@/integrations/supabase/client';
 import { LeadsQuickStats } from './LeadsQuickStats';
 import { useLeadsQuickStats } from '@/hooks/useLeadsQuickStats';
@@ -814,7 +815,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                                   Edit
                                 </DropdownMenuItem>
                               )}
-                              {lead.assigned_to && (
+                              {canRecycleLead(profile, lead.assigned_to, user?.id) && (
                                 <DropdownMenuItem 
                                   onClick={() => handleRecycleLead(lead.id)}
                                   className="text-orange-600"

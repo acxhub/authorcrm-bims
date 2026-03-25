@@ -190,14 +190,9 @@ export const DealsPermissionDebug: React.FC = () => {
                   <Alert>
                     <CheckCircle className="h-4 w-4" />
                     <AlertDescription>
-                      <strong>Sales Agent</strong> should be able to:
-                      <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-                        <li>View deals for leads assigned to them</li>
-                        <li>View deals they created</li>
-                        <li>Create deals for assigned leads</li>
-                        <li>Update deals for assigned leads or deals they created</li>
-                        <li>Delete deals they created or for assigned leads</li>
-                      </ul>
+                      <strong>Sales Agent</strong> (RLS): access deals only when the parent lead is assigned to them;
+                      create/update those deals. No access to other reps&apos; leads or deals. Archive/restore leads
+                      via managers only; recycle own assigned leads or any lead if manager.
                     </AlertDescription>
                   </Alert>
                 )}

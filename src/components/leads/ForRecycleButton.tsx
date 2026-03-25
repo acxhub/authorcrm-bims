@@ -9,6 +9,7 @@ import { useManageLeadTags } from '@/hooks/useLeads';
 import { notify } from '@/lib/notifications/notify';
 import type { Lead } from '@/lib/api/leads';
 import type { Tag } from '@/lib/api/tags';
+import { canRecycleLead } from '@/lib/permissions';
 
 interface ForRecycleButtonProps {
   lead: Lead;
@@ -27,6 +28,10 @@ export const ForRecycleButton: React.FC<ForRecycleButtonProps> = ({
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile } = useProfile();
+
+  if (!canRecycleLead(profile, lead.assigned_to, user?.id)) {
+    return null;
+  }
 
   const handleForRecycle = async () => {
     setIsLoading(true);

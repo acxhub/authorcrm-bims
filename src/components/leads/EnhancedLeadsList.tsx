@@ -25,7 +25,8 @@ import { useStatusesRealtime } from '@/hooks/useStatusesRealtime';
 import { useUsers } from '@/hooks/useUsers';
 import { useLeadsState } from '@/hooks/useLeadsState';
 import { useCreateActivity } from '@/hooks/useActivities';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useProfile } from '@/hooks/useAuth';
+import { canArchive } from '@/lib/permissions';
 
 interface EnhancedLeadsListProps {
   onCreateLead?: () => void;
@@ -48,6 +49,7 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
   
   // Hooks
   const { user } = useAuth();
+  const { profile } = useProfile();
   const updateLead = useUpdateLead();
   const createActivity = useCreateActivity();
   const pinLead = usePinLead();
@@ -729,13 +731,15 @@ export const EnhancedLeadsList: React.FC<EnhancedLeadsListProps> = ({
                                   Edit
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem
-                                onClick={() => handleArchiveLead(lead.id)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Archive
-                              </DropdownMenuItem>
+                              {canArchive(profile) && (
+                                <DropdownMenuItem
+                                  onClick={() => handleArchiveLead(lead.id)}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Archive
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>

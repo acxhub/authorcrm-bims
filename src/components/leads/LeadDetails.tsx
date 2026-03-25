@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useLead } from '@/hooks/useLeads';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useProfile } from '@/hooks/useAuth';
 import { LeadComments } from './LeadComments';
 import { LeadActivities } from './LeadActivities';
 import { LeadDeals } from './LeadDeals';
@@ -18,6 +18,7 @@ import { ForRecycleButton } from './ForRecycleButton';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead } from '@/lib/api/leads';
 import { getLeadAuthorBaseName, getLeadDisplayName, getLeadBookTitleDisplay } from '@/lib/lead-display';
+import { canRecycleLead } from '@/lib/permissions';
 
 interface LeadDetailsProps {
   leadId: string;
@@ -33,6 +34,7 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
   const [activeTab, setActiveTab] = useState('comments');
 
   const { user } = useAuth();
+  const { profile } = useProfile();
   const { data: lead, isLoading, error } = useLead(leadId);
 
   const getInitials = (name: string) => {
@@ -474,14 +476,15 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
                   </div>
                 )}
 
-                {/* For Recycle Button */}
-                <div className="pt-3 border-t">
-                  <ForRecycleButton 
-                    lead={lead}
-                    onAssignmentChange={handleAssignmentChange}
-                    onTagsChange={handleTagsChange}
-                  />
-                </div>
+                {canRecycleLead(profile, lead.assigned_to, user?.id) && (
+                  <div className="pt-3 border-t">
+                    <ForRecycleButton
+                      lead={lead}
+                      onAssignmentChange={handleAssignmentChange}
+                      onTagsChange={handleTagsChange}
+                    />
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
