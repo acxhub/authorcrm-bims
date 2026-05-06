@@ -36,6 +36,7 @@ const DB_FIELDS = {
   alternative_phone_number: { label: 'Alternative Phone', required: false, type: 'phone', maxLength: 20 },
   primary_email: { label: 'Primary Email', required: false, type: 'email', maxLength: 255 },
   secondary_email: { label: 'Secondary Email', required: false, type: 'email', maxLength: 255 },
+  alternative_email: { label: 'Alternative Email', required: false, type: 'email', maxLength: 255 },
   author_bio: { label: 'Author Bio', required: false, type: 'text', maxLength: null }, // TEXT field, no limit
   publisher: { label: 'Publisher', required: false, type: 'text', maxLength: 255 },
   website: { label: 'Website', required: false, type: 'url', maxLength: 500 },
@@ -174,6 +175,17 @@ const ImportLeadsPage: React.FC = () => {
             autoMapping[header] = 'phone_number_2';
           } else if (!autoMapping[header]) {
             autoMapping[header] = 'phone_number_1';
+          }
+        }
+
+        // Fuzzy email matches (the direct-label loop above already covers exact matches)
+        if (normalizedHeader.includes('email')) {
+          if (normalizedHeader.includes('alt') || normalizedHeader.includes('other') || normalizedHeader.includes('3')) {
+            autoMapping[header] = 'alternative_email';
+          } else if (normalizedHeader.includes('secondary') || normalizedHeader.includes('2')) {
+            autoMapping[header] = 'secondary_email';
+          } else if (!autoMapping[header]) {
+            autoMapping[header] = 'primary_email';
           }
         }
         if (normalizedHeader === 'name' || normalizedHeader === 'full name') {

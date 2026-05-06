@@ -62,6 +62,7 @@ const DB_FIELDS = {
   alternative_phone_number: { label: 'Alternative Phone', required: false, type: 'phone' },
   primary_email: { label: 'Primary Email', required: false, type: 'email' },
   secondary_email: { label: 'Secondary Email', required: false, type: 'email' },
+  alternative_email: { label: 'Alternative Email', required: false, type: 'email' },
   author_bio: { label: 'Author Bio', required: false, type: 'text' },
   publisher: { label: 'Publisher', required: false, type: 'text' },
   website: { label: 'Website', required: false, type: 'url' },
@@ -146,9 +147,13 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
           autoMapping[header] = 'pen_name';
         } else if (lowerHeader.includes('author') && lowerHeader.includes('name')) {
           autoMapping[header] = 'author_name';
+        } else if (lowerHeader.includes('email') && (lowerHeader.includes('alt') || lowerHeader.includes('other') || lowerHeader.includes('3'))) {
+          autoMapping[header] = 'alternative_email';
+        } else if (lowerHeader.includes('email') && (lowerHeader.includes('secondary') || lowerHeader.includes('2'))) {
+          autoMapping[header] = 'secondary_email';
         } else if (lowerHeader.includes('email') && lowerHeader.includes('primary')) {
           autoMapping[header] = 'primary_email';
-        } else if (lowerHeader.includes('email') && !lowerHeader.includes('secondary')) {
+        } else if (lowerHeader.includes('email')) {
           autoMapping[header] = 'primary_email';
         } else if (lowerHeader.includes('phone') && (lowerHeader.includes('alt') || lowerHeader.includes('other') || lowerHeader.includes('3'))) {
           autoMapping[header] = 'alternative_phone_number';

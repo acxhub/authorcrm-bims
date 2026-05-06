@@ -222,11 +222,22 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
                     {lead.secondary_email && (
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-gray-500" />
-                        <button 
+                        <button
                           onClick={() => handleEmailClick(lead.secondary_email!)}
                           className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
                         >
                           {lead.secondary_email}
+                        </button>
+                      </div>
+                    )}
+                    {lead.alternative_email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-gray-500" />
+                        <button
+                          onClick={() => handleEmailClick(lead.alternative_email!)}
+                          className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {lead.alternative_email}
                         </button>
                       </div>
                     )}

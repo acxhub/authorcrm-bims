@@ -31,6 +31,7 @@ function buildLeadFormSchema(mode: 'create' | 'edit') {
       alternative_phone_number: z.string().regex(/^[+]?[1-9][\d]{0,15}$/, 'Invalid phone format').optional().or(z.literal('')),
       primary_email: z.string().email('Invalid email format').optional().or(z.literal('')),
       secondary_email: z.string().email('Invalid email format').optional().or(z.literal('')),
+      alternative_email: z.string().email('Invalid email format').optional().or(z.literal('')),
       author_bio: z.string().optional(),
       multiple_titles: z.boolean().default(false),
       other_titles: z.array(z.string()).optional(),
@@ -90,6 +91,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
       alternative_phone_number: initialData?.alternative_phone_number || '',
       primary_email: initialData?.primary_email || '',
       secondary_email: initialData?.secondary_email || '',
+      alternative_email: initialData?.alternative_email || '',
       author_bio: initialData?.author_bio || '',
       multiple_titles: initialData?.multiple_titles || false,
       other_titles: Array.isArray(initialData?.other_titles) ? initialData.other_titles : [],
@@ -124,6 +126,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
       alternative_phone_number: data.alternative_phone_number || null,
       primary_email: data.primary_email || null,
       secondary_email: data.secondary_email || null,
+      alternative_email: data.alternative_email || null,
       author_bio: data.author_bio || null,
       multiple_titles: data.multiple_titles,
       other_titles: data.other_titles?.length ? data.other_titles : null,
@@ -251,7 +254,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-gray-900">Contact Information</h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField
               control={form.control}
               name="primary_email"
@@ -274,6 +277,20 @@ export const LeadForm: React.FC<LeadFormProps> = ({
                   <FormLabel>Secondary Email</FormLabel>
                   <FormControl>
                     <Input type="email" placeholder="author.alt@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="alternative_email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Alternative Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="author.other@example.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

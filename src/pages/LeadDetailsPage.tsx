@@ -97,6 +97,7 @@ const LeadDetailsPage: React.FC = () => {
       alternative_phone_number: lead.alternative_phone_number || '',
       primary_email: lead.primary_email || '',
       secondary_email: lead.secondary_email || '',
+      alternative_email: lead.alternative_email || '',
       author_bio: lead.author_bio || '',
       multiple_titles: lead.multiple_titles || false,
       other_titles: otherTitles,

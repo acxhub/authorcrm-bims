@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
       activity_logs: {
@@ -51,6 +56,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "activity_logs_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "activity_logs_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
@@ -73,115 +85,39 @@ export type Database = {
           },
         ]
       }
-      attendance_breaks: {
-        Row: {
-          id: string
-          shift_id: string
-          break_start_at: string
-          break_end_at: string | null
-          duration_seconds: number | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          shift_id: string
-          break_start_at: string
-          break_end_at?: string | null
-          duration_seconds?: number | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          shift_id?: string
-          break_start_at?: string
-          break_end_at?: string | null
-          duration_seconds?: number | null
-          created_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "attendance_breaks_shift_id_fkey"
-            columns: ["shift_id"]
-            isOneToOne: false
-            referencedRelation: "attendance_shifts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      attendance_shifts: {
-        Row: {
-          id: string
-          user_id: string
-          clock_in_at: string
-          clock_out_at: string | null
-          status: Database["public"]["Enums"]["attendance_shift_status"]
-          total_break_seconds: number
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          clock_in_at: string
-          clock_out_at?: string | null
-          status?: Database["public"]["Enums"]["attendance_shift_status"]
-          total_break_seconds?: number
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          clock_in_at?: string
-          clock_out_at?: string | null
-          status?: Database["public"]["Enums"]["attendance_shift_status"]
-          total_break_seconds?: number
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "attendance_shifts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       agent_commission_settings: {
         Row: {
-          id: string
-          agent_id: string
-          template_id: string | null
+          agent_id: string | null
+          created_at: string | null
           custom_commission_percent: number | null
           custom_markup_percent: number | null
-          use_custom_override: boolean | null
+          id: string
           notes: string | null
-          created_at: string | null
+          template_id: string | null
           updated_at: string | null
+          use_custom_override: boolean | null
         }
         Insert: {
-          id?: string
-          agent_id: string
-          template_id?: string | null
+          agent_id?: string | null
+          created_at?: string | null
           custom_commission_percent?: number | null
           custom_markup_percent?: number | null
-          use_custom_override?: boolean | null
+          id?: string
           notes?: string | null
-          created_at?: string | null
+          template_id?: string | null
           updated_at?: string | null
+          use_custom_override?: boolean | null
         }
         Update: {
-          id?: string
-          agent_id?: string
-          template_id?: string | null
+          agent_id?: string | null
+          created_at?: string | null
           custom_commission_percent?: number | null
           custom_markup_percent?: number | null
-          use_custom_override?: boolean | null
+          id?: string
           notes?: string | null
-          created_at?: string | null
+          template_id?: string | null
           updated_at?: string | null
+          use_custom_override?: boolean | null
         }
         Relationships: [
           {
@@ -236,6 +172,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "comments_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "comments_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
@@ -267,34 +210,34 @@ export type Database = {
       }
       commission_audit_log: {
         Row: {
-          id: string
-          commission_id: string
           action: string
-          previous_values: Json | null
-          new_values: Json | null
-          performed_by: string | null
-          notes: string | null
+          commission_id: string | null
           created_at: string | null
+          id: string
+          new_values: Json | null
+          notes: string | null
+          performed_by: string | null
+          previous_values: Json | null
         }
         Insert: {
-          id?: string
-          commission_id: string
           action: string
-          previous_values?: Json | null
-          new_values?: Json | null
-          performed_by?: string | null
-          notes?: string | null
+          commission_id?: string | null
           created_at?: string | null
+          id?: string
+          new_values?: Json | null
+          notes?: string | null
+          performed_by?: string | null
+          previous_values?: Json | null
         }
         Update: {
-          id?: string
-          commission_id?: string
           action?: string
-          previous_values?: Json | null
-          new_values?: Json | null
-          performed_by?: string | null
-          notes?: string | null
+          commission_id?: string | null
           created_at?: string | null
+          id?: string
+          new_values?: Json | null
+          notes?: string | null
+          performed_by?: string | null
+          previous_values?: Json | null
         }
         Relationships: [
           {
@@ -315,39 +258,39 @@ export type Database = {
       }
       commission_templates: {
         Row: {
-          id: string
-          name: string
-          description: string | null
           calculation_type: string
-          markup_commissionable_percent: number | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
           is_active: boolean | null
           is_default: boolean | null
-          created_by: string | null
-          created_at: string | null
+          markup_commissionable_percent: number | null
+          name: string
           updated_at: string | null
         }
         Insert: {
-          id?: string
-          name: string
-          description?: string | null
           calculation_type: string
-          markup_commissionable_percent?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
           is_active?: boolean | null
           is_default?: boolean | null
-          created_by?: string | null
-          created_at?: string | null
+          markup_commissionable_percent?: number | null
+          name: string
           updated_at?: string | null
         }
         Update: {
-          id?: string
-          name?: string
-          description?: string | null
           calculation_type?: string
-          markup_commissionable_percent?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
           is_active?: boolean | null
           is_default?: boolean | null
-          created_by?: string | null
-          created_at?: string | null
+          markup_commissionable_percent?: number | null
+          name?: string
           updated_at?: string | null
         }
         Relationships: [
@@ -362,39 +305,46 @@ export type Database = {
       }
       commission_tiers: {
         Row: {
-          id: string
-          template_id: string
-          min_amount: number
-          max_amount: number | null
           commission_percent: number
-          sort_order: number | null
+          created_at: string | null
           deleted_at: string | null
           deleted_by: string | null
-          created_at: string | null
+          id: string
+          max_amount: number | null
+          min_amount: number
+          sort_order: number | null
+          template_id: string | null
         }
         Insert: {
-          id?: string
-          template_id: string
-          min_amount: number
-          max_amount?: number | null
           commission_percent: number
-          sort_order?: number | null
+          created_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
-          created_at?: string | null
+          id?: string
+          max_amount?: number | null
+          min_amount: number
+          sort_order?: number | null
+          template_id?: string | null
         }
         Update: {
-          id?: string
-          template_id?: string
-          min_amount?: number
-          max_amount?: number | null
           commission_percent?: number
-          sort_order?: number | null
+          created_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
-          created_at?: string | null
+          id?: string
+          max_amount?: number | null
+          min_amount?: number
+          sort_order?: number | null
+          template_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "commission_tiers_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "commission_tiers_template_id_fkey"
             columns: ["template_id"]
@@ -406,120 +356,99 @@ export type Database = {
       }
       commissions: {
         Row: {
-          id: string
-          deal_id: string
           agent_id: string | null
-          deal_value: number
-          markup_amount: number | null
+          approved_at: string | null
+          approved_by: string | null
           base_commission_amount: number
-          markup_commissionable_percent: number | null
-          markup_commission_amount: number | null
-          company_markup_amount: number | null
-          total_commission_amount: number
-          template_id: string | null
-          template_name: string | null
           calculation_type: string | null
-          tier_breakdown: Json | null
+          commission_period: string | null
+          company_markup_amount: number | null
+          created_at: string | null
+          deal_id: string | null
+          deal_value: number
+          id: string
           is_overridden: boolean | null
+          markup_amount: number | null
+          markup_commission_amount: number | null
+          markup_commissionable_percent: number | null
+          overridden_at: string | null
+          overridden_by: string | null
           override_amount: number | null
           override_reason: string | null
-          overridden_by: string | null
-          overridden_at: string | null
-          status: string | null
-          approved_by: string | null
-          approved_at: string | null
-          rejection_reason: string | null
           paid_at: string | null
-          commission_period: string | null
           period_type: string | null
-          created_at: string | null
+          rejection_reason: string | null
+          status: string | null
+          template_id: string | null
+          template_name: string | null
+          tier_breakdown: Json | null
+          total_commission_amount: number
           updated_at: string | null
         }
         Insert: {
-          id?: string
-          deal_id: string
           agent_id?: string | null
-          deal_value: number
-          markup_amount?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
           base_commission_amount: number
-          markup_commissionable_percent?: number | null
-          markup_commission_amount?: number | null
-          company_markup_amount?: number | null
-          total_commission_amount: number
-          template_id?: string | null
-          template_name?: string | null
           calculation_type?: string | null
-          tier_breakdown?: Json | null
+          commission_period?: string | null
+          company_markup_amount?: number | null
+          created_at?: string | null
+          deal_id?: string | null
+          deal_value: number
+          id?: string
           is_overridden?: boolean | null
+          markup_amount?: number | null
+          markup_commission_amount?: number | null
+          markup_commissionable_percent?: number | null
+          overridden_at?: string | null
+          overridden_by?: string | null
           override_amount?: number | null
           override_reason?: string | null
-          overridden_by?: string | null
-          overridden_at?: string | null
-          status?: string | null
-          approved_by?: string | null
-          approved_at?: string | null
-          rejection_reason?: string | null
           paid_at?: string | null
-          commission_period?: string | null
           period_type?: string | null
-          created_at?: string | null
+          rejection_reason?: string | null
+          status?: string | null
+          template_id?: string | null
+          template_name?: string | null
+          tier_breakdown?: Json | null
+          total_commission_amount: number
           updated_at?: string | null
         }
         Update: {
-          id?: string
-          deal_id?: string
           agent_id?: string | null
-          deal_value?: number
-          markup_amount?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
           base_commission_amount?: number
-          markup_commissionable_percent?: number | null
-          markup_commission_amount?: number | null
-          company_markup_amount?: number | null
-          total_commission_amount?: number
-          template_id?: string | null
-          template_name?: string | null
           calculation_type?: string | null
-          tier_breakdown?: Json | null
+          commission_period?: string | null
+          company_markup_amount?: number | null
+          created_at?: string | null
+          deal_id?: string | null
+          deal_value?: number
+          id?: string
           is_overridden?: boolean | null
+          markup_amount?: number | null
+          markup_commission_amount?: number | null
+          markup_commissionable_percent?: number | null
+          overridden_at?: string | null
+          overridden_by?: string | null
           override_amount?: number | null
           override_reason?: string | null
-          overridden_by?: string | null
-          overridden_at?: string | null
-          status?: string | null
-          approved_by?: string | null
-          approved_at?: string | null
-          rejection_reason?: string | null
           paid_at?: string | null
-          commission_period?: string | null
           period_type?: string | null
-          created_at?: string | null
+          rejection_reason?: string | null
+          status?: string | null
+          template_id?: string | null
+          template_name?: string | null
+          tier_breakdown?: Json | null
+          total_commission_amount?: number
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "commissions_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: false
-            referencedRelation: "deals"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "commissions_agent_id_fkey"
             columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "commissions_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "commission_templates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "commissions_overridden_by_fkey"
-            columns: ["overridden_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -531,52 +460,73 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      company_revenue: {
-        Row: {
-          id: string
-          deal_id: string
-          commission_id: string | null
-          revenue_type: string
-          amount: number
-          description: string | null
-          revenue_period: string | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          deal_id: string
-          commission_id?: string | null
-          revenue_type: string
-          amount: number
-          description?: string | null
-          revenue_period?: string | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          deal_id?: string
-          commission_id?: string | null
-          revenue_type?: string
-          amount?: number
-          description?: string | null
-          revenue_period?: string | null
-          created_at?: string | null
-        }
-        Relationships: [
           {
-            foreignKeyName: "company_revenue_deal_id_fkey"
+            foreignKeyName: "commissions_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "commissions_overridden_by_fkey"
+            columns: ["overridden_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "commission_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_revenue: {
+        Row: {
+          amount: number
+          commission_id: string | null
+          created_at: string | null
+          deal_id: string | null
+          description: string | null
+          id: string
+          revenue_period: string | null
+          revenue_type: string
+        }
+        Insert: {
+          amount: number
+          commission_id?: string | null
+          created_at?: string | null
+          deal_id?: string | null
+          description?: string | null
+          id?: string
+          revenue_period?: string | null
+          revenue_type: string
+        }
+        Update: {
+          amount?: number
+          commission_id?: string | null
+          created_at?: string | null
+          deal_id?: string | null
+          description?: string | null
+          id?: string
+          revenue_period?: string | null
+          revenue_type?: string
+        }
+        Relationships: [
+          {
             foreignKeyName: "company_revenue_commission_id_fkey"
             columns: ["commission_id"]
             isOneToOne: false
             referencedRelation: "commissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_revenue_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
             referencedColumns: ["id"]
           },
         ]
@@ -638,6 +588,13 @@ export type Database = {
           {
             foreignKeyName: "deals_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_deleted_by_fkey"
+            columns: ["deleted_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -707,13 +664,14 @@ export type Database = {
       }
       leads: {
         Row: {
+          alternative_email: string | null
           alternative_phone_number: string | null
           amazon_link: string | null
           assigned_at: string | null
           assigned_to: string | null
           author_bio: string | null
           author_name: string
-          book_title: string | null
+          book_title: string
           category: string | null
           country: string | null
           created_at: string | null
@@ -733,11 +691,11 @@ export type Database = {
           phone_number_1: string | null
           phone_number_2: string | null
           pinned_at: string | null
+          previous_assignee: string | null
           primary_email: string | null
           publisher: string | null
           recycled_at: string | null
           recycled_by: string | null
-          previous_assignee: string | null
           secondary_email: string | null
           state: string | null
           status_id: string
@@ -745,13 +703,14 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          alternative_email?: string | null
           alternative_phone_number?: string | null
           amazon_link?: string | null
           assigned_at?: string | null
           assigned_to?: string | null
           author_bio?: string | null
           author_name: string
-          book_title?: string | null
+          book_title: string
           category?: string | null
           country?: string | null
           created_at?: string | null
@@ -771,11 +730,11 @@ export type Database = {
           phone_number_1?: string | null
           phone_number_2?: string | null
           pinned_at?: string | null
+          previous_assignee?: string | null
           primary_email?: string | null
           publisher?: string | null
           recycled_at?: string | null
           recycled_by?: string | null
-          previous_assignee?: string | null
           secondary_email?: string | null
           state?: string | null
           status_id: string
@@ -783,13 +742,14 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          alternative_email?: string | null
           alternative_phone_number?: string | null
           amazon_link?: string | null
           assigned_at?: string | null
           assigned_to?: string | null
           author_bio?: string | null
           author_name?: string
-          book_title?: string | null
+          book_title?: string
           category?: string | null
           country?: string | null
           created_at?: string | null
@@ -809,11 +769,11 @@ export type Database = {
           phone_number_1?: string | null
           phone_number_2?: string | null
           pinned_at?: string | null
+          previous_assignee?: string | null
           primary_email?: string | null
           publisher?: string | null
           recycled_at?: string | null
           recycled_by?: string | null
-          previous_assignee?: string | null
           secondary_email?: string | null
           state?: string | null
           status_id?: string
@@ -836,10 +796,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "leads_status_id_fkey"
-            columns: ["status_id"]
+            foreignKeyName: "leads_deleted_by_fkey"
+            columns: ["deleted_by"]
             isOneToOne: false
-            referencedRelation: "statuses"
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_previous_assignee_fkey"
+            columns: ["previous_assignee"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -850,8 +817,71 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "leads_previous_assignee_fkey"
-            columns: ["previous_assignee"]
+            foreignKeyName: "leads_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "statuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          group_key: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          metadata: Json | null
+          read_at: string | null
+          recipient_id: string
+          title: string
+          type: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          group_key?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          metadata?: Json | null
+          read_at?: string | null
+          recipient_id: string
+          title: string
+          type: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          group_key?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          metadata?: Json | null
+          read_at?: string | null
+          recipient_id?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -894,6 +924,70 @@ export type Database = {
         }
         Relationships: []
       }
+      reminders: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          due_date: string | null
+          id: string
+          is_completed: boolean | null
+          lead_id: string | null
+          notes: string | null
+          priority: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean | null
+          lead_id?: string | null
+          notes?: string | null
+          priority?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean | null
+          lead_id?: string | null
+          notes?: string | null
+          priority?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminders_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminders_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_with_author_name"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       statuses: {
         Row: {
           color: string
@@ -928,7 +1022,15 @@ export type Database = {
           order_index?: number
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "statuses_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tags: {
         Row: {
@@ -967,129 +1069,10 @@ export type Database = {
           tag_type?: string
           updated_at?: string | null
         }
-        Relationships: []
-      }
-      reminders: {
-        Row: {
-          id: string
-          user_id: string
-          lead_id: string | null
-          title: string
-          notes: string | null
-          is_completed: boolean
-          completed_at: string | null
-          due_date: string | null
-          priority: string
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          lead_id?: string | null
-          title: string
-          notes?: string | null
-          is_completed?: boolean
-          completed_at?: string | null
-          due_date?: string | null
-          priority?: string
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          lead_id?: string | null
-          title?: string
-          notes?: string | null
-          is_completed?: boolean
-          completed_at?: string | null
-          due_date?: string | null
-          priority?: string
-          created_at?: string | null
-          updated_at?: string | null
-        }
         Relationships: [
           {
-            foreignKeyName: "reminders_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reminders_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reminders_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads_with_author_name"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      notifications: {
-        Row: {
-          id: string
-          recipient_id: string
-          actor_id: string | null
-          type: string
-          title: string
-          message: string
-          entity_type: string | null
-          entity_id: string | null
-          metadata: Json | null
-          is_read: boolean | null
-          read_at: string | null
-          created_at: string | null
-          group_key: string | null
-        }
-        Insert: {
-          id?: string
-          recipient_id: string
-          actor_id?: string | null
-          type: string
-          title: string
-          message: string
-          entity_type?: string | null
-          entity_id?: string | null
-          metadata?: Json | null
-          is_read?: boolean | null
-          read_at?: string | null
-          created_at?: string | null
-          group_key?: string | null
-        }
-        Update: {
-          id?: string
-          recipient_id?: string
-          actor_id?: string | null
-          type?: string
-          title?: string
-          message?: string
-          entity_type?: string | null
-          entity_id?: string | null
-          metadata?: Json | null
-          is_read?: boolean | null
-          read_at?: string | null
-          created_at?: string | null
-          group_key?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notifications_recipient_id_fkey"
-            columns: ["recipient_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notifications_actor_id_fkey"
-            columns: ["actor_id"]
+            foreignKeyName: "tags_deleted_by_fkey"
+            columns: ["deleted_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1100,8 +1083,8 @@ export type Database = {
     Views: {
       leads_with_author_name: {
         Row: {
-          alternative_phone_number: string | null
           amazon_link: string | null
+          assigned_at: string | null
           assigned_to: string | null
           author_bio: string | null
           author_name: string | null
@@ -1112,17 +1095,24 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           deal_value: number | null
+          deleted_at: string | null
+          deleted_by: string | null
           first_name: string | null
           id: string | null
+          is_pinned: boolean | null
           last_name: string | null
+          lead_record_type: string | null
           multiple_titles: boolean | null
           offer_title: string | null
           other_titles: Json | null
-          pen_name: string | null
           phone_number_1: string | null
           phone_number_2: string | null
+          pinned_at: string | null
+          previous_assignee: string | null
           primary_email: string | null
           publisher: string | null
+          recycled_at: string | null
+          recycled_by: string | null
           secondary_email: string | null
           state: string | null
           status_id: string | null
@@ -1130,8 +1120,8 @@ export type Database = {
           website: string | null
         }
         Insert: {
-          alternative_phone_number?: string | null
           amazon_link?: string | null
+          assigned_at?: string | null
           assigned_to?: string | null
           author_bio?: string | null
           author_name?: string | null
@@ -1142,17 +1132,24 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           deal_value?: number | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           first_name?: string | null
           id?: string | null
+          is_pinned?: boolean | null
           last_name?: string | null
+          lead_record_type?: string | null
           multiple_titles?: boolean | null
           offer_title?: string | null
           other_titles?: Json | null
-          pen_name?: string | null
           phone_number_1?: string | null
           phone_number_2?: string | null
+          pinned_at?: string | null
+          previous_assignee?: string | null
           primary_email?: string | null
           publisher?: string | null
+          recycled_at?: string | null
+          recycled_by?: string | null
           secondary_email?: string | null
           state?: string | null
           status_id?: string | null
@@ -1160,8 +1157,8 @@ export type Database = {
           website?: string | null
         }
         Update: {
-          alternative_phone_number?: string | null
           amazon_link?: string | null
+          assigned_at?: string | null
           assigned_to?: string | null
           author_bio?: string | null
           author_name?: string | null
@@ -1172,17 +1169,24 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           deal_value?: number | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           first_name?: string | null
           id?: string | null
+          is_pinned?: boolean | null
           last_name?: string | null
+          lead_record_type?: string | null
           multiple_titles?: boolean | null
           offer_title?: string | null
           other_titles?: Json | null
-          pen_name?: string | null
           phone_number_1?: string | null
           phone_number_2?: string | null
+          pinned_at?: string | null
+          previous_assignee?: string | null
           primary_email?: string | null
           publisher?: string | null
+          recycled_at?: string | null
+          recycled_by?: string | null
           secondary_email?: string | null
           state?: string | null
           status_id?: string | null
@@ -1205,6 +1209,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "leads_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_previous_assignee_fkey"
+            columns: ["previous_assignee"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_recycled_by_fkey"
+            columns: ["recycled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "leads_status_id_fkey"
             columns: ["status_id"]
             isOneToOne: false
@@ -1215,34 +1240,76 @@ export type Database = {
       }
     }
     Functions: {
-      attendance_clock_in: {
-        Args: { p_at?: string }
-        Returns: string
-      }
-      attendance_clock_out: {
-        Args: { p_shift_id: string; p_at?: string }
-        Returns: undefined
-      }
-      attendance_start_break: {
-        Args: { p_shift_id: string; p_at?: string }
-        Returns: string
-      }
-      attendance_end_break: {
-        Args: { p_break_id: string; p_at?: string }
-        Returns: undefined
-      }
       archive_lead_cascade: {
-        Args: { p_lead_id: string; p_deleted_by: string }
+        Args: { p_deleted_by: string; p_lead_id: string }
         Returns: undefined
       }
+      bulk_recycle_leads: { Args: { lead_ids: string[] }; Returns: undefined }
+      cleanup_old_notifications: { Args: never; Returns: undefined }
+      get_agent_lead_counts: { Args: never; Returns: Json }
       get_author_name: {
         Args: { first_name: string; last_name: string }
         Returns: string
       }
-      restore_lead_cascade: {
-        Args: { p_lead_id: string }
-        Returns: undefined
+      get_filtered_lead_ids:
+        | {
+            Args: {
+              p_assigned_to?: string
+              p_assignment_status?: string
+              p_created_by?: string
+              p_date_from?: string
+              p_date_to?: string
+              p_include_archived?: boolean
+              p_limit?: number
+              p_no_tags?: boolean
+              p_page?: number
+              p_search?: string
+              p_status_ids?: string[]
+              p_tag_ids?: string[]
+              p_untouched?: boolean
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_assigned_to?: string
+              p_assignment_status?: string
+              p_created_by?: string
+              p_date_from?: string
+              p_date_to?: string
+              p_in_pipeline?: boolean
+              p_include_archived?: boolean
+              p_limit?: number
+              p_no_tags?: boolean
+              p_page?: number
+              p_search?: string
+              p_status_ids?: string[]
+              p_tag_ids?: string[]
+              p_untouched?: boolean
+            }
+            Returns: Json
+          }
+      get_lead_manager_agent_workloads: { Args: never; Returns: Json }
+      get_lead_manager_counts: {
+        Args: { p_stale_days?: number }
+        Returns: Json
       }
+      get_lead_manager_leads: {
+        Args: {
+          p_agent_id?: string
+          p_filter_type: string
+          p_limit?: number
+          p_page?: number
+          p_stale_days?: number
+          p_tag_id?: string
+        }
+        Returns: Json
+      }
+      get_leads_quick_stats: { Args: never; Returns: Json }
+      get_status_distribution: { Args: never; Returns: Json }
+      get_tag_distribution: { Args: never; Returns: Json }
+      recycle_lead: { Args: { lead_ids: string[] }; Returns: undefined }
+      restore_lead_cascade: { Args: { p_lead_id: string }; Returns: undefined }
     }
     Enums: {
       activity_type:
@@ -1252,7 +1319,6 @@ export type Database = {
         | "note"
         | "status_change"
         | "assignment"
-      attendance_shift_status: "active" | "on_break" | "clocked_out"
       user_role: "leads_manager" | "sales_manager" | "sales"
     }
     CompositeTypes: {
@@ -1261,21 +1327,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -1293,14 +1363,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -1316,14 +1388,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -1339,14 +1413,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -1354,14 +1430,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
@@ -1377,7 +1455,6 @@ export const Constants = {
         "status_change",
         "assignment",
       ],
-      attendance_shift_status: ["active", "on_break", "clocked_out"],
       user_role: ["leads_manager", "sales_manager", "sales"],
     },
   },
