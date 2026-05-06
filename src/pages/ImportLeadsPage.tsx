@@ -1010,9 +1010,9 @@ const ImportLeadsPage: React.FC = () => {
                 <Button variant="outline" onClick={() => setStep('duplicates')}>
                   Back to Duplicates
                 </Button>
-                <Button 
+                <Button
                   onClick={handleImport}
-                  disabled={!selectedStatusId}
+                  disabled={!unassignedPipelineStatusId}
                 >
                   Import {(parsedData?.rows.length || 0) - skipDuplicates.length} Leads
                   {skipDuplicates.length > 0 && (
