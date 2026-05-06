@@ -146,6 +146,12 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
                     Call Primary
                   </DropdownMenuItem>
                 )}
+                {lead.alternative_phone_number && (
+                  <DropdownMenuItem onClick={() => handlePhoneClick(lead.alternative_phone_number!)}>
+                    <Phone className="h-4 w-4 mr-2" />
+                    Call Alternative
+                  </DropdownMenuItem>
+                )}
                 {lead.amazon_link && (
                   <DropdownMenuItem onClick={() => window.open(lead.amazon_link!, '_blank')}>
                     <ExternalLink className="h-4 w-4 mr-2" />
@@ -238,11 +244,22 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
                     {lead.phone_number_2 && (
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-gray-500" />
-                        <button 
+                        <button
                           onClick={() => handlePhoneClick(lead.phone_number_2!)}
                           className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
                         >
                           {lead.phone_number_2}
+                        </button>
+                      </div>
+                    )}
+                    {lead.alternative_phone_number && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-gray-500" />
+                        <button
+                          onClick={() => handlePhoneClick(lead.alternative_phone_number!)}
+                          className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {lead.alternative_phone_number}
                         </button>
                       </div>
                     )}

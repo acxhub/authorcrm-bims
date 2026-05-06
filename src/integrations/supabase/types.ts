@@ -707,6 +707,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          alternative_phone_number: string | null
           amazon_link: string | null
           assigned_at: string | null
           assigned_to: string | null
@@ -724,6 +725,7 @@ export type Database = {
           id: string
           is_pinned: boolean
           last_name: string | null
+          lead_record_type: string
           multiple_titles: boolean | null
           offer_title: string | null
           other_titles: Json | null
@@ -743,6 +745,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          alternative_phone_number?: string | null
           amazon_link?: string | null
           assigned_at?: string | null
           assigned_to?: string | null
@@ -760,6 +763,7 @@ export type Database = {
           id?: string
           is_pinned?: boolean
           last_name?: string | null
+          lead_record_type?: string
           multiple_titles?: boolean | null
           offer_title?: string | null
           other_titles?: Json | null
@@ -779,6 +783,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          alternative_phone_number?: string | null
           amazon_link?: string | null
           assigned_at?: string | null
           assigned_to?: string | null
@@ -796,6 +801,7 @@ export type Database = {
           id?: string
           is_pinned?: boolean
           last_name?: string | null
+          lead_record_type?: string
           multiple_titles?: boolean | null
           offer_title?: string | null
           other_titles?: Json | null
@@ -1094,6 +1100,7 @@ export type Database = {
     Views: {
       leads_with_author_name: {
         Row: {
+          alternative_phone_number: string | null
           amazon_link: string | null
           assigned_to: string | null
           author_bio: string | null
@@ -1123,6 +1130,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          alternative_phone_number?: string | null
           amazon_link?: string | null
           assigned_to?: string | null
           author_bio?: string | null
@@ -1152,6 +1160,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          alternative_phone_number?: string | null
           amazon_link?: string | null
           assigned_to?: string | null
           author_bio?: string | null

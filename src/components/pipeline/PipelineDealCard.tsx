@@ -102,27 +102,27 @@ export const PipelineDealCard: React.FC<PipelineDealCardProps> = ({
       onClick={onClick}
     >
       <Card className="border border-gray-200/80 hover:border-gray-300 bg-white/90 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200">
-        <CardContent className="p-4">
-          <div className="space-y-3">
+        <CardContent className="p-3">
+          <div className="space-y-2">
             {/* Header with Actions */}
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
                 <h4 className="font-semibold text-gray-900 truncate text-sm leading-tight">
                   {deal.offer_title}
                 </h4>
-                <p className="text-xs text-gray-600 truncate mt-1">
+                <p className="text-xs text-gray-600 truncate mt-0.5">
                   {deal.lead
                     ? `${getLeadDisplayName(deal.lead)} • ${getLeadBookTitleDisplay(deal.lead.book_title)}`
                     : ''}
                 </p>
               </div>
-              
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2"
+                    className="h-7 w-7 p-0 opacity-60 group-hover:opacity-100 transition-opacity shrink-0 ml-2"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <MoreHorizontal className="h-3 w-3" />
@@ -145,72 +145,48 @@ export const PipelineDealCard: React.FC<PipelineDealCardProps> = ({
               </DropdownMenu>
             </div>
 
-            {/* Deal Value - Prominent Display */}
-            <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-200">
-              <DollarSign className="h-4 w-4 text-green-600" />
-              <span className="font-bold text-green-700 text-sm">
-                {formatCurrency(deal.deal_value)}
-              </span>
-            </div>
-
-            {/* Category Badge */}
-            {deal.category && (
-              <div className="flex items-center gap-2">
+            {/* Deal Value + Category - inline to save vertical space */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 rounded-md border border-green-200">
+                <DollarSign className="h-3.5 w-3.5 text-green-600" />
+                <span className="font-bold text-green-700 text-sm">
+                  {formatCurrency(deal.deal_value)}
+                </span>
+              </div>
+              {deal.category && (
                 <Badge className={`text-xs font-medium ${getCategoryColor(deal.category)}`}>
                   <CategoryIcon className="h-3 w-3 mr-1" />
                   {deal.category}
                 </Badge>
-              </div>
-            )}
-
-            {/* Assignment Info */}
-            <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-              <User className="h-3 w-3 text-gray-500 shrink-0" />
-              {deal.assigned_to_profile ? (
-                <div className="flex items-center gap-2 min-w-0">
-                  <Avatar className="h-5 w-5 shrink-0">
-                    <AvatarImage src={deal.assigned_to_profile.avatar_url || ''} />
-                    <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
-                      {getInitials(deal.assigned_to_profile.full_name || 'U')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs text-gray-700 truncate font-medium">
-                    {deal.assigned_to_profile.full_name || deal.assigned_to_profile.email}
-                  </span>
-                </div>
-              ) : (
-                <span className="text-xs text-gray-500 font-medium">Unassigned</span>
               )}
             </div>
 
-            {/* Created Date */}
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <Calendar className="h-3 w-3" />
-              <span>
-                Created {formatDistanceToNow(new Date(deal.created_at || ''), { addSuffix: true })}
-              </span>
-            </div>
-
-            {/* Hover Actions Bar */}
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-between pt-2 border-t border-gray-100">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-gray-600 hover:text-blue-600"
-                onClick={handleViewDeal}
-              >
-                <ExternalLink className="h-3 w-3 mr-1" />
-                View
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-gray-600 hover:text-green-600"
-                onClick={onEdit}
-              >
-                <Edit className="h-3 w-3 mr-1" />
-                Edit
-              </Button>
+            {/* Assignment + Created Date - combined row */}
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-1.5 min-w-0">
+                {deal.assigned_to_profile ? (
+                  <>
+                    <Avatar className="h-5 w-5 shrink-0">
+                      <AvatarImage src={deal.assigned_to_profile.avatar_url || ''} />
+                      <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
+                        {getInitials(deal.assigned_to_profile.full_name || 'U')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-gray-700 truncate font-medium">
+                      {deal.assigned_to_profile.full_name || deal.assigned_to_profile.email}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <User className="h-3 w-3 text-gray-400 shrink-0" />
+                    <span className="text-gray-500 font-medium">Unassigned</span>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-1 text-gray-500 shrink-0">
+                <Calendar className="h-3 w-3" />
+                <span>{formatDistanceToNow(new Date(deal.created_at || ''), { addSuffix: true })}</span>
+              </div>
             </div>
           </div>
         </CardContent>

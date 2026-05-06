@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, X, Download, Eye, MapPin, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +20,8 @@ import { useUsersContext } from '@/contexts/UsersContext';
 import { notify, getManagers } from '@/lib/notifications/notify';
 import { useNavigate } from 'react-router-dom';
 import { getLeadDisplayName, getLeadBookTitleDisplay } from '@/lib/lead-display';
+import { resolveUnassignedPipelineStatusId, type LeadRecordType } from '@/lib/lead-defaults';
+import { useToast } from '@/hooks/use-toast';
 
 // Database field definitions with length limits
 const DB_FIELDS = {
@@ -31,6 +33,7 @@ const DB_FIELDS = {
   amazon_link: { label: 'Amazon Link', required: false, type: 'url', maxLength: null }, // No limit
   phone_number_1: { label: 'Home Phone', required: false, type: 'phone', maxLength: 20 },
   phone_number_2: { label: 'Mobile Phone', required: false, type: 'phone', maxLength: 20 },
+  alternative_phone_number: { label: 'Alternative Phone', required: false, type: 'phone', maxLength: 20 },
   primary_email: { label: 'Primary Email', required: false, type: 'email', maxLength: 255 },
   secondary_email: { label: 'Secondary Email', required: false, type: 'email', maxLength: 255 },
   author_bio: { label: 'Author Bio', required: false, type: 'text', maxLength: null }, // TEXT field, no limit
@@ -38,7 +41,6 @@ const DB_FIELDS = {
   website: { label: 'Website', required: false, type: 'url', maxLength: 500 },
   state: { label: 'State', required: false, type: 'text', maxLength: 100 },
   country: { label: 'Country', required: false, type: 'text', maxLength: 100 },
-  status_id: { label: 'Status', required: false, type: 'select', maxLength: null },
 };
 
 interface ParsedData {
@@ -84,10 +86,11 @@ const ImportLeadsPage: React.FC = () => {
   const [importProgress, setImportProgress] = useState(0);
   const [importResults, setImportResults] = useState<{ success: number; errors: number; skipped: number }>({ success: 0, errors: 0, skipped: 0 });
   const [skipValidation, setSkipValidation] = useState(false);
-  const [selectedStatusId, setSelectedStatusId] = useState<string>('');
+  const [importLeadRecordType, setImportLeadRecordType] = useState<LeadRecordType>('lead');
   const [assignedUserId, setAssignedUserId] = useState<string>('');
 
   const { user } = useAuth();
+  const { toast } = useToast();
   const { profile } = useProfile();
   const { users: allContextUsers } = useUsersContext();
   const { data: statuses } = useStatuses();
@@ -95,15 +98,10 @@ const ImportLeadsPage: React.FC = () => {
   const { users = [] } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
   const createLead = useCreateLead();
 
-  // Set default status when statuses are loaded
-  useEffect(() => {
-    if (statuses?.length && !selectedStatusId) {
-      const defaultStatus = statuses.find(s => s.order_index === 1);
-      if (defaultStatus) {
-        setSelectedStatusId(defaultStatus.id);
-      }
-    }
-  }, [statuses, selectedStatusId]);
+  const unassignedPipelineStatusId = useMemo(
+    () => resolveUnassignedPipelineStatusId(statuses ?? []),
+    [statuses],
+  );
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -166,6 +164,17 @@ const ImportLeadsPage: React.FC = () => {
           normalizedHeader === 'alias'
         ) {
           autoMapping[header] = 'pen_name';
+        }
+
+        // Fuzzy phone matches (the direct-label loop above already covers exact matches)
+        if (normalizedHeader.includes('phone')) {
+          if (normalizedHeader.includes('alt') || normalizedHeader.includes('other') || normalizedHeader.includes('3')) {
+            autoMapping[header] = 'alternative_phone_number';
+          } else if (normalizedHeader.includes('mobile') || normalizedHeader.includes('secondary') || normalizedHeader.includes('2')) {
+            autoMapping[header] = 'phone_number_2';
+          } else if (!autoMapping[header]) {
+            autoMapping[header] = 'phone_number_1';
+          }
         }
         if (normalizedHeader === 'name' || normalizedHeader === 'full name') {
           // Try to find additional first/last name columns before using as author_name
@@ -316,6 +325,14 @@ const ImportLeadsPage: React.FC = () => {
       return mappedRow;
     });
 
+    const collectPhones = (source: any): string[] =>
+      [source?.phone_number_1, source?.phone_number_2, source?.alternative_phone_number]
+        .map(normalizeValue)
+        .filter((p): p is string => !!p);
+
+    const phonesIntersect = (a: string[], b: string[]) =>
+      a.some((phone) => b.includes(phone));
+
     // Check for internal duplicates first
     for (let i = 0; i < mappedRows.length; i++) {
       for (let j = i + 1; j < mappedRows.length; j++) {
@@ -329,7 +346,9 @@ const ImportLeadsPage: React.FC = () => {
         if (row1.book_title && row2.book_title && normalizeValue(row1.book_title) === normalizeValue(row2.book_title)) {
           matchingFields.push('Book Title');
         }
-        if (row1.phone_number_1 && row2.phone_number_1 && normalizeValue(row1.phone_number_1) === normalizeValue(row2.phone_number_1)) {
+        const row1Phones = collectPhones(row1);
+        const row2Phones = collectPhones(row2);
+        if (row1Phones.length && row2Phones.length && phonesIntersect(row1Phones, row2Phones)) {
           matchingFields.push('Phone Number');
         }
         if (row1.primary_email && row2.primary_email && normalizeValue(row1.primary_email) === normalizeValue(row2.primary_email)) {
@@ -352,7 +371,7 @@ const ImportLeadsPage: React.FC = () => {
       const rowData = {
         author_name: normalizeValue(row.author_name),
         book_title: normalizeValue(row.book_title),
-        phone: normalizeValue(row.phone_number_1),
+        phones: collectPhones(row),
         email: normalizeValue(row.primary_email),
       };
 
@@ -360,19 +379,19 @@ const ImportLeadsPage: React.FC = () => {
         const existingData = {
           author_name: normalizeValue(existingLead.author_name),
           book_title: normalizeValue(existingLead.book_title),
-          phone: normalizeValue(existingLead.phone_number_1),
+          phones: collectPhones(existingLead),
           email: normalizeValue(existingLead.primary_email),
         };
 
         const matchingFields: string[] = [];
-        
+
         if (rowData.author_name && existingData.author_name && rowData.author_name === existingData.author_name) {
           matchingFields.push('Author Name');
         }
         if (rowData.book_title && existingData.book_title && rowData.book_title === existingData.book_title) {
           matchingFields.push('Book Title');
         }
-        if (rowData.phone && existingData.phone && rowData.phone === existingData.phone) {
+        if (rowData.phones.length && existingData.phones.length && phonesIntersect(rowData.phones, existingData.phones)) {
           matchingFields.push('Phone Number');
         }
         if (rowData.email && existingData.email && rowData.email === existingData.email) {
@@ -473,15 +492,17 @@ const ImportLeadsPage: React.FC = () => {
   const handleImport = async () => {
     if (!parsedData || !user) return;
 
+    if (!unassignedPipelineStatusId) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot import',
+        description: 'No Unassigned pipeline status found. Add one in Admin.',
+      });
+      return;
+    }
+
     setStep('importing');
     setImportProgress(0);
-
-    // Use selected status or find default
-    let statusToUse = selectedStatusId;
-    if (!statusToUse && statuses?.length) {
-      const defaultStatus = statuses.find(s => s.order_index === 1);
-      statusToUse = defaultStatus?.id || '';
-    }
 
     let successCount = 0;
     let errorCount = 0;
@@ -501,7 +522,8 @@ const ImportLeadsPage: React.FC = () => {
       try {
         const leadData: any = {
           created_by: user.id,
-          status_id: statusToUse,
+          status_id: unassignedPipelineStatusId,
+          lead_record_type: importLeadRecordType,
         };
 
         // Add assigned user if selected
@@ -519,19 +541,7 @@ const ImportLeadsPage: React.FC = () => {
           const value = row[columnIndex];
 
           if (value && value.toString().trim() !== '') {
-            // Special handling for status field if it's mapped
-            if (dbField === 'status_id') {
-              // Try to find status by name
-              const matchingStatus = statuses?.find(
-                s => s.name.toLowerCase() === value.toString().toLowerCase().trim()
-              );
-              if (matchingStatus) {
-                leadData[dbField] = matchingStatus.id;
-              } else {
-                // If no matching status found, use selected or default
-                leadData[dbField] = statusToUse;
-              }
-            } else if (dbField === 'multiple_titles') {
+            if (dbField === 'multiple_titles') {
               leadData[dbField] = value.toString().toLowerCase() === 'true';
             } else {
               const fieldDef = DB_FIELDS[dbField as keyof typeof DB_FIELDS];
@@ -883,22 +893,26 @@ const ImportLeadsPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Lead Status <span className="text-red-500">*</span>
+                    Initial Status <span className="text-red-500">*</span>
                   </label>
-                  <Select value={selectedStatusId} onValueChange={setSelectedStatusId}>
+                  <Select
+                    value={importLeadRecordType}
+                    onValueChange={(v) => setImportLeadRecordType(v as LeadRecordType)}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select status for imported leads" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {statuses?.map((status) => (
-                        <SelectItem key={status.id} value={status.id}>
-                          {status.name}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="lead">Lead</SelectItem>
+                      <SelectItem value="sold_lead">Sold Lead</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Pipeline for imports is always <span className="font-medium text-foreground">Unassigned</span> (not the
+                    same as this setting).
+                  </p>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Assign to User <span className="text-gray-400">(Optional)</span>

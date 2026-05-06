@@ -273,7 +273,7 @@ export const PipelineBoard: React.FC = () => {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex flex-col min-h-full">
         {/* Enhanced Pipeline Header with Filters - Fixed at top */}
         <div className="flex-shrink-0 p-6 pb-4 bg-white/50 backdrop-blur-sm border-b border-gray-200/60">
           <div className="space-y-4">
@@ -576,17 +576,18 @@ export const PipelineBoard: React.FC = () => {
         </div>
 
         {/* Pipeline Content - Board or Table View */}
-        <div className="flex-1 min-h-0 overflow-hidden p-6">
+        {/* min-h ensures ~5 deal cards fit without squeezing, even on shorter viewports */}
+        <div className="flex-1 min-h-[920px] p-6">
           {viewMode === 'table' ? (
             <div className="h-full overflow-auto">
-              <PipelineTableView 
-                deals={deals} 
+              <PipelineTableView
+                deals={deals}
                 filter={attentionFilter}
                 onDealClick={handleDealClick}
               />
             </div>
           ) : (
-            <Card className="h-full bg-white/60 backdrop-blur-sm border-gray-200/60 shadow-lg flex flex-col relative">
+            <Card className="h-full min-h-[920px] bg-white/60 backdrop-blur-sm border-gray-200/60 shadow-lg flex flex-col relative">
               <CardHeader className="flex-shrink-0 bg-white/80 backdrop-blur-sm border-b border-gray-200/60">
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-blue-600" />

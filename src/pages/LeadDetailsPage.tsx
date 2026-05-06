@@ -94,12 +94,14 @@ const LeadDetailsPage: React.FC = () => {
       amazon_link: lead.amazon_link || '',
       phone_number_1: lead.phone_number_1 || '',
       phone_number_2: lead.phone_number_2 || '',
+      alternative_phone_number: lead.alternative_phone_number || '',
       primary_email: lead.primary_email || '',
       secondary_email: lead.secondary_email || '',
       author_bio: lead.author_bio || '',
       multiple_titles: lead.multiple_titles || false,
       other_titles: otherTitles,
       status_id: lead.status_id,
+      lead_record_type: lead.lead_record_type === 'sold_lead' ? 'sold_lead' : 'lead',
       publisher: lead.publisher || '',
       website: lead.website || '',
       state: lead.state || '',
@@ -215,6 +217,7 @@ const LeadDetailsPage: React.FC = () => {
           </DialogHeader>
           {lead && (
             <LeadForm
+              mode="edit"
               initialData={getFormInitialData()}
               onSubmit={handleEditSubmit}
               isLoading={updateLead.isPending}

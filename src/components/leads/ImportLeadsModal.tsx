@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, X, Download, Eye, MapPin, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,8 @@ import { useCreateLead, useLeads } from '@/hooks/useLeads';
 import { useStatuses } from '@/hooks/useStatuses';
 import { useAuth } from '@/hooks/useAuth';
 import { getLeadDisplayName, getLeadBookTitleDisplay } from '@/lib/lead-display';
+import { resolveUnassignedPipelineStatusId, type LeadRecordType } from '@/lib/lead-defaults';
+import { useToast } from '@/hooks/use-toast';
 
 interface ImportLeadsModalProps {
   open: boolean;
@@ -57,6 +59,7 @@ const DB_FIELDS = {
   amazon_link: { label: 'Amazon Link', required: false, type: 'url' },
   phone_number_1: { label: 'Home Phone', required: false, type: 'phone' },
   phone_number_2: { label: 'Mobile Phone', required: false, type: 'phone' },
+  alternative_phone_number: { label: 'Alternative Phone', required: false, type: 'phone' },
   primary_email: { label: 'Primary Email', required: false, type: 'email' },
   secondary_email: { label: 'Secondary Email', required: false, type: 'email' },
   author_bio: { label: 'Author Bio', required: false, type: 'text' },
@@ -64,7 +67,6 @@ const DB_FIELDS = {
   website: { label: 'Website', required: false, type: 'url' },
   state: { label: 'State', required: false, type: 'text' },
   country: { label: 'Country', required: false, type: 'text' },
-  status_id: { label: 'Status', required: true, type: 'select' },
 };
 
 export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
@@ -80,9 +82,15 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
   const [skipDuplicates, setSkipDuplicates] = useState<number[]>([]);
   const [importProgress, setImportProgress] = useState(0);
   const [importResults, setImportResults] = useState<{ success: number; errors: number; skipped: number }>({ success: 0, errors: 0, skipped: 0 });
+  const [importLeadRecordType, setImportLeadRecordType] = useState<LeadRecordType>('lead');
 
   const { user } = useAuth();
+  const { toast } = useToast();
   const { data: statuses } = useStatuses();
+  const unassignedPipelineStatusId = useMemo(
+    () => resolveUnassignedPipelineStatusId(statuses ?? []),
+    [statuses],
+  );
   const { data: existingLeadsData } = useLeads({}, 1, 1000); // Get existing leads for duplicate checking
   const createLead = useCreateLead();
 
@@ -142,9 +150,15 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
           autoMapping[header] = 'primary_email';
         } else if (lowerHeader.includes('email') && !lowerHeader.includes('secondary')) {
           autoMapping[header] = 'primary_email';
+        } else if (lowerHeader.includes('phone') && (lowerHeader.includes('alt') || lowerHeader.includes('other') || lowerHeader.includes('3'))) {
+          autoMapping[header] = 'alternative_phone_number';
+        } else if (lowerHeader.includes('phone') && lowerHeader.includes('secondary')) {
+          autoMapping[header] = 'phone_number_2';
+        } else if (lowerHeader.includes('phone') && lowerHeader.includes('mobile')) {
+          autoMapping[header] = 'phone_number_2';
         } else if (lowerHeader.includes('phone') && lowerHeader.includes('primary')) {
           autoMapping[header] = 'phone_number_1';
-        } else if (lowerHeader.includes('phone') && !lowerHeader.includes('secondary')) {
+        } else if (lowerHeader.includes('phone')) {
           autoMapping[header] = 'phone_number_1';
         } else if (lowerHeader.includes('amazon')) {
           autoMapping[header] = 'amazon_link';
@@ -201,12 +215,20 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
       return mappedRow;
     });
 
+    const collectPhones = (source: any): string[] =>
+      [source?.phone_number_1, source?.phone_number_2, source?.alternative_phone_number]
+        .map(normalizeValue)
+        .filter((p): p is string => !!p);
+
+    const phonesIntersect = (a: string[], b: string[]) =>
+      a.some((phone) => b.includes(phone));
+
     // Check against existing leads in database
     mappedRows.forEach((row, index) => {
       const rowData = {
         author_name: normalizeValue(row.author_name),
         book_title: normalizeValue(row.book_title),
-        phone: normalizeValue(row.phone_number_1),
+        phones: collectPhones(row),
         email: normalizeValue(row.primary_email),
       };
 
@@ -214,19 +236,19 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
         const existingData = {
           author_name: normalizeValue(existingLead.author_name),
           book_title: normalizeValue(existingLead.book_title),
-          phone: normalizeValue(existingLead.phone_number_1),
+          phones: collectPhones(existingLead),
           email: normalizeValue(existingLead.primary_email),
         };
 
         const matchingFields: string[] = [];
-        
+
         if (rowData.author_name && existingData.author_name && rowData.author_name === existingData.author_name) {
           matchingFields.push('Author Name');
         }
         if (rowData.book_title && existingData.book_title && rowData.book_title === existingData.book_title) {
           matchingFields.push('Book Title');
         }
-        if (rowData.phone && existingData.phone && rowData.phone === existingData.phone) {
+        if (rowData.phones.length && existingData.phones.length && phonesIntersect(rowData.phones, existingData.phones)) {
           matchingFields.push('Phone Number');
         }
         if (rowData.email && existingData.email && rowData.email === existingData.email) {
@@ -251,26 +273,26 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
         const row1Data = {
           author_name: normalizeValue(mappedRows[i].author_name),
           book_title: normalizeValue(mappedRows[i].book_title),
-          phone: normalizeValue(mappedRows[i].phone_number_1),
+          phones: collectPhones(mappedRows[i]),
           email: normalizeValue(mappedRows[i].primary_email),
         };
 
         const row2Data = {
           author_name: normalizeValue(mappedRows[j].author_name),
           book_title: normalizeValue(mappedRows[j].book_title),
-          phone: normalizeValue(mappedRows[j].phone_number_1),
+          phones: collectPhones(mappedRows[j]),
           email: normalizeValue(mappedRows[j].primary_email),
         };
 
         const matchingFields: string[] = [];
-        
+
         if (row1Data.author_name && row2Data.author_name && row1Data.author_name === row2Data.author_name) {
           matchingFields.push('Author Name');
         }
         if (row1Data.book_title && row2Data.book_title && row1Data.book_title === row2Data.book_title) {
           matchingFields.push('Book Title');
         }
-        if (row1Data.phone && row2Data.phone && row1Data.phone === row2Data.phone) {
+        if (row1Data.phones.length && row2Data.phones.length && phonesIntersect(row1Data.phones, row2Data.phones)) {
           matchingFields.push('Phone Number');
         }
         if (row1Data.email && row2Data.email && row1Data.email === row2Data.email) {
@@ -399,10 +421,18 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
   const handleImport = async () => {
     if (!parsedData || !user) return;
 
+    if (!unassignedPipelineStatusId) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot import',
+        description: 'No Unassigned pipeline status found. Add one in Admin.',
+      });
+      return;
+    }
+
     setStep('importing');
     setImportProgress(0);
 
-    const defaultStatus = statuses?.find(s => s.order_index === 1);
     let successCount = 0;
     let errorCount = 0;
     let skippedCount = 0;
@@ -421,7 +451,8 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
       try {
         const leadData: any = {
           created_by: user.id,
-          status_id: defaultStatus?.id || '',
+          status_id: unassignedPipelineStatusId,
+          lead_record_type: importLeadRecordType,
         };
 
         // Map the data
@@ -461,6 +492,7 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
     setSkipDuplicates([]);
     setImportProgress(0);
     setImportResults({ success: 0, errors: 0, skipped: 0 });
+    setImportLeadRecordType('lead');
     onOpenChange(false);
   };
 
@@ -800,6 +832,27 @@ export const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
                     </AlertDescription>
                   </Alert>
                 )}
+
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Initial Status <span className="text-red-500">*</span>
+                  </label>
+                  <Select
+                    value={importLeadRecordType}
+                    onValueChange={(v) => setImportLeadRecordType(v as LeadRecordType)}
+                  >
+                    <SelectTrigger className="max-w-xs bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="lead">Lead</SelectItem>
+                      <SelectItem value="sold_lead">Sold Lead</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Pipeline for imports is always <span className="font-medium text-foreground">Unassigned</span>.
+                  </p>
+                </div>
 
                 <div className="overflow-x-auto">
                   <Table>

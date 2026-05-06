@@ -29,8 +29,8 @@ export const PipelinePage: React.FC = () => {
             </div>
           </header>
 
-          {/* Main Content - Full height container with overflow hidden */}
-          <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* Main Content - Allow page-level vertical scroll so the board can claim min-height */}
+          <main className="flex-1 flex flex-col overflow-y-auto">
             <PipelineBoard />
           </main>
         </SidebarInset>
