@@ -532,17 +532,17 @@ export const BulkLeadActions: React.FC<BulkLeadActionsProps> = ({
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Change Status
+                Change Pipeline Status
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Bulk Change Status</DialogTitle>
+                <DialogTitle>Bulk Change Pipeline Status</DialogTitle>
               </DialogHeader>
-              
+
               <div className="space-y-4">
                 <div>
-                  <Label>Changing status for {selectedLeads.length} leads to:</Label>
+                  <Label>Changing pipeline status for {selectedLeads.length} leads to:</Label>
                   <Select value={selectedStatusId} onValueChange={setSelectedStatusId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Choose a status..." />

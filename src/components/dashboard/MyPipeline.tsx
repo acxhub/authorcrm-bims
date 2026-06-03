@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow, differenceInDays, startOfToday } from 'date-fns';
 import { useDeals } from '@/hooks/useDeals';
 import { useStatuses } from '@/hooks/useStatuses';
+import { useLeadsLastActivity } from '@/hooks/useLeadsLastActivity';
 import { useProfile } from '@/hooks/useAuth';
 import type { Deal } from '@/lib/api/deals';
 import { getLeadDisplayName } from '@/lib/lead-display';
@@ -20,9 +21,10 @@ interface DealRowProps {
   deal: Deal;
   navigate: (path: string) => void;
   urgency: 'urgent' | 'warning' | 'good';
+  lastTouch: Date;
 }
 
-const DealRow: React.FC<DealRowProps> = ({ deal, navigate, urgency }) => {
+const DealRow: React.FC<DealRowProps> = ({ deal, navigate, urgency, lastTouch }) => {
   const borderColors = {
     urgent: 'border-l-red-400 bg-red-50/50',
     warning: 'border-l-orange-400 bg-orange-50/50',
@@ -53,11 +55,9 @@ const DealRow: React.FC<DealRowProps> = ({ deal, navigate, urgency }) => {
         </div>
         <p className="text-xs text-gray-500 truncate">
           {deal.lead ? getLeadDisplayName(deal.lead) : 'No lead'}
-          {deal.updated_at && (
-            <span className="ml-2 text-gray-400">
-              {formatDistanceToNow(new Date(deal.updated_at), { addSuffix: true })}
-            </span>
-          )}
+          <span className="ml-2 text-gray-400">
+            last activity {formatDistanceToNow(lastTouch, { addSuffix: true })}
+          </span>
         </p>
       </div>
       {deal.deal_value != null && deal.deal_value > 0 && (
@@ -89,20 +89,42 @@ export const MyPipeline: React.FC<MyPipelineProps> = ({ userId }) => {
     });
   }, [deals]);
 
-  // Group by urgency instead of status
+  // Reps log calls/emails as activities on the LEAD, which never bumps the deal's
+  // updated_at. So engagement is measured from the lead's last activity, falling
+  // back to the deal's own updated_at (e.g. a manual stage move with no activity yet).
+  const leadIds = useMemo(
+    () => [...new Set(activeDeals.map(d => d.lead_id).filter(Boolean))] as string[],
+    [activeDeals]
+  );
+  const { data: lastActivityMap } = useLeadsLastActivity(leadIds);
+
+  // Per-deal "last touch" = most recent of (lead's last activity, deal.updated_at).
+  const lastTouchByDeal = useMemo(() => {
+    const map = new Map<string, Date>();
+    for (const deal of activeDeals) {
+      const dealUpdated = deal.updated_at ? new Date(deal.updated_at) : new Date(deal.created_at!);
+      const leadActivityIso = deal.lead_id ? lastActivityMap?.get(deal.lead_id) : undefined;
+      const leadActivity = leadActivityIso ? new Date(leadActivityIso) : null;
+      const lastTouch = leadActivity && leadActivity > dealUpdated ? leadActivity : dealUpdated;
+      map.set(deal.id, lastTouch);
+    }
+    return map;
+  }, [activeDeals, lastActivityMap]);
+
+  // Group by urgency based on the combined last-touch signal
   const groupedByUrgency = useMemo(() => {
     const today = startOfToday();
     const urgent: Deal[] = []; // No activity 14+ days
-    const needsAction: Deal[] = []; // No activity 7-13 days  
+    const needsAction: Deal[] = []; // No activity 7-13 days
     const onTrack: Deal[] = []; // Activity within 7 days
 
     for (const deal of activeDeals) {
-      const lastUpdate = new Date(deal.updated_at!);
-      const daysSinceUpdate = differenceInDays(today, lastUpdate);
+      const lastTouch = lastTouchByDeal.get(deal.id) ?? new Date(deal.updated_at!);
+      const daysSinceTouch = differenceInDays(today, lastTouch);
 
-      if (daysSinceUpdate >= 14) {
+      if (daysSinceTouch >= 14) {
         urgent.push(deal);
-      } else if (daysSinceUpdate >= 7) {
+      } else if (daysSinceTouch >= 7) {
         needsAction.push(deal);
       } else {
         onTrack.push(deal);
@@ -116,7 +138,7 @@ export const MyPipeline: React.FC<MyPipelineProps> = ({ userId }) => {
     onTrack.sort(sortByValue);
 
     return { urgent, needsAction, onTrack };
-  }, [activeDeals]);
+  }, [activeDeals, lastTouchByDeal]);
 
   // Keep the old grouped view for reference but use urgency view by default
   const groupedDeals = useMemo(() => {
@@ -215,7 +237,7 @@ export const MyPipeline: React.FC<MyPipelineProps> = ({ userId }) => {
                 </div>
                 <div className="space-y-1.5 ml-6">
                   {groupedByUrgency.urgent.slice(0, 3).map((deal) => (
-                    <DealRow key={deal.id} deal={deal} navigate={navigate} urgency="urgent" />
+                    <DealRow key={deal.id} deal={deal} navigate={navigate} urgency="urgent" lastTouch={lastTouchByDeal.get(deal.id) ?? new Date(deal.updated_at!)} />
                   ))}
                   {groupedByUrgency.urgent.length > 3 && (
                     <p className="text-xs text-gray-500 pl-3">+{groupedByUrgency.urgent.length - 3} more</p>
@@ -238,7 +260,7 @@ export const MyPipeline: React.FC<MyPipelineProps> = ({ userId }) => {
                 </div>
                 <div className="space-y-1.5 ml-6">
                   {groupedByUrgency.needsAction.slice(0, 3).map((deal) => (
-                    <DealRow key={deal.id} deal={deal} navigate={navigate} urgency="warning" />
+                    <DealRow key={deal.id} deal={deal} navigate={navigate} urgency="warning" lastTouch={lastTouchByDeal.get(deal.id) ?? new Date(deal.updated_at!)} />
                   ))}
                   {groupedByUrgency.needsAction.length > 3 && (
                     <p className="text-xs text-gray-500 pl-3">+{groupedByUrgency.needsAction.length - 3} more</p>
@@ -261,7 +283,7 @@ export const MyPipeline: React.FC<MyPipelineProps> = ({ userId }) => {
                 </div>
                 <div className="space-y-1.5 ml-6">
                   {groupedByUrgency.onTrack.slice(0, 4).map((deal) => (
-                    <DealRow key={deal.id} deal={deal} navigate={navigate} urgency="good" />
+                    <DealRow key={deal.id} deal={deal} navigate={navigate} urgency="good" lastTouch={lastTouchByDeal.get(deal.id) ?? new Date(deal.updated_at!)} />
                   ))}
                   {groupedByUrgency.onTrack.length > 4 && (
                     <p className="text-xs text-gray-500 pl-3">+{groupedByUrgency.onTrack.length - 4} more</p>

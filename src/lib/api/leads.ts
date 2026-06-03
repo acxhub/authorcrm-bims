@@ -34,6 +34,34 @@ export interface PaginatedLeadsResponse {
   total_pages: number;
 }
 
+/** Server-side aggregated lead metrics (computed in Postgres over ALL matching rows). */
+export interface LeadStats {
+  total_leads: number;
+  active_leads: number;
+  closed_won: number;
+  avg_time_to_close: number;
+  new_leads_this_week: number;
+  closed_won_this_month: number;
+  closed_lost_this_month: number;
+  leads_this_month: number;
+  leads_last_month: number;
+  status_counts: Array<{ status_id: string; count: number }>;
+}
+
+/** Subset of lead fields needed for import duplicate matching. */
+export interface DuplicateCandidate {
+  id: string;
+  author_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  pen_name: string | null;
+  book_title: string | null;
+  primary_email: string | null;
+  phone_number_1: string | null;
+  phone_number_2: string | null;
+  alternative_phone_number: string | null;
+}
+
 export class LeadsAPI {
   /**
    * Unified lead fetching via server-side RPC.
@@ -120,6 +148,62 @@ export class LeadsAPI {
       limit,
       total_pages: total_pages,
     };
+  }
+
+  /**
+   * Aggregated lead metrics computed server-side over ALL matching rows.
+   * Replaces client-side reduce over a capped page (which truncated totals).
+   */
+  async getLeadStats(assignedTo?: string | null): Promise<LeadStats> {
+    const { data, error } = await supabase.rpc('get_lead_stats', {
+      p_assigned_to: assignedTo || undefined,
+    });
+    if (error) {
+      throw new Error(`Failed to fetch lead stats: ${error.message}`);
+    }
+    return data as unknown as LeadStats;
+  }
+
+  /** Per-creator lead counts (optionally within a created_at window), computed server-side. */
+  async getLeadCountsByCreator(
+    dateFrom?: string | null,
+    dateTo?: string | null
+  ): Promise<Record<string, number>> {
+    const { data, error } = await supabase.rpc('get_lead_counts_by_creator', {
+      p_date_from: dateFrom || undefined,
+      p_date_to: dateTo || undefined,
+    });
+    if (error) {
+      throw new Error(`Failed to fetch lead counts by creator: ${error.message}`);
+    }
+    return (data || []).reduce((acc, row) => {
+      acc[row.created_by] = Number(row.lead_count);
+      return acc;
+    }, {} as Record<string, number>);
+  }
+
+  /**
+   * Returns existing leads that match ANY of the supplied (normalized) values on
+   * author name, book title, email, or phone. A true duplicate must match >=2 of
+   * these, so it is guaranteed to be in this candidate set. Lets the caller run the
+   * 2+-field rule against a small set instead of loading the entire leads table.
+   */
+  async findDuplicateCandidates(values: {
+    authorNames?: string[];
+    bookTitles?: string[];
+    emails?: string[];
+    phones?: string[];
+  }): Promise<DuplicateCandidate[]> {
+    const { data, error } = await supabase.rpc('find_duplicate_lead_candidates', {
+      p_author_names: values.authorNames || [],
+      p_book_titles: values.bookTitles || [],
+      p_emails: values.emails || [],
+      p_phones: values.phones || [],
+    });
+    if (error) {
+      throw new Error(`Failed to fetch duplicate candidates: ${error.message}`);
+    }
+    return (data || []) as unknown as DuplicateCandidate[];
   }
 
   async getLeadById(id: string): Promise<Lead> {

@@ -3,7 +3,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, DollarSign, Target, Trophy, Percent } from 'lucide-react';
 import { useDeals } from '@/hooks/useDeals';
-import { useLeads } from '@/hooks/useLeads';
 import { useProfile, useAuth } from '@/hooks/useAuth';
 import { startOfMonth, endOfMonth, subMonths, differenceInDays } from 'date-fns';
 
@@ -55,7 +54,6 @@ export const HeroPerformanceCard: React.FC = () => {
   
   const filters = isAgent && user?.id ? { assigned_to: user.id } : {};
   const { data: dealsData, isLoading: dealsLoading } = useDeals(filters, 1, 500);
-  const { data: leadsData, isLoading: leadsLoading } = useLeads(filters, 1, 500);
 
   const now = new Date();
   const thisMonthStart = startOfMonth(now);
@@ -64,7 +62,6 @@ export const HeroPerformanceCard: React.FC = () => {
   const lastMonthEnd = endOfMonth(subMonths(now, 1));
 
   const deals = dealsData?.data || [];
-  const leads = leadsData?.data || [];
 
   // This month's metrics
   const dealsThisMonth = deals.filter(d => {
@@ -129,7 +126,7 @@ export const HeroPerformanceCard: React.FC = () => {
     return `${sign}${value.toFixed(0)}%`;
   };
 
-  const isLoading = dealsLoading || leadsLoading;
+  const isLoading = dealsLoading;
 
   // Get greeting based on time
   const getGreeting = () => {

@@ -15,6 +15,7 @@ import { useAuth, useProfile } from '@/hooks/useAuth';
 import { useDeals } from '@/hooks/useDeals';
 import { useLeads } from '@/hooks/useLeads';
 import { useReminders } from '@/hooks/useReminders';
+import { useLeadsLastActivity } from '@/hooks/useLeadsLastActivity';
 import { differenceInDays, startOfToday, isBefore } from 'date-fns';
 
 interface AttentionItemProps {
@@ -64,18 +65,41 @@ export const NeedsAttention: React.FC = () => {
 
   const filters = isAgent && user?.id ? { assigned_to: user.id } : {};
   const { data: dealsData } = useDeals(filters, 1, 500);
-  const { data: leadsData } = useLeads(filters, 1, 500);
+  // Unassigned-lead count is a server-side total (managers only); avoids loading a
+  // capped page of leads just to count the unassigned ones.
+  const { data: unassignedLeadsData } = useLeads(
+    { assignment_status: 'unassigned' },
+    1,
+    1,
+    { enabled: !isAgent }
+  );
+  const unassignedCount = unassignedLeadsData?.count || 0;
   const { data: remindersData } = useReminders(
     { user_id: user?.id || '' },
     1,
     100
   );
 
+  // Engagement is logged as activities on the lead, not the deal, so staleness is
+  // measured from the lead's last activity (falling back to the deal's updated_at).
+  const activeDealLeadIds = useMemo(() => {
+    const deals = dealsData?.data || [];
+    return [...new Set(
+      deals
+        .filter(d => {
+          const statusName = d.status?.name?.toLowerCase() || '';
+          return !statusName.includes('closed') && !statusName.includes('lost') && !statusName.includes('dead');
+        })
+        .map(d => d.lead_id)
+        .filter(Boolean)
+    )] as string[];
+  }, [dealsData]);
+  const { data: dealLeadActivity } = useLeadsLastActivity(activeDealLeadIds);
+
   const attentionItems = useMemo(() => {
     const items: AttentionItemProps[] = [];
     const today = startOfToday();
     const deals = dealsData?.data || [];
-    const leads = leadsData?.data || [];
     const reminders = remindersData?.data || [];
 
     // 1. Overdue reminders
@@ -97,14 +121,17 @@ export const NeedsAttention: React.FC = () => {
       });
     }
 
-    // 2. Stale deals (no update in 14+ days, not closed)
+    // 2. Stale deals (no logged activity in 14+ days, not closed)
     const staleDeals = deals.filter(d => {
       const statusName = d.status?.name?.toLowerCase() || '';
       if (statusName.includes('closed') || statusName.includes('lost') || statusName.includes('dead')) {
         return false;
       }
-      const lastUpdate = new Date(d.updated_at!);
-      return differenceInDays(today, lastUpdate) >= 14;
+      const dealUpdated = d.updated_at ? new Date(d.updated_at) : new Date(d.created_at!);
+      const leadActivityIso = d.lead_id ? dealLeadActivity?.get(d.lead_id) : undefined;
+      const leadActivity = leadActivityIso ? new Date(leadActivityIso) : null;
+      const lastTouch = leadActivity && leadActivity > dealUpdated ? leadActivity : dealUpdated;
+      return differenceInDays(today, lastTouch) >= 14;
     });
 
     if (staleDeals.length > 0) {
@@ -113,26 +140,23 @@ export const NeedsAttention: React.FC = () => {
         iconColor: 'bg-orange-100 text-orange-600',
         bgColor: 'bg-orange-50 border border-orange-100',
         title: 'Stale Deals',
-        description: `No activity in 14+ days`,
+        description: `No logged activity in 14+ days`,
         count: staleDeals.length,
         onClick: () => navigate('/pipeline?view=table&filter=stale')
       });
     }
 
     // 3. Unassigned leads (managers only)
-    if (!isAgent) {
-      const unassignedLeads = leads.filter(l => !l.assigned_to);
-      if (unassignedLeads.length > 0) {
-        items.push({
-          icon: UserX,
-          iconColor: 'bg-yellow-100 text-yellow-600',
-          bgColor: 'bg-yellow-50 border border-yellow-100',
-          title: 'Unassigned Leads',
-          description: `Leads waiting for assignment`,
-          count: unassignedLeads.length,
-          onClick: () => navigate('/leads?filter=unassigned')
-        });
-      }
+    if (!isAgent && unassignedCount > 0) {
+      items.push({
+        icon: UserX,
+        iconColor: 'bg-yellow-100 text-yellow-600',
+        bgColor: 'bg-yellow-50 border border-yellow-100',
+        title: 'Unassigned Leads',
+        description: `Leads waiting for assignment`,
+        count: unassignedCount,
+        onClick: () => navigate('/leads?filter=unassigned')
+      });
     }
 
     // 4. Deals stuck in early stages (7+ days in New Lead or Contacted)
@@ -158,7 +182,7 @@ export const NeedsAttention: React.FC = () => {
     }
 
     return items;
-  }, [dealsData, leadsData, remindersData, isAgent, navigate]);
+  }, [dealsData, unassignedCount, remindersData, dealLeadActivity, isAgent, navigate]);
 
   if (attentionItems.length === 0) {
     return (

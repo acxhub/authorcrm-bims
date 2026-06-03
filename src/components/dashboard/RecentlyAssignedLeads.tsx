@@ -18,14 +18,15 @@ export const RecentlyAssignedLeads: React.FC = () => {
   const filters = isAgent && user?.id ? { assigned_to: user.id } : {};
   const { data: leadsData, isLoading } = useLeads(filters, 1, 10);
 
-  // Sort by updated_at (most recently assigned) and take latest 10
+  // Sort by assignment time (most recently assigned first) and take latest 10.
+  // Uses assigned_at — not updated_at, which also bumps on unrelated edits.
   const recentLeads = React.useMemo(() => {
     if (!leadsData?.data) return [];
     return [...leadsData.data]
       .filter(lead => lead.assigned_to) // Only show assigned leads
       .sort((a, b) => {
-        const dateA = new Date(a.updated_at || a.created_at || 0);
-        const dateB = new Date(b.updated_at || b.created_at || 0);
+        const dateA = new Date(a.assigned_at || a.created_at || 0);
+        const dateB = new Date(b.assigned_at || b.created_at || 0);
         return dateB.getTime() - dateA.getTime();
       })
       .slice(0, 10);
@@ -103,7 +104,7 @@ export const RecentlyAssignedLeads: React.FC = () => {
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-400">
-                  {formatDistanceToNow(new Date(lead.updated_at || lead.created_at!), { addSuffix: true })}
+                  {formatDistanceToNow(new Date(lead.assigned_at || lead.created_at!), { addSuffix: true })}
                 </p>
               </div>
             </div>

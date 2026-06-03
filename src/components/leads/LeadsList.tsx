@@ -414,10 +414,10 @@ export const LeadsList: React.FC<LeadsListProps> = ({
               <div className="w-48 min-w-[160px]">
                 <Select value={state.filters.statusFilter || 'all'} onValueChange={handleStatusFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Filter by status" />
+                    <SelectValue placeholder="Filter by pipeline status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="all">All Pipeline Statuses</SelectItem>
                     {statuses?.map((status) => (
                       <SelectItem key={status.id} value={status.id}>
                         <div className="flex items-center gap-2">
@@ -596,7 +596,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                     <TableHead>Author</TableHead>
                     <TableHead>Book Title</TableHead>
                     <TableHead>Publisher</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Pipeline Status</TableHead>
                     <TableHead>Tags</TableHead>
                     <TableHead>Assigned To</TableHead>
                     <TableHead>Updated</TableHead>

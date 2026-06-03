@@ -6,11 +6,17 @@ import { useUsersContext } from '@/contexts/UsersContext';
 import { notify, getManagers } from '@/lib/notifications/notify';
 import { getLeadBookTitleDisplay } from '@/lib/lead-display';
 
-export const useLeads = (filters: LeadsFilter = {}, page = 1, limit = 10) => {
+export const useLeads = (
+  filters: LeadsFilter = {},
+  page = 1,
+  limit = 10,
+  options?: { enabled?: boolean }
+) => {
   return useQuery({
     queryKey: ['leads', filters, page, limit],
     queryFn: () => leadsApi.getLeads(filters, page, limit),
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: options?.enabled ?? true,
   });
 };
 

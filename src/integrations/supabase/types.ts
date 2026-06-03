@@ -1246,6 +1246,15 @@ export type Database = {
       }
       bulk_recycle_leads: { Args: { lead_ids: string[] }; Returns: undefined }
       cleanup_old_notifications: { Args: never; Returns: undefined }
+      find_duplicate_lead_candidates: {
+        Args: {
+          p_author_names?: string[]
+          p_book_titles?: string[]
+          p_emails?: string[]
+          p_phones?: string[]
+        }
+        Returns: Database["public"]["Tables"]["leads"]["Row"][]
+      }
       get_agent_lead_counts: { Args: never; Returns: Json }
       get_author_name: {
         Args: { first_name: string; last_name: string }
@@ -1289,6 +1298,14 @@ export type Database = {
             }
             Returns: Json
           }
+      get_lead_counts_by_creator: {
+        Args: { p_date_from?: string; p_date_to?: string }
+        Returns: { created_by: string; lead_count: number }[]
+      }
+      get_lead_stats: {
+        Args: { p_assigned_to?: string }
+        Returns: Json
+      }
       get_lead_manager_agent_workloads: { Args: never; Returns: Json }
       get_lead_manager_counts: {
         Args: { p_stale_days?: number }
@@ -1305,9 +1322,14 @@ export type Database = {
         }
         Returns: Json
       }
+      get_leads_last_activity: {
+        Args: { p_lead_ids: string[] }
+        Returns: Json
+      }
       get_leads_quick_stats: { Args: never; Returns: Json }
       get_status_distribution: { Args: never; Returns: Json }
       get_tag_distribution: { Args: never; Returns: Json }
+      lead_has_no_activity: { Args: { p_lead_id: string }; Returns: boolean }
       recycle_lead: { Args: { lead_ids: string[] }; Returns: undefined }
       restore_lead_cascade: { Args: { p_lead_id: string }; Returns: undefined }
     }

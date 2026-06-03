@@ -12,7 +12,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useDropzone } from 'react-dropzone';
 import readXlsxFile from 'read-excel-file';
 import Papa from 'papaparse';
-import { useCreateLead, useLeads } from '@/hooks/useLeads';
+import { useCreateLead } from '@/hooks/useLeads';
+import { leadsApi } from '@/lib/api/leads';
 import { useStatuses } from '@/hooks/useStatuses';
 import { useAuth, useProfile } from '@/hooks/useAuth';
 import { useUsers } from '@/hooks/useUsers';
@@ -89,13 +90,13 @@ const ImportLeadsPage: React.FC = () => {
   const [skipValidation, setSkipValidation] = useState(false);
   const [importLeadRecordType, setImportLeadRecordType] = useState<LeadRecordType>('lead');
   const [assignedUserId, setAssignedUserId] = useState<string>('');
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
 
   const { user } = useAuth();
   const { toast } = useToast();
   const { profile } = useProfile();
   const { users: allContextUsers } = useUsersContext();
   const { data: statuses } = useStatuses();
-  const { data: existingLeadsData } = useLeads({}, 1, 1000);
   const { users = [] } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
   const createLead = useCreateLead();
 
@@ -313,11 +314,10 @@ const ImportLeadsPage: React.FC = () => {
     return errors.length === 0;
   };
 
-  const checkDuplicates = () => {
-    if (!parsedData || !existingLeadsData?.data) return [];
+  const checkDuplicates = async (): Promise<DuplicateInfo[]> => {
+    if (!parsedData) return [];
 
     const duplicatesList: DuplicateInfo[] = [];
-    const existingLeads = existingLeadsData.data;
 
     // Get mapped data for duplicate checking
     const mappedRows = parsedData.rows.map((row, rowIndex) => {
@@ -378,7 +378,19 @@ const ImportLeadsPage: React.FC = () => {
       }
     }
 
-    // Check against existing leads
+    // Check against existing leads. Rather than load the entire leads table, ask the
+    // DB for only the leads that share at least one match field with this batch — a
+    // true duplicate (>=2 matching fields) is guaranteed to be in that candidate set.
+    const uniq = (vals: (string | undefined)[]) =>
+      [...new Set(vals.map(normalizeValue).filter(Boolean))] as string[];
+
+    const existingLeads = await leadsApi.findDuplicateCandidates({
+      authorNames: uniq(mappedRows.map((r) => r.author_name)),
+      bookTitles: uniq(mappedRows.map((r) => r.book_title)),
+      emails: uniq(mappedRows.map((r) => r.primary_email)),
+      phones: uniq(mappedRows.flatMap((r) => collectPhones(r))),
+    });
+
     mappedRows.forEach((row) => {
       const rowData = {
         author_name: normalizeValue(row.author_name),
@@ -437,17 +449,28 @@ const ImportLeadsPage: React.FC = () => {
     }
   };
 
-  const handleCheckDuplicates = () => {
+  const handleCheckDuplicates = async () => {
     const isValid = validateData();
-    
+
     if (!isValid && !skipValidation) {
       // If there are validation errors and skip is not enabled, stay on mapping step
       return;
     }
 
-    const foundDuplicates = checkDuplicates();
-    setDuplicates(foundDuplicates);
-    setStep('duplicates');
+    setCheckingDuplicates(true);
+    try {
+      const foundDuplicates = await checkDuplicates();
+      setDuplicates(foundDuplicates);
+      setStep('duplicates');
+    } catch (error) {
+      toast({
+        title: 'Duplicate check failed',
+        description: error instanceof Error ? error.message : 'Could not check for duplicates. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCheckingDuplicates(false);
+    }
   };
 
   const handleSkipDuplicate = (rowNumber: number, skip: boolean) => {
@@ -748,8 +771,10 @@ const ImportLeadsPage: React.FC = () => {
                   <Button variant="outline" onClick={() => setStep('upload')}>
                     Back
                   </Button>
-                  <Button onClick={handleCheckDuplicates}>
-                    {skipValidation ? 'Proceed with Import' : 'Check for Duplicates'}
+                  <Button onClick={handleCheckDuplicates} disabled={checkingDuplicates}>
+                    {checkingDuplicates
+                      ? 'Checking…'
+                      : skipValidation ? 'Proceed with Import' : 'Check for Duplicates'}
                   </Button>
                 </div>
               </CardContent>

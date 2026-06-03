@@ -57,16 +57,31 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
   const { user } = useAuth();
   const { data: statuses = [] } = useStatuses();
   const { users = [] } = useUsers({}, 1, 1000); // Fetch all users for assignment dropdown
-  // Only fetch leads if no lead was provided directly (i.e., creating from Pipeline page)
-  const { data: leadsData } = useLeads({}, 1, 10000); // Fetch all leads (for sales users, RLS filters to their assigned leads)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(providedLead || null);
   const [authorSearchOpen, setAuthorSearchOpen] = useState(false);
 
   // Check if user is sales manager
   const isSalesManager = user?.role === 'sales_manager';
-  
+
   // If a lead was provided directly, use it
   const isLeadProvided = !!providedLead;
+
+  // Server-side author search: query the leads table as the user types instead of
+  // loading every lead into the client (there can be tens of thousands of leads).
+  const [authorQuery, setAuthorQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(authorQuery.trim()), 250);
+    return () => clearTimeout(t);
+  }, [authorQuery]);
+
+  const { data: leadsData, isFetching: leadsFetching } = useLeads(
+    { search: debouncedQuery || undefined },
+    1,
+    50,
+    // Only fetch when the picker is usable (modal open, no lead pre-supplied, nothing selected yet)
+    { enabled: open && !isLeadProvided && !selectedLead }
+  );
 
   const form = useForm<CreateDealFormData>({
     resolver: zodResolver(createDealSchema),
@@ -81,8 +96,6 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
     },
   });
 
-  const watchedAuthorName = form.watch('author_name');
-
   // Initialize selectedLead when providedLead changes (e.g., modal opens)
   useEffect(() => {
     if (providedLead && open) {
@@ -96,29 +109,6 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
       }
     }
   }, [providedLead, open, form]);
-
-  // Auto-populate fields when author is selected (only when no lead was provided)
-  useEffect(() => {
-    if (!isLeadProvided && watchedAuthorName && leadsData?.data) {
-      const q = watchedAuthorName.toLowerCase();
-      const matchingLead = leadsData.data.find(
-        (lead) =>
-          lead.author_name.toLowerCase().includes(q) ||
-          (lead.pen_name && lead.pen_name.toLowerCase().includes(q))
-      );
-      
-      if (matchingLead) {
-        setSelectedLead(matchingLead);
-        // Auto-populate offer title if not already set
-        if (!form.getValues('offer_title')) {
-          form.setValue(
-            'offer_title',
-            `${getLeadBookTitleDisplay(matchingLead.book_title)} - Publishing Package`
-          );
-        }
-      }
-    }
-  }, [watchedAuthorName, leadsData, form, isLeadProvided]);
 
   const handleSubmit = (data: CreateDealFormData) => {
     if (!data.author_name.trim()) {
@@ -164,6 +154,7 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
     form.reset();
     setSelectedLead(providedLead || null);
     setAuthorSearchOpen(false);
+    setAuthorQuery('');
     onClose();
   };
 
@@ -240,6 +231,7 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
                         onClick={() => {
                           setSelectedLead(null);
                           field.onChange('');
+                          setAuthorQuery('');
                         }}
                       >
                         Change
@@ -265,15 +257,28 @@ export const CreateDealModal: React.FC<CreateDealModalProps> = ({
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-full p-0 z-[9999]" onWheel={(e) => e.stopPropagation()}>
-                        <Command>
-                          <CommandInput placeholder="Search authors..." />
+                        {/* shouldFilter={false}: results are filtered server-side as the user types */}
+                        <Command shouldFilter={false}>
+                          <CommandInput
+                            placeholder="Search authors by name, book, or email..."
+                            value={authorQuery}
+                            onValueChange={setAuthorQuery}
+                          />
                           <CommandList className="max-h-[300px] overflow-y-auto">
-                            <CommandEmpty>No author found.</CommandEmpty>
+                            {leadsFetching ? (
+                              <div className="py-6 text-center text-sm text-muted-foreground">
+                                Searching…
+                              </div>
+                            ) : finalAuthorOptions.length === 0 ? (
+                              <div className="py-6 text-center text-sm text-muted-foreground">
+                                {debouncedQuery ? 'No author found.' : 'Start typing to search authors.'}
+                              </div>
+                            ) : null}
                             <CommandGroup>
                               {finalAuthorOptions.map((option) => (
                                 <CommandItem
                                   key={`${option.value}-${option.lead.id}`}
-                                  value={option.searchText}
+                                  value={option.lead.id}
                                   onSelect={() => {
                                     field.onChange(option.value);
                                     setSelectedLead(option.lead);

@@ -111,8 +111,9 @@ export const StaleLeadsSection: React.FC<StaleLeadsSectionProps> = ({
                     <div className="flex-1">
                       <h4 className="font-medium text-red-900">Never Touched Leads</h4>
                       <p className="text-sm text-red-700 mt-1">
-                        These leads have <strong>zero activities</strong> recorded. They may have been imported 
-                        but never contacted, or their activities weren't logged in the system.
+                        These leads have <strong>no engagement at all</strong> — no activities, comments,
+                        deals, tags, or reminders, and they're still in their initial status (no status
+                        change). They were likely imported but never worked.
                       </p>
                       <div className="mt-3 flex items-center gap-4">
                         <div className="text-2xl font-bold text-red-600">

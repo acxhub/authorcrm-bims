@@ -19,6 +19,7 @@ import {
 import { formatDistanceToNow, differenceInDays, startOfToday } from 'date-fns';
 import type { Deal } from '@/lib/api/deals';
 import { getLeadDisplayName } from '@/lib/lead-display';
+import { useLeadsLastActivity } from '@/hooks/useLeadsLastActivity';
 
 interface PipelineTableViewProps {
   deals: Deal[];
@@ -40,6 +41,22 @@ export const PipelineTableView: React.FC<PipelineTableViewProps> = ({
   const navigate = useNavigate();
   const today = startOfToday();
 
+  // Engagement is logged as activities on the lead, not the deal, so "stale" is
+  // measured from the lead's last activity (falling back to the deal's updated_at) —
+  // matching the dashboard's MyPipeline / NeedsAttention so the counts line up.
+  const leadIds = React.useMemo(
+    () => [...new Set(deals.map(d => d.lead_id).filter(Boolean))] as string[],
+    [deals]
+  );
+  const { data: lastActivityMap } = useLeadsLastActivity(leadIds);
+
+  const lastTouchFor = React.useCallback((deal: Deal) => {
+    const dealUpdated = deal.updated_at ? new Date(deal.updated_at) : new Date(deal.created_at!);
+    const iso = deal.lead_id ? lastActivityMap?.get(deal.lead_id) : undefined;
+    const leadActivity = iso ? new Date(iso) : null;
+    return leadActivity && leadActivity > dealUpdated ? leadActivity : dealUpdated;
+  }, [lastActivityMap]);
+
   // Filter deals based on attention type
   const filteredDeals = React.useMemo(() => {
     if (filter === 'all') return deals;
@@ -49,10 +66,9 @@ export const PipelineTableView: React.FC<PipelineTableViewProps> = ({
       const isClosedOrDead = statusName.includes('closed') || statusName.includes('lost') || statusName.includes('dead');
 
       if (filter === 'stale') {
-        // Stale: no update in 14+ days, not closed
+        // Stale: no logged activity in 14+ days, not closed
         if (isClosedOrDead) return false;
-        const lastUpdate = new Date(deal.updated_at!);
-        return differenceInDays(today, lastUpdate) >= 14;
+        return differenceInDays(today, lastTouchFor(deal)) >= 14;
       }
 
       if (filter === 'stuck') {
@@ -66,7 +82,7 @@ export const PipelineTableView: React.FC<PipelineTableViewProps> = ({
 
       return true;
     });
-  }, [deals, filter, today]);
+  }, [deals, filter, today, lastTouchFor]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -86,7 +102,7 @@ export const PipelineTableView: React.FC<PipelineTableViewProps> = ({
     const statusName = deal.status?.name?.toLowerCase() || '';
     
     if (filter === 'stale') {
-      const days = differenceInDays(today, new Date(deal.updated_at!));
+      const days = differenceInDays(today, lastTouchFor(deal));
       return (
         <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
           <Clock className="h-3 w-3 mr-1" />

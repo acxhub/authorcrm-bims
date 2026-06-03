@@ -2,9 +2,8 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Users, DollarSign, Target } from 'lucide-react';
-import { usePipelineMetrics } from '@/hooks/usePipelineMetrics';
 import { useDealsPipelineMetrics } from '@/hooks/useDealsPipelineMetrics';
-import { useLeads } from '@/hooks/useLeads';
+import { useLeadStats } from '@/hooks/useLeadStats';
 import { useDeals } from '@/hooks/useDeals';
 import { useProfile } from '@/hooks/useAuth';
 
@@ -94,12 +93,13 @@ export const DashboardMetrics: React.FC<DashboardMetricsProps> = ({ userId }) =>
   const isAgent = profile?.role === 'sales';
   const agentFilter = isAgent && userId ? { assigned_to: userId } : {};
 
-  const { metrics: leadsMetrics, isLoading: leadsMetricsLoading } = usePipelineMetrics();
   const { metrics: dealsMetrics, isLoading: dealsMetricsLoading } = useDealsPipelineMetrics();
-  const { data: leadsData, isLoading: leadsLoading } = useLeads(agentFilter, 1, 1000);
+  // Lead counts come from a server-side aggregate (scoped to the agent when applicable)
+  // so totals/month-over-month aren't truncated by a client-side row cap.
+  const { data: leadStats, isLoading: leadStatsLoading } = useLeadStats(isAgent && userId ? userId : null);
   const { data: dealsData, isLoading: dealsLoading } = useDeals(agentFilter, 1, 1000);
 
-  if (leadsMetricsLoading || dealsMetricsLoading || leadsLoading || dealsLoading) {
+  if (leadStatsLoading || dealsMetricsLoading || dealsLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
@@ -117,7 +117,6 @@ export const DashboardMetrics: React.FC<DashboardMetricsProps> = ({ userId }) =>
     );
   }
 
-  const leads = leadsData?.data || [];
   const deals = dealsData?.data || [];
 
   // Calculate additional metrics
@@ -129,11 +128,8 @@ export const DashboardMetrics: React.FC<DashboardMetricsProps> = ({ userId }) =>
   const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   
-  const leadsThisMonth = leads.filter(lead => new Date(lead.created_at!) >= thisMonth).length;
-  const leadsLastMonth = leads.filter(lead => {
-    const createdDate = new Date(lead.created_at!);
-    return createdDate >= lastMonth && createdDate < thisMonth;
-  }).length;
+  const leadsThisMonth = leadStats?.leads_this_month || 0;
+  const leadsLastMonth = leadStats?.leads_last_month || 0;
   
   const dealsThisMonth = deals.filter(deal => new Date(deal.created_at!) >= thisMonth).length;
   const dealsLastMonth = deals.filter(deal => {
@@ -163,7 +159,7 @@ export const DashboardMetrics: React.FC<DashboardMetricsProps> = ({ userId }) =>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <MetricCard
         title={isAgent ? "My Leads" : "Total Leads"}
-        value={isAgent ? leads.length.toLocaleString() : leadsMetrics.totalLeads.toLocaleString()}
+        value={(leadStats?.total_leads || 0).toLocaleString()}
         change={formatPercentage(leadsChange)}
         trend={leadsChange >= 0 ? 'up' : 'down'}
         icon={Users}

@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Trophy, Target, TrendingUp, Award, Star, Medal, Crown, Zap, Calendar, Filter } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { useDeals } from '@/hooks/useDeals';
-import { useLeads } from '@/hooks/useLeads';
+import { useLeadCountsByCreator } from '@/hooks/useLeadStats';
 import { useUsersContext } from '@/contexts/UsersContext';
 import { useStatuses } from '@/hooks/useStatuses';
 import { formatDistanceToNow, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths } from 'date-fns';
@@ -21,7 +21,6 @@ import { AppSidebar } from '@/components/AppSidebar';
 
 export const SalesBoard = () => {
   const { data: dealsResponse } = useDeals({}, 1, 1000);
-  const { data: leadsData } = useLeads({}, 1, 1000);
   const { data: statuses } = useStatuses();
   const { activeUsers } = useUsersContext();
   
@@ -41,7 +40,36 @@ export const SalesBoard = () => {
   });
   
   const allDeals = dealsResponse?.data || [];
-  const allLeads = leadsData?.data || [];
+
+  // Lead counts are aggregated server-side per creator (within the selected time
+  // window) instead of loading/filtering a capped page of leads on the client.
+  const leadDateRange = React.useMemo(() => {
+    const now = new Date();
+    let dateFrom: Date | null = null;
+    let dateTo: Date | null = null;
+
+    switch (timeFilter) {
+      case 'week':
+        dateFrom = startOfWeek(now); dateTo = endOfWeek(now); break;
+      case 'month':
+        dateFrom = startOfMonth(now); dateTo = endOfMonth(now); break;
+      case 'quarter':
+        dateFrom = subMonths(startOfMonth(now), 2); dateTo = endOfMonth(now); break;
+      case 'year':
+        dateFrom = new Date(now.getFullYear(), 0, 1); dateTo = new Date(now.getFullYear(), 11, 31); break;
+      case 'custom':
+        dateFrom = new Date(selectedYear, selectedMonth, 1); dateTo = new Date(selectedYear, selectedMonth + 1, 0); break;
+      case 'all':
+      default:
+        return { from: null, to: null };
+    }
+    return {
+      from: dateFrom ? dateFrom.toISOString() : null,
+      to: dateTo ? dateTo.toISOString() : null,
+    };
+  }, [timeFilter, selectedMonth, selectedYear]);
+
+  const { data: leadCountsByCreator = {} } = useLeadCountsByCreator(leadDateRange.from, leadDateRange.to);
 
   // Apply time filter to deals
   const filteredDeals = React.useMemo(() => {
@@ -80,44 +108,6 @@ export const SalesBoard = () => {
       return (!dateFrom || dealDate >= dateFrom) && (!dateTo || dealDate <= dateTo);
     });
   }, [allDeals, timeFilter, selectedMonth, selectedYear]);
-
-  // Apply time filter to leads
-  const filteredLeads = React.useMemo(() => {
-    const now = new Date();
-    let dateFrom = null;
-    let dateTo = null;
-    
-    switch(timeFilter) {
-      case 'week':
-        dateFrom = startOfWeek(now);
-        dateTo = endOfWeek(now);
-        break;
-      case 'month':
-        dateFrom = startOfMonth(now);
-        dateTo = endOfMonth(now);
-        break;
-      case 'quarter':
-        dateFrom = subMonths(startOfMonth(now), 2);
-        dateTo = endOfMonth(now);
-        break;
-      case 'year':
-        dateFrom = new Date(now.getFullYear(), 0, 1);
-        dateTo = new Date(now.getFullYear(), 11, 31);
-        break;
-      case 'custom':
-        dateFrom = new Date(selectedYear, selectedMonth, 1);
-        dateTo = new Date(selectedYear, selectedMonth + 1, 0);
-        break;
-      case 'all':
-      default:
-        return allLeads;
-    }
-    
-    return allLeads.filter(lead => {
-      const leadDate = new Date(lead.created_at);
-      return (!dateFrom || leadDate >= dateFrom) && (!dateTo || leadDate <= dateTo);
-    });
-  }, [allLeads, timeFilter, selectedMonth, selectedYear]);
 
   // Calculate metrics for each user
   const userMetrics = React.useMemo(() => {
@@ -166,13 +156,13 @@ export const SalesBoard = () => {
       }
     });
     
-    // Process leads
-    filteredLeads.forEach(lead => {
-      if (lead.created_by && metrics[lead.created_by]) {
-        metrics[lead.created_by].leadsCreated++;
+    // Process leads (server-aggregated per-creator counts for the selected window)
+    Object.entries(leadCountsByCreator).forEach(([creatorId, count]) => {
+      if (metrics[creatorId]) {
+        metrics[creatorId].leadsCreated = count;
       }
     });
-    
+
     // Calculate derived metrics
     Object.values(metrics).forEach(metric => {
       metric.avgDealSize = metric.dealsWon > 0 ? metric.totalValue / metric.dealsWon : 0;
@@ -182,7 +172,7 @@ export const SalesBoard = () => {
     });
     
     return metrics;
-  }, [filteredDeals, filteredLeads, activeUsers, statuses, roleFilter]);
+  }, [filteredDeals, leadCountsByCreator, activeUsers, statuses, roleFilter]);
 
   // Sort users by total value for leaderboard
   const leaderboard = React.useMemo(() => {

@@ -568,7 +568,7 @@ export const LeadDetails: React.FC<LeadDetailsProps> = ({
               </div>
 
               <div>
-                <div className="text-sm font-medium text-gray-700">Status</div>
+                <div className="text-sm font-medium text-gray-700">Pipeline Status</div>
                 <div className="flex items-center gap-2 mt-1">
                   <div
                     className="w-3 h-3 rounded-full"
