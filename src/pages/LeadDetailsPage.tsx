@@ -86,6 +86,7 @@ const LeadDetailsPage: React.FC = () => {
     }
     
     return {
+      id: lead.id,
       book_title: lead.book_title,
       author_name: lead.author_name,
       first_name: lead.first_name || '',

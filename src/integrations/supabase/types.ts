@@ -671,6 +671,7 @@ export type Database = {
           assigned_to: string | null
           author_bio: string | null
           author_name: string
+          book_key: string | null
           book_title: string
           category: string | null
           country: string | null
@@ -679,15 +680,18 @@ export type Database = {
           deal_value: number | null
           deleted_at: string | null
           deleted_by: string | null
+          email_keys: string[] | null
           first_name: string | null
           id: string
           is_pinned: boolean
           last_name: string | null
           lead_record_type: string
           multiple_titles: boolean | null
+          name_key: string | null
           offer_title: string | null
           other_titles: Json | null
           pen_name: string | null
+          phone_keys: string[] | null
           phone_number_1: string | null
           phone_number_2: string | null
           pinned_at: string | null
@@ -1245,16 +1249,38 @@ export type Database = {
         Returns: undefined
       }
       bulk_recycle_leads: { Args: { lead_ids: string[] }; Returns: undefined }
-      cleanup_old_notifications: { Args: never; Returns: undefined }
-      find_duplicate_lead_candidates: {
+      check_lead_duplicates: {
         Args: {
-          p_author_names?: string[]
-          p_book_titles?: string[]
-          p_emails?: string[]
+          p_name?: string
+          p_book?: string
           p_phones?: string[]
+          p_emails?: string[]
+          p_exclude_id?: string
         }
-        Returns: Database["public"]["Tables"]["leads"]["Row"][]
+        Returns: {
+          id: string
+          author_name: string | null
+          book_title: string | null
+          phone_number_1: string | null
+          primary_email: string | null
+          assigned_to: string | null
+          points_matched: number
+          matched_on: string[]
+          tier: string
+        }[]
       }
+      check_lead_duplicates_batch: {
+        Args: { p_rows: Json }
+        Returns: {
+          row_no: number
+          existing_lead_id: string
+          existing_label: string
+          points_matched: number
+          matched_on: string[]
+          tier: string
+        }[]
+      }
+      cleanup_old_notifications: { Args: never; Returns: undefined }
       get_agent_lead_counts: { Args: never; Returns: Json }
       get_author_name: {
         Args: { first_name: string; last_name: string }

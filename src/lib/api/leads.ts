@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+import type { Tables, TablesInsert, TablesUpdate, Json } from '@/integrations/supabase/types';
 
 export type Lead = Tables<'leads'> & {
   status: Tables<'statuses'>;
@@ -48,18 +48,45 @@ export interface LeadStats {
   status_counts: Array<{ status_id: string; count: number }>;
 }
 
-/** Subset of lead fields needed for import duplicate matching. */
-export interface DuplicateCandidate {
+export type DuplicateTier = 'HIGH' | 'MEDIUM' | 'LOW';
+
+/** A single existing lead that matches an incoming lead on >=2 identity points. */
+export interface DuplicateMatch {
   id: string;
   author_name: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  pen_name: string | null;
   book_title: string | null;
-  primary_email: string | null;
   phone_number_1: string | null;
-  phone_number_2: string | null;
-  alternative_phone_number: string | null;
+  primary_email: string | null;
+  assigned_to: string | null;
+  points_matched: number;
+  matched_on: string[];
+  tier: DuplicateTier;
+}
+
+/** A duplicate hit for one staged import row (matched against the existing DB). */
+export interface BatchDuplicateMatch {
+  row_no: number;
+  existing_lead_id: string;
+  existing_label: string;
+  points_matched: number;
+  matched_on: string[];
+  tier: DuplicateTier;
+}
+
+export interface DuplicateCheckInput {
+  name?: string | null;
+  book?: string | null;
+  phones?: (string | null | undefined)[];
+  emails?: (string | null | undefined)[];
+  excludeId?: string | null;
+}
+
+export interface BatchDuplicateRow {
+  row_no: number;
+  name?: string | null;
+  book?: string | null;
+  phones?: (string | null | undefined)[];
+  emails?: (string | null | undefined)[];
 }
 
 export class LeadsAPI {
@@ -183,27 +210,56 @@ export class LeadsAPI {
   }
 
   /**
-   * Returns existing leads that match ANY of the supplied (normalized) values on
-   * author name, book title, email, or phone. A true duplicate must match >=2 of
-   * these, so it is guaranteed to be in this candidate set. Lets the caller run the
-   * 2+-field rule against a small set instead of loading the entire leads table.
+   * Real-time single-record duplicate check (Add New Lead / edit). Returns existing
+   * non-deleted leads matching the incoming values on >=2 identity points, ranked by
+   * strength, each tagged with which fields matched and a severity tier. Pass
+   * `excludeId` when editing so the record can't match itself.
    */
-  async findDuplicateCandidates(values: {
-    authorNames?: string[];
-    bookTitles?: string[];
-    emails?: string[];
-    phones?: string[];
-  }): Promise<DuplicateCandidate[]> {
-    const { data, error } = await supabase.rpc('find_duplicate_lead_candidates', {
-      p_author_names: values.authorNames || [],
-      p_book_titles: values.bookTitles || [],
-      p_emails: values.emails || [],
-      p_phones: values.phones || [],
+  async checkLeadDuplicates(input: DuplicateCheckInput): Promise<DuplicateMatch[]> {
+    const clean = (vals?: (string | null | undefined)[]) =>
+      (vals || []).map((v) => (v ?? '').toString()).filter((v) => v.trim() !== '');
+    const { data, error } = await supabase.rpc('check_lead_duplicates', {
+      p_name: input.name || undefined,
+      p_book: input.book || undefined,
+      p_phones: clean(input.phones),
+      p_emails: clean(input.emails),
+      p_exclude_id: input.excludeId || undefined,
     });
     if (error) {
-      throw new Error(`Failed to fetch duplicate candidates: ${error.message}`);
+      throw new Error(`Failed to check for duplicates: ${error.message}`);
     }
-    return (data || []) as unknown as DuplicateCandidate[];
+    return (data || []) as unknown as DuplicateMatch[];
+  }
+
+  /**
+   * Bulk import Pass-1: match many staged rows against the existing DB in one call.
+   * Returns a map of row_no -> matches (a row may match multiple existing leads).
+   */
+  async checkLeadDuplicatesBatch(
+    rows: BatchDuplicateRow[]
+  ): Promise<Map<number, BatchDuplicateMatch[]>> {
+    const clean = (vals?: (string | null | undefined)[]) =>
+      (vals || []).map((v) => (v ?? '').toString()).filter((v) => v.trim() !== '');
+    const payload = rows.map((r) => ({
+      row_no: r.row_no,
+      name: r.name || '',
+      book: r.book || '',
+      phones: clean(r.phones),
+      emails: clean(r.emails),
+    }));
+    const { data, error } = await supabase.rpc('check_lead_duplicates_batch', {
+      p_rows: payload as unknown as Json,
+    });
+    if (error) {
+      throw new Error(`Failed to check import duplicates: ${error.message}`);
+    }
+    const byRow = new Map<number, BatchDuplicateMatch[]>();
+    ((data || []) as unknown as BatchDuplicateMatch[]).forEach((m) => {
+      const list = byRow.get(m.row_no) || [];
+      list.push(m);
+      byRow.set(m.row_no, list);
+    });
+    return byRow;
   }
 
   async getLeadById(id: string): Promise<Lead> {

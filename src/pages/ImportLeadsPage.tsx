@@ -14,6 +14,7 @@ import readXlsxFile from 'read-excel-file';
 import Papa from 'papaparse';
 import { useCreateLead } from '@/hooks/useLeads';
 import { leadsApi } from '@/lib/api/leads';
+import { matchedFields, severityTier, FIELD_LABELS, type DuplicateInput } from '@/lib/duplicate-detection';
 import { useStatuses } from '@/hooks/useStatuses';
 import { useAuth, useProfile } from '@/hooks/useAuth';
 import { useUsers } from '@/hooks/useUsers';
@@ -68,6 +69,8 @@ interface DuplicateInfo {
   matchType: 'existing' | 'internal';
   matchedWith?: string;
   matchedRow?: number;
+  tier?: 'HIGH' | 'MEDIUM' | 'LOW';
+  existingLeadId?: string;
 }
 
 // Helper function to truncate field values
@@ -220,11 +223,6 @@ const ImportLeadsPage: React.FC = () => {
     multiple: false,
   });
 
-  const normalizeValue = (value: any): string => {
-    if (!value) return '';
-    return value.toString().toLowerCase().trim();
-  };
-
   const validateData = () => {
     if (!parsedData) return false;
 
@@ -337,99 +335,50 @@ const ImportLeadsPage: React.FC = () => {
       return mappedRow;
     });
 
-    const collectPhones = (source: any): string[] =>
-      [source?.phone_number_1, source?.phone_number_2, source?.alternative_phone_number]
-        .map(normalizeValue)
-        .filter((p): p is string => !!p);
+    const labels = (fields: string[]) => fields.map((f) => FIELD_LABELS[f] ?? f);
 
-    const phonesIntersect = (a: string[], b: string[]) =>
-      a.some((phone) => b.includes(phone));
-
-    // Check for internal duplicates first
-    for (let i = 0; i < mappedRows.length; i++) {
-      for (let j = i + 1; j < mappedRows.length; j++) {
-        const row1 = mappedRows[i];
-        const row2 = mappedRows[j];
-        const matchingFields: string[] = [];
-
-        if (row1.author_name && row2.author_name && normalizeValue(row1.author_name) === normalizeValue(row2.author_name)) {
-          matchingFields.push('Author Name');
-        }
-        if (row1.book_title && row2.book_title && normalizeValue(row1.book_title) === normalizeValue(row2.book_title)) {
-          matchingFields.push('Book Title');
-        }
-        const row1Phones = collectPhones(row1);
-        const row2Phones = collectPhones(row2);
-        if (row1Phones.length && row2Phones.length && phonesIntersect(row1Phones, row2Phones)) {
-          matchingFields.push('Phone Number');
-        }
-        if (row1.primary_email && row2.primary_email && normalizeValue(row1.primary_email) === normalizeValue(row2.primary_email)) {
-          matchingFields.push('Email');
-        }
-
-        if (matchingFields.length >= 2) {
+    // Pass 2 — within the import file itself (uses the shared normalization util so it
+    // matches the DB logic exactly: >=2 of name/book/phone/email across all contact cols).
+    // Flag the LATER occurrence so the first one still imports; flag each duplicate once.
+    for (let j = 0; j < mappedRows.length; j++) {
+      for (let i = 0; i < j; i++) {
+        const fields = matchedFields(mappedRows[i] as DuplicateInput, mappedRows[j] as DuplicateInput);
+        if (fields.length >= 2) {
           duplicatesList.push({
-            row: row1._rowIndex,
-            matchingFields,
+            row: mappedRows[j]._rowIndex,
+            matchingFields: labels(fields),
             matchType: 'internal',
-            matchedRow: row2._rowIndex,
+            matchedRow: mappedRows[i]._rowIndex,
+            tier: severityTier(fields),
           });
+          break;
         }
       }
     }
 
-    // Check against existing leads. Rather than load the entire leads table, ask the
-    // DB for only the leads that share at least one match field with this batch — a
-    // true duplicate (>=2 matching fields) is guaranteed to be in that candidate set.
-    const uniq = (vals: (string | undefined)[]) =>
-      [...new Set(vals.map(normalizeValue).filter(Boolean))] as string[];
+    // Pass 1 — against the existing database (single set-based RPC; checks ALL active
+    // leads, spanning every phone/email column, ignoring soft-deleted records).
+    const batch = await leadsApi.checkLeadDuplicatesBatch(
+      mappedRows.map((r) => ({
+        row_no: r._rowIndex,
+        name: r.author_name || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+        book: r.book_title,
+        phones: [r.phone_number_1, r.phone_number_2, r.alternative_phone_number],
+        emails: [r.primary_email, r.secondary_email, r.alternative_email],
+      }))
+    );
 
-    const existingLeads = await leadsApi.findDuplicateCandidates({
-      authorNames: uniq(mappedRows.map((r) => r.author_name)),
-      bookTitles: uniq(mappedRows.map((r) => r.book_title)),
-      emails: uniq(mappedRows.map((r) => r.primary_email)),
-      phones: uniq(mappedRows.flatMap((r) => collectPhones(r))),
-    });
-
-    mappedRows.forEach((row) => {
-      const rowData = {
-        author_name: normalizeValue(row.author_name),
-        book_title: normalizeValue(row.book_title),
-        phones: collectPhones(row),
-        email: normalizeValue(row.primary_email),
-      };
-
-      existingLeads.forEach((existingLead) => {
-        const existingData = {
-          author_name: normalizeValue(existingLead.author_name),
-          book_title: normalizeValue(existingLead.book_title),
-          phones: collectPhones(existingLead),
-          email: normalizeValue(existingLead.primary_email),
-        };
-
-        const matchingFields: string[] = [];
-
-        if (rowData.author_name && existingData.author_name && rowData.author_name === existingData.author_name) {
-          matchingFields.push('Author Name');
-        }
-        if (rowData.book_title && existingData.book_title && rowData.book_title === existingData.book_title) {
-          matchingFields.push('Book Title');
-        }
-        if (rowData.phones.length && existingData.phones.length && phonesIntersect(rowData.phones, existingData.phones)) {
-          matchingFields.push('Phone Number');
-        }
-        if (rowData.email && existingData.email && rowData.email === existingData.email) {
-          matchingFields.push('Email');
-        }
-
-        if (matchingFields.length >= 2) {
-          duplicatesList.push({
-            row: row._rowIndex,
-            matchingFields,
-            matchType: 'existing',
-            matchedWith: `${getLeadDisplayName(existingLead)} - ${getLeadBookTitleDisplay(existingLead.book_title)}`,
-          });
-        }
+    // Keep the strongest existing match per row (RPC returns them ordered by points desc).
+    batch.forEach((rowMatches, rowNo) => {
+      const best = rowMatches[0];
+      if (!best) return;
+      duplicatesList.push({
+        row: rowNo,
+        matchingFields: labels(best.matched_on),
+        matchType: 'existing',
+        matchedWith: best.existing_label,
+        existingLeadId: best.existing_lead_id,
+        tier: best.tier,
       });
     });
 
@@ -461,6 +410,8 @@ const ImportLeadsPage: React.FC = () => {
     try {
       const foundDuplicates = await checkDuplicates();
       setDuplicates(foundDuplicates);
+      // Default to skipping every detected duplicate; the user can opt rows back in.
+      setSkipDuplicates([...new Set(foundDuplicates.map((d) => d.row))]);
       setStep('duplicates');
     } catch (error) {
       toast({
@@ -831,6 +782,20 @@ const ImportLeadsPage: React.FC = () => {
                                 <Badge variant="outline">
                                   {duplicate.matchType === 'existing' ? 'Existing Lead' : 'Internal Duplicate'}
                                 </Badge>
+                                {duplicate.tier && (
+                                  <Badge
+                                    variant="outline"
+                                    className={
+                                      duplicate.tier === 'HIGH'
+                                        ? 'bg-red-100 text-red-700 border-red-200'
+                                        : duplicate.tier === 'MEDIUM'
+                                          ? 'bg-amber-100 text-amber-700 border-amber-200'
+                                          : 'bg-gray-100 text-gray-700 border-gray-200'
+                                    }
+                                  >
+                                    {duplicate.tier}
+                                  </Badge>
+                                )}
                               </div>
                               
                               <div className="grid grid-cols-2 gap-4 text-sm mb-3">
@@ -856,7 +821,18 @@ const ImportLeadsPage: React.FC = () => {
                               {duplicate.matchType === 'existing' && (
                                 <div className="text-sm text-gray-600 mt-1">
                                   <span className="font-medium">Matches with:</span>{' '}
-                                  {duplicate.matchedWith}
+                                  {duplicate.existingLeadId ? (
+                                    <a
+                                      href={`/leads/${duplicate.existingLeadId}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:underline"
+                                    >
+                                      {duplicate.matchedWith}
+                                    </a>
+                                  ) : (
+                                    duplicate.matchedWith
+                                  )}
                                 </div>
                               )}
                               {duplicate.matchType === 'internal' && (

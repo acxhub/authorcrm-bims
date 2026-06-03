@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useStatuses } from '@/hooks/useStatuses';
 import { useAuth } from '@/hooks/useAuth';
-import type { CreateLeadData, UpdateLeadData } from '@/lib/api/leads';
+import { leadsApi, type CreateLeadData, type UpdateLeadData, type DuplicateMatch } from '@/lib/api/leads';
+import { DuplicateMatchDialog } from './DuplicateMatchDialog';
 import { DEFAULT_BOOK_TITLE_DISPLAY } from '@/lib/lead-display';
 import {
   LEAD_RECORD_TYPE_LABELS,
@@ -61,7 +62,7 @@ interface LeadFormProps {
   onSubmit: (data: CreateLeadData | UpdateLeadData) => void;
   isLoading?: boolean;
   initialData?: Partial<
-    LeadFormData & { author_name?: string; pen_name?: string | null; lead_record_type?: string }
+    LeadFormData & { id?: string; author_name?: string; pen_name?: string | null; lead_record_type?: string }
   >;
 }
 
@@ -75,6 +76,12 @@ export const LeadForm: React.FC<LeadFormProps> = ({
   const { toast } = useToast();
   const { data: statuses = [] } = useStatuses();
   const schema = React.useMemo(() => buildLeadFormSchema(mode), [mode]);
+
+  // Duplicate-check gate state
+  const [checkingDuplicates, setCheckingDuplicates] = React.useState(false);
+  const [duplicateMatches, setDuplicateMatches] = React.useState<DuplicateMatch[] | null>(null);
+  const [duplicateMode, setDuplicateMode] = React.useState<'block' | 'warn'>('warn');
+  const pendingPayload = React.useRef<CreateLeadData | UpdateLeadData | null>(null);
 
   const defaultRecordType: LeadRecordType =
     initialData?.lead_record_type === 'sold_lead' ? 'sold_lead' : 'lead';
@@ -114,7 +121,8 @@ export const LeadForm: React.FC<LeadFormProps> = ({
     }
   }, [mode, initialData?.status_id, initialData?.lead_record_type, form]);
 
-  const handleSubmit = (data: LeadFormData) => {
+  /** Build the create/edit payload from form data (null = blocked early). */
+  const buildPayload = (data: LeadFormData): CreateLeadData | UpdateLeadData | null => {
     const baseFields = {
       book_title: data.book_title?.trim() || null,
       author_name: `${data.first_name} ${data.last_name}`.trim(),
@@ -139,12 +147,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
     };
 
     if (mode === 'edit') {
-      const updatePayload: UpdateLeadData = {
-        ...baseFields,
-        status_id: data.status_id,
-      };
-      onSubmit(updatePayload);
-      return;
+      return { ...baseFields, status_id: data.status_id } as UpdateLeadData;
     }
 
     const pipelineId = resolveUnassignedPipelineStatusId(statuses);
@@ -154,17 +157,66 @@ export const LeadForm: React.FC<LeadFormProps> = ({
         title: 'Pipeline status missing',
         description: 'Add an active status named "Unassigned" in Admin, or contact an administrator.',
       });
-      return;
+      return null;
     }
 
-    const submitData: CreateLeadData = {
+    return {
       ...baseFields,
       status_id: pipelineId,
       created_by: user?.id || '',
       assigned_to: user?.role === 'sales' ? user.id : null,
-    };
+    } as CreateLeadData;
+  };
 
-    onSubmit(submitData);
+  const handleSubmit = async (data: LeadFormData) => {
+    const payload = buildPayload(data);
+    if (!payload) return;
+
+    // Duplicate gate: HIGH-tier blocks (override required), MEDIUM warns, LOW/none proceeds.
+    setCheckingDuplicates(true);
+    try {
+      const matches = await leadsApi.checkLeadDuplicates({
+        name: payload.author_name,
+        book: payload.book_title,
+        phones: [data.phone_number_1, data.phone_number_2, data.alternative_phone_number],
+        emails: [data.primary_email, data.secondary_email, data.alternative_email],
+        excludeId: mode === 'edit' ? initialData?.id : undefined,
+      });
+
+      const hasHigh = matches.some((m) => m.tier === 'HIGH');
+      const hasMedium = matches.some((m) => m.tier === 'MEDIUM');
+      if (hasHigh || hasMedium) {
+        pendingPayload.current = payload;
+        setDuplicateMatches(matches);
+        // Only hard-block on create. On edit the record already exists, so blocking a
+        // save because it resembles another lead is counterproductive — warn instead.
+        setDuplicateMode(hasHigh && mode === 'create' ? 'block' : 'warn');
+        return;
+      }
+    } catch (error) {
+      // Fail open: never lose the user's input over a check error — warn and proceed.
+      toast({
+        variant: 'destructive',
+        title: 'Duplicate check unavailable',
+        description: 'Could not verify duplicates; proceeding with save.',
+      });
+    } finally {
+      setCheckingDuplicates(false);
+    }
+
+    onSubmit(payload);
+  };
+
+  const handleProceedAnyway = () => {
+    const payload = pendingPayload.current;
+    pendingPayload.current = null;
+    setDuplicateMatches(null);
+    if (payload) onSubmit(payload);
+  };
+
+  const handleCancelDuplicate = () => {
+    pendingPayload.current = null;
+    setDuplicateMatches(null);
   };
 
   const sortedStatuses = React.useMemo(
@@ -487,11 +539,23 @@ export const LeadForm: React.FC<LeadFormProps> = ({
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Saving...' : mode === 'edit' ? 'Save changes' : 'Create Lead'}
+          <Button type="submit" disabled={isLoading || checkingDuplicates}>
+            {checkingDuplicates
+              ? 'Checking for duplicates…'
+              : isLoading
+                ? 'Saving...'
+                : mode === 'edit' ? 'Save changes' : 'Create Lead'}
           </Button>
         </div>
       </form>
+
+      <DuplicateMatchDialog
+        open={duplicateMatches !== null}
+        mode={duplicateMode}
+        matches={duplicateMatches ?? []}
+        onProceed={handleProceedAnyway}
+        onCancel={handleCancelDuplicate}
+      />
     </Form>
   );
 };
