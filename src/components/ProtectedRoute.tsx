@@ -2,7 +2,7 @@ import { useAuth, useProfile } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { ForcePasswordReset } from '@/components/auth/ForcePasswordReset';
 
-type UserRole = 'leads_manager' | 'sales_manager' | 'sales';
+type UserRole = 'leads_manager' | 'lead_miner' | 'sales_manager' | 'sales';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

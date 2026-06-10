@@ -29,7 +29,7 @@ export function canRecycleLead(
   userId: string | undefined
 ): boolean {
   if (!profile || !userId) return false;
-  if (profile.role === 'leads_manager' || profile.role === 'sales_manager') return true;
+  if (profile.role === 'leads_manager' || profile.role === 'sales_manager' || profile.role === 'lead_miner') return true;
   if (profile.role === 'sales') return leadAssignedTo === userId;
   return false;
 }

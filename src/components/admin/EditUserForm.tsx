@@ -14,7 +14,7 @@ import type { UserProfile, UserRole, UpdateUserRequest } from '@/lib/api/users';
 
 const updateUserSchema = z.object({
   full_name: z.string().min(1, 'Full name is required'),
-  role: z.enum(['leads_manager', 'sales_manager', 'sales'] as const),
+  role: z.enum(['leads_manager', 'lead_miner', 'sales_manager', 'sales'] as const),
   is_active: z.boolean(),
   force_password_reset: z.boolean().optional(),
 });
@@ -30,12 +30,14 @@ interface EditUserFormProps {
 
 const roleLabels: Record<UserRole, string> = {
   leads_manager: 'Leads Manager',
+  lead_miner: 'Lead Miner',
   sales_manager: 'Sales Manager',
   sales: 'Sales',
 };
 
 const roleDescriptions: Record<UserRole, string> = {
   leads_manager: 'Full system access, user management, lead import/export',
+  lead_miner: 'Create, manage, assign, and import leads only',
   sales_manager: 'Team management, lead assignment, pipeline oversight',
   sales: 'Assigned leads management, activity logging, pipeline updates',
 };

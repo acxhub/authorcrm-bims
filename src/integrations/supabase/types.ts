@@ -1367,7 +1367,7 @@ export type Database = {
         | "note"
         | "status_change"
         | "assignment"
-      user_role: "leads_manager" | "sales_manager" | "sales"
+      user_role: "leads_manager" | "lead_miner" | "sales_manager" | "sales"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1503,7 +1503,7 @@ export const Constants = {
         "status_change",
         "assignment",
       ],
-      user_role: ["leads_manager", "sales_manager", "sales"],
+      user_role: ["leads_manager", "lead_miner", "sales_manager", "sales"],
     },
   },
 } as const

@@ -79,32 +79,32 @@ const App = () => {
                   </ProtectedRoute>
                 } />
                 <Route path="/pipeline" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole={["leads_manager", "sales_manager", "sales"]}>
                     <PipelinePage />
                   </ProtectedRoute>
                 } />
                 <Route path="/deals/:id" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole={["leads_manager", "sales_manager", "sales"]}>
                     <DealDetailsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/sales-board" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole={["leads_manager", "sales_manager", "sales"]}>
                     <SalesBoard />
                   </ProtectedRoute>
                 } />
                 <Route path="/sold-dashboard" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole={["leads_manager", "sales_manager", "sales"]}>
                     <SoldDashboard />
                   </ProtectedRoute>
                 } />
                 <Route path="/commissions" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole={["leads_manager", "sales_manager", "sales"]}>
                     <CommissionsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/reminders" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole={["leads_manager", "sales_manager", "sales"]}>
                     <RemindersPage />
                   </ProtectedRoute>
                 } />

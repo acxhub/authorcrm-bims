@@ -34,12 +34,14 @@ import type { UserProfile, UserRole, UsersFilter, CreateUserRequest, UpdateUserR
 
 const roleLabels: Record<UserRole, string> = {
   leads_manager: 'Leads Manager',
+  lead_miner: 'Lead Miner',
   sales_manager: 'Sales Manager',
   sales: 'Sales',
 };
 
 const roleColors: Record<UserRole, string> = {
   leads_manager: 'bg-purple-100 text-purple-800',
+  lead_miner: 'bg-amber-100 text-amber-800',
   sales_manager: 'bg-blue-100 text-blue-800',
   sales: 'bg-green-100 text-green-800',
 };

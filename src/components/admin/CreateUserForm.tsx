@@ -17,7 +17,7 @@ const createUserSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
   full_name: z.string().min(1, 'Full name is required'),
-  role: z.enum(['leads_manager', 'sales_manager', 'sales'] as const),
+  role: z.enum(['leads_manager', 'lead_miner', 'sales_manager', 'sales'] as const),
   is_active: z.boolean().default(true),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -34,12 +34,14 @@ interface CreateUserFormProps {
 
 const roleLabels: Record<UserRole, string> = {
   leads_manager: 'Leads Manager',
+  lead_miner: 'Lead Miner',
   sales_manager: 'Sales Manager',
   sales: 'Sales',
 };
 
 const roleDescriptions: Record<UserRole, string> = {
   leads_manager: 'Full system access, user management, lead import/export',
+  lead_miner: 'Create, manage, assign, and import leads only',
   sales_manager: 'Team management, lead assignment, pipeline oversight',
   sales: 'Assigned leads management, activity logging, pipeline updates',
 };

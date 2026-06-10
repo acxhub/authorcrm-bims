@@ -47,8 +47,15 @@ import { Button } from "@/components/ui/button";
 import { useAuth, useProfile } from "@/hooks/useAuth";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 
+type UserRole = 'leads_manager' | 'lead_miner' | 'sales_manager' | 'sales';
+
 // Navigation items
-const navigationItems = [
+const navigationItems: {
+  title: string;
+  url: string;
+  icon: typeof Home;
+  roles?: UserRole[];
+}[] = [
   {
     title: "Dashboard",
     url: "/",
@@ -63,26 +70,31 @@ const navigationItems = [
     title: "Pipeline",
     url: "/pipeline",
     icon: BarChart3,
+    roles: ['leads_manager', 'sales_manager', 'sales'],
   },
   {
     title: "Sold Deals",
     url: "/sold-dashboard",
     icon: DollarSign,
+    roles: ['leads_manager', 'sales_manager', 'sales'],
   },
   {
     title: "Sales Board",
     url: "/sales-board",
     icon: Trophy,
+    roles: ['leads_manager', 'sales_manager', 'sales'],
   },
   {
     title: "Commissions",
     url: "/commissions",
     icon: Receipt,
+    roles: ['leads_manager', 'sales_manager', 'sales'],
   },
   {
     title: "Reminders",
     url: "/reminders",
     icon: CheckSquare,
+    roles: ['leads_manager', 'sales_manager', 'sales'],
   },
   {
     title: "Notifications",
@@ -143,7 +155,9 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
-              {navigationItems.map((item) => (
+              {navigationItems
+                .filter((item) => !item.roles || (profile?.role && item.roles.includes(profile.role as UserRole)))
+                .map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
